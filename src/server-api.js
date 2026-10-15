@@ -54,6 +54,7 @@
   window.tpAvatars = who => String(who || '').split(/\s*(?:,|;|\/|&|\+|\bund\b)\s*/i).filter(Boolean)
     .map(n => findMember(n)).filter(Boolean).map(m => avatarHtml(m.name, m.avatar)).join('');
   window.TP_TEAM_NAMES = () => team.map(m => m.name);
+  window.TP_ME = () => me ? { id: String(me.id), name: me.name } : null;
   window.TP_TEAM = () => team.map(m => ({ id: m.id, name: m.name, avatar: m.avatar }));
   async function loadTeam() {
     try {
@@ -262,7 +263,10 @@
       doc(id) {
         return {
           async set(v) {
-            const r = await call(() => post('put', { id, json: v.json, base: ver.get(id) || 0 }));
+            // Aufgaben, deren Zuständige sich geändert haben: Server benachrichtigt nach dem Speichern
+            const pend = window.__tpNotify instanceof Set ? [...window.__tpNotify].filter(k => k.startsWith(id + ':')) : [];
+            const r = await call(() => post('put', { id, json: v.json, base: ver.get(id) || 0, ...(pend.length ? { notify: pend.map(k => Number(k.slice(id.length + 1))) } : {}) }));
+            if (r.ok) pend.forEach(k => window.__tpNotify.delete(k));
             const j = await r.json().catch(() => ({}));
             if (r.status === 409) { if (j.current) { ver.set(id, j.current.version); throw { code: 'conflict', doc: { json: j.current.json, savedAt: j.current.savedAt, by: j.current.by, byName: j.current.byName } }; } throw { code: 'conflict' }; }
             if (r.status === 403) throw { code: 'forbidden' };

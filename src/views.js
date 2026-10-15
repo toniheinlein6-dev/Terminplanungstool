@@ -115,19 +115,24 @@ function resetViewFilters() {
 }
 
 function setView(v) {
-  if (!['gantt', 'list', 'kanban', 'cal'].includes(v)) v = 'gantt';
+  if (!['gantt', 'list', 'kanban', 'cal', 'tasks'].includes(v) || (v === 'tasks' && !$('vTasks'))) v = 'gantt';
   view = v; saveUi({ view: v });
   $('segView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
   $('board').hidden = v !== 'gantt'; $('tabs').hidden = v !== 'gantt';
   document.querySelector('.foot').hidden = v !== 'gantt';
   $('vList').hidden = v !== 'list'; $('vKanban').hidden = v !== 'kanban'; $('vCal').hidden = v !== 'cal';
+  if ($('vTasks')) $('vTasks').hidden = v !== 'tasks';
+  // Aufgaben haben eigene Filter
+  if ($('toggleFilters')) $('toggleFilters').hidden = v === 'tasks';
+  if (v === 'tasks' && $('vfilters')) $('vfilters').hidden = true;
   if (v === 'gantt' && sched) renderFilteredViews();
   else renderView();
 }
 function renderView() {
   if (!sched || typeof view === 'undefined') return;
   updateFilterUi();
-  if (view === 'list') renderList(); else if (view === 'kanban') renderKanban(); else if (view === 'cal') renderCal();
+  if (view === 'list') renderList(); else if (view === 'kanban') renderKanban(); else if (view === 'cal') renderCal(); else if (view === 'tasks' && typeof renderTasks === 'function') renderTasks();
+  if (typeof tasksAfterRender === 'function') tasksAfterRender();
 }
 function gotoRow(i) {
   setView('gantt'); select(i);
@@ -473,6 +478,7 @@ function openDetails(i) {
       : '<div class="prog"><input type="range" id="dPct" min="0" max="100" step="10"' + (ro ? ' disabled' : '') + '><b id="dPctV"></b></div>') + '</div>' +
     '<label class="pf">Beschreibung<textarea class="in" id="dDesc" rows="5" maxlength="4000" placeholder="Was ist zu tun? Besonderheiten, Ansprechpartner, Unterlagen …"' + (ro ? ' disabled' : '') + '></textarea></label>' +
     '<div class="btns"><button class="btn" type="button" id="dGo">Im Gantt zeigen</button></div>' +
+    (typeof paintDetTasks === 'function' ? '<div class="dtasks" id="dTasks"></div>' : '') +
     (comments ? '<div class="cmts"><h3>Kommentare</h3><div id="cList" class="clist">Wird geladen …</div>' +
       '<div class="ccompose"><textarea class="in" id="cText" rows="3" maxlength="4000" placeholder="Kommentar schreiben … mit @ erwähnst du Teammitglieder"></textarea><div class="mlist" id="cMention" hidden></div>' +
       '<div class="btns"><button class="btn primary" type="button" id="cSend">Kommentar senden</button><span class="msg" id="cMsg"></span></div>' +
@@ -489,6 +495,7 @@ function openDetails(i) {
     q('#detPsp').textContent = sched.psp[k]; q('#detTitle').textContent = rr.name || 'ohne Namen';
     q('#detMeta').textContent = (oo.summary ? 'Sammelvorgang' : TYPES[rr.type]) + ' · ' + rangeTxt(k) + (rr.type === 'meilenstein' ? '' : ' · ' + durTxt(k)) + (isLate(k) ? ' · überfällig' : '');
     if (q('#dProgSum')) q('#dProgSum').innerHTML = progBar(progOf(k));
+    if (q('#dTasks')) paintDetTasks(q('#dTasks'), id);
     paintPeople();
   }
   function paintPeople() {

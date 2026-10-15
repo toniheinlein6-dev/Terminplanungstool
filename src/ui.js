@@ -26,6 +26,11 @@ function demoPlan() {
       r(9, 'meilenstein', 'Zwischenabnahme', 'Person A', 7), r(10, 'vorgang', 'Abschluss'),
       r(11, 'untervorgang', 'Dokumentation', 'Person C', 9, 'EA', '', 5), r(12, 'untervorgang', 'Übergabe', 'Person B', 11, 'EE', '', 2),
       r(13, 'meilenstein', 'Projektabschluss', 'Person A', 12)
+    ],
+    nextTaskId: 3,
+    tasks: [
+      { id: 1, title: 'Bestandspläne beim Bauamt anfragen', desc: '', who: 'Person A', due: '2026-10-16', prio: 'hoch', done: false, row: 2, by: '', created: '2026-10-12' },
+      { id: 2, title: 'Termin für Konzeptbesprechung finden', desc: '', who: 'Person B, Person C', due: '', prio: 'normal', done: false, row: 3, by: '', created: '2026-10-12' }
     ]
   };
 }
@@ -42,7 +47,7 @@ function cleanLanes(L) {
 }
 function blankPlan(keep) {
   return { v: 1, name: keep ? keep.name : '', start: keep ? keep.start : toISO(mondayOf(todayDn())), raster: keep ? keep.raster : 'weeks', mode: keep ? keep.mode : 'work',
-    lines: true, people: keep ? keep.people : [], holidays: keep ? keep.holidays : [], lanes: keep && keep.lanes ? JSON.parse(JSON.stringify(keep.lanes)) : defaultLanes(), nextId: 1, rows: [] };
+    lines: true, people: keep ? keep.people : [], holidays: keep ? keep.holidays : [], lanes: keep && keep.lanes ? JSON.parse(JSON.stringify(keep.lanes)) : defaultLanes(), nextId: 1, rows: [], nextTaskId: 1, tasks: [] };
 }
 function sanitize(p) {
   if (!p || typeof p !== 'object' || !Array.isArray(p.rows)) return null;
@@ -63,7 +68,19 @@ function sanitize(p) {
       pct: Math.max(0, Math.min(100, Math.round((parseInt(r.pct, 10) || 0) / 10) * 10)), desc: String(r.desc || '').slice(0, 4000),
       ...(Array.isArray(r.assignees) ? { assignees: sanitizeAssignees(r.assignees) } : {}) });
   });
-  s.nextId = max + 1; if (p.example) s.example = true;
+  s.nextId = max + 1;
+  let tmax = 0; const tseen = new Set();
+  (Array.isArray(p.tasks) ? p.tasks : []).slice(0, 1000).forEach(t => {
+    if (!t || typeof t !== 'object') return;
+    let id = Number(t.id); if (!Number.isInteger(id) || id < 1 || tseen.has(id)) id = tmax + 1; tseen.add(id); tmax = Math.max(tmax, id);
+    const row = Number(t.row);
+    s.tasks.push({ id, title: String(t.title || '').slice(0, 200), desc: String(t.desc || '').slice(0, 4000), who: String(t.who || ''),
+      due: parseISO(t.due) != null ? t.due : '', prio: t.prio === 'hoch' || t.prio === 'niedrig' ? t.prio : 'normal', done: !!t.done,
+      row: t.row !== '' && Number.isInteger(row) && row > 0 ? row : '', by: String(t.by || '').slice(0, 100), created: parseISO(t.created) != null ? t.created : '',
+      ...(Array.isArray(t.assignees) ? { assignees: sanitizeAssignees(t.assignees) } : {}) });
+  });
+  s.nextTaskId = Math.max(tmax + 1, Number.isInteger(Number(p.nextTaskId)) ? Number(p.nextTaskId) : 1);
+  if (p.example) s.example = true;
   return s;
 }
 
@@ -546,6 +563,18 @@ function mergePlans(b, m, t) {
   else { (t.rows || []).forEach(r => put(r.id)); mIds.forEach((id, i) => { if (!order.includes(id) && res.has(id)) { const prev = mIds.slice(0, i).reverse().find(x => order.includes(x)); order.splice(prev ? order.indexOf(prev) + 1 : 0, 0, id); } }); }
   out.rows = order.map(id => res.get(id));
   out.nextId = Math.max(m.nextId || 0, t.nextId || 0, ...out.rows.map(r => +r.id || 0), 0) + (out.rows.length ? 0 : 0);
+  // Aufgaben: gleiche Dreiwege-Logik je Aufgabe, Reihenfolge der Kollegen, eigene neue hinten
+  const BT = rowsById(b.tasks), MT = rowsById(m.tasks), TT = rowsById(t.tasks), tasks = [];
+  const tids = (t.tasks || []).map(x => x.id).concat((m.tasks || []).map(x => x.id).filter(id => !TT.has(id)));
+  tids.forEach(id => {
+    const inB = BT.has(id), inM = MT.has(id), inT = TT.has(id); let v;
+    if (inM && inT) v = !inB ? MT.get(id) : same(MT.get(id), BT.get(id)) ? TT.get(id) : same(TT.get(id), BT.get(id)) ? MT.get(id) : mergeRow(BT.get(id), MT.get(id), TT.get(id));
+    else if (inM) { if (!inB || !same(MT.get(id), BT.get(id))) v = MT.get(id); }
+    else if (inT) { if (!inB || !same(TT.get(id), BT.get(id))) v = TT.get(id); }
+    if (v) tasks.push(v);
+  });
+  out.tasks = tasks;
+  out.nextTaskId = Math.max(m.nextTaskId || 1, t.nextTaskId || 1, ...tasks.map(x => x.id + 1));
   return out;
 }
 function mergeRow(b, m, t) {
@@ -702,6 +731,7 @@ function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Ma
 function boot() {
   applyDisplay();
   initViews();
+  initTasks();
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (typeof u.zoom2 === 'number') zoom = Math.max(0, Math.min(ZMAX, u.zoom2)); if (u.leftw) document.documentElement.style.setProperty('--leftw', u.leftw + 'px'); } catch (e) { }
   link($('bodyL'), $('bodyR')); link($('bodyR'), $('bodyL'));
   const rl = $('rowsL');
