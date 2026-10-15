@@ -83,7 +83,17 @@
     anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
     const btn = wrap.querySelector('#userBtn'), menu = wrap.querySelector('#userMenu');
     const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
-    btn.addEventListener('click', e => { e.stopPropagation(); menu.hidden = !menu.hidden; btn.setAttribute('aria-expanded', String(!menu.hidden)); if (!menu.hidden) menu.querySelector('button').focus(); });
+    const positionMenu = () => {
+      if (menu.hidden) return;
+      menu.style.transform = '';
+      const edge = 8, width = document.documentElement.clientWidth;
+      menu.style.maxWidth = Math.max(0, width - edge * 2) + 'px';
+      const rect = menu.getBoundingClientRect();
+      const shift = Math.max(edge - rect.left, Math.min(0, width - edge - rect.right));
+      menu.style.transform = 'translateX(' + shift + 'px)';
+    };
+    btn.addEventListener('click', e => { e.stopPropagation(); menu.hidden = !menu.hidden; btn.setAttribute('aria-expanded', String(!menu.hidden)); if (!menu.hidden) { positionMenu(); menu.querySelector('button').focus(); } });
+    window.addEventListener('resize', positionMenu);
     document.addEventListener('click', e => { if (!wrap.contains(e.target)) close(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
     menu.addEventListener('click', async e => {

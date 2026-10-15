@@ -331,8 +331,8 @@ body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
 .userbtn .un { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
 .userbtn .caret { color: var(--muted); font-size: 11px; }
 .badge { background: var(--warn); color: #fff; border-radius: 10px; font-size: 11px; font-weight: 600; padding: 0 6px; line-height: 18px; }
-.umenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 25; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .14); min-width: 230px; padding: 6px; display: flex; flex-direction: column; }
-.umenu button { all: unset; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+.umenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 25; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .14); width: 230px; max-width: calc(100vw - 16px); padding: 6px; display: flex; flex-direction: column; }
+.umenu button { all: unset; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; overflow-wrap: anywhere; }
 .umenu button:hover, .umenu button:focus-visible { background: var(--sel); }
 /* Profil- und Ticket-Dialog */
 .prof, .tk { display: flex; flex-direction: column; gap: 18px; }
