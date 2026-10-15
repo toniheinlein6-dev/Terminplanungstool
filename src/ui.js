@@ -89,12 +89,12 @@ function rowHTML(r, i) {
     '<div><select data-f="type" aria-label="Typ">' + Object.keys(TYPES).map(k => opt(k, TYPES[k], r.type)).join('') + '</select></div>' +
     '<div class="nm"><input data-f="name" type="text" value="' + esc(r.name) + '" aria-label="Bezeichnung" autocomplete="off"><button class="ib det" data-a="det" type="button" title="Details, Beschreibung und Kommentare" aria-label="Details öffnen">' + icon('det') + '<span class="cnt" data-c="cnt"></span></button></div>' +
     '<div class="who-cell">' + assigneeCell(r, i) + '</div>' +
+    '<div><select data-f="pct" aria-label="Fortschritt in Prozent">' + PCTS.map(p => '<option value="' + p + '"' + (p === (r.pct || 0) ? ' selected' : '') + '>' + p + ' %</option>').join('') + '</select></div>' +
     '<div><select data-f="pred" aria-label="Vorgänger"></select></div>' +
     '<div><select data-f="rel" aria-label="Beziehung">' + RELS.map(k => opt(k, k, r.rel)).join('') + '</select></div>' +
     '<div><input data-f="lag" type="number" step="1" value="' + esc(r.lag) + '" aria-label="Versatz in Tagen"></div>' +
     '<div><input data-f="fixed" type="date" value="' + esc(r.fixed) + '" aria-label="Fester Start"></div>' +
     '<div><input data-f="dur" type="number" min="0" step="1" value="' + esc(r.dur) + '" aria-label="Dauer" placeholder="1"></div>' +
-    '<div><select data-f="pct" aria-label="Fortschritt in Prozent">' + PCTS.map(p => '<option value="' + p + '"' + (p === (r.pct || 0) ? ' selected' : '') + '>' + p + ' %</option>').join('') + '</select></div>' +
     '<div class="calc" data-c="start"></div><div class="calc" data-c="end"></div></div>';
 }
 function predOptions(i) {
@@ -157,6 +157,7 @@ function updateComputed() {
     if (o.summary) { ps.innerHTML = '<option>' + progOf(i) + ' %</option>'; ps.disabled = true; }
     else if (ps.disabled || ps.options.length !== PCTS.length) { ps.innerHTML = PCTS.map(p => '<option value="' + p + '">' + p + ' %</option>').join(''); ps.disabled = false; ps.value = String(r.pct || 0); }
     else if (document.activeElement !== ps) ps.value = String(r.pct || 0);
+    const pv = progOf(i), pc = ps.parentNode; pc.className = 'pcell' + (pv >= 100 ? ' full' : ''); pc.style.setProperty('--p', pv + '%');
     const n = commentCount(r.id), cn = el.querySelector('[data-c="cnt"]'), db = el.querySelector('[data-a="det"]');
     cn.textContent = n ? String(n) : ''; db.classList.toggle('has', !!(n || (r.desc || '').trim()));
   });
@@ -264,6 +265,7 @@ function renderChart(indices = ganttRowIndices()) {
     const x = X(o.S), w = Math.max((o.E - o.S + 1) / step * colW, 4);
     if (o.summary) {
       s += '<g data-i="' + i + '">' + tip + '<rect class="bar-sum" x="' + x + '" y="' + (y - 7) + '" width="' + w + '" height="8" rx="1.5"/>' +
+        (progOf(i) > 0 ? '<rect class="bar-sumprog" x="' + x + '" y="' + (y - 5) + '" width="' + (w * progOf(i) / 100).toFixed(1) + '" height="4" rx="1"/>' : '') +
         '<polygon class="bar-sum" points="' + x + ',' + (y + 1) + ' ' + (x + 8) + ',' + (y + 1) + ' ' + x + ',' + (y + 8) + '"/>' +
         '<polygon class="bar-sum" points="' + (x + w) + ',' + (y + 1) + ' ' + (x + w - 8) + ',' + (y + 1) + ' ' + (x + w) + ',' + (y + 8) + '"/>' +
         '<text class="lbl" x="' + (x + w + 14) + '" y="' + (y + 4) + '">' + esc(r.name) + (progOf(i) ? ' · ' + progOf(i) + ' %' : '') + '</text></g>';
@@ -340,7 +342,7 @@ function onInput(e) {
   if (f === 'pred') r.pred = t.value === '' ? '' : Number(t.value);
   else if (f === 'lag') r.lag = t.value === '' ? '' : String(parseInt(t.value, 10) || 0);
   else if (f === 'dur') r.dur = t.value === '' ? '' : String(Math.max(0, parseInt(t.value, 10) || 0));
-  else if (f === 'pct') r.pct = parseInt(t.value, 10) || 0;
+  else if (f === 'pct') setPct(r, t.value);
   else { r[f] = t.value; if (f === 'who') delete r.assignees; }
   refresh(); changed(false);
 }
@@ -672,10 +674,33 @@ function link(a, b) {
     if (b.scrollTop !== a.scrollTop) { syncing = true; b.scrollTop = a.scrollTop; }
   });
 }
+/* ---------- Darstellung: automatisch, Desktop oder Mobil (je Gerät gespeichert) ---------- */
+let vpDefault = null;
+function dispMode() { try { const d = JSON.parse(localStorage.getItem(LS_UI) || '{}').disp; return ['desktop', 'mobile'].includes(d) ? d : 'auto'; } catch (e) { return 'auto'; } }
+function isMobile() { return document.documentElement.classList.contains('m'); }
+function applyDisplay() {
+  const mode = dispMode(), html = document.documentElement, meta = document.querySelector('meta[name="viewport"]');
+  if (meta && vpDefault == null) vpDefault = meta.getAttribute('content') || 'width=device-width,initial-scale=1';
+  // Desktop auf dem Handy: Seite in Desktopbreite darstellen, Zoomen mit den Fingern bleibt möglich
+  if (meta) meta.setAttribute('content', mode === 'desktop' && (screen.width || 9999) < 1000 ? 'width=1280' : vpDefault);
+  const narrow = window.matchMedia ? window.matchMedia('(max-width: 860px)').matches : false;
+  const m = mode === 'mobile' || (mode === 'auto' && narrow);
+  html.classList.toggle('m', m); html.classList.toggle('mf', m && !narrow);
+  // Mobil: Projekteinstellungen wandern in „Listen & Daten“, damit der Kopf schmal bleibt
+  const set = document.querySelector('.settings'), slot = document.getElementById('setSlot'), home = document.querySelector('.row2');
+  if (set && slot && home) {
+    if (m && set.parentNode !== slot) slot.appendChild(set);
+    else if (!m && set.parentNode !== home) home.insertBefore(set, home.firstChild);
+    slot.parentNode.hidden = !m;
+  }
+  const seg = document.getElementById('segDisp');
+  if (seg) seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === mode)));
+}
 function saveUi(extra) { try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); Object.assign(u, extra); localStorage.setItem(LS_UI, JSON.stringify(u)); } catch (e) { } }
 function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Math.min(px, bw - 240)); document.documentElement.style.setProperty('--leftw', px + 'px'); saveUi({ leftw: px }); }
 
 function boot() {
+  applyDisplay();
   initViews();
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (typeof u.zoom2 === 'number') zoom = Math.max(0, Math.min(ZMAX, u.zoom2)); if (u.leftw) document.documentElement.style.setProperty('--leftw', u.leftw + 'px'); } catch (e) { }
   link($('bodyL'), $('bodyR')); link($('bodyR'), $('bodyL'));
@@ -708,7 +733,8 @@ function boot() {
   $('addU').addEventListener('click', () => addRow('untervorgang'));
   $('addM').addEventListener('click', () => addRow('meilenstein'));
   $('undo').addEventListener('click', undo);
-  $('toggleSet').addEventListener('click', () => { const t = document.querySelector('.top'); const o = t.dataset.open === '1' ? '0' : '1'; t.dataset.open = o; $('toggleSet').setAttribute('aria-expanded', o === '1' ? 'true' : 'false'); });
+  $('segDisp').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; saveUi({ disp: b.dataset.v }); applyDisplay(); renderAll(); });
+  window.addEventListener('resize', () => { const m = isMobile(); applyDisplay(); if (m !== isMobile()) renderAll(); });
   const blank = () => loadState(blankPlan(state), 'Plan geleert');
   $('blank').addEventListener('click', blank); $('blank2').addEventListener('click', () => { blank(); closePanel(); });
   $('loadDemo').addEventListener('click', () => { addProject(demoPlan(), 'Beispielplan als neues Projekt angelegt'); closePanel(); });

@@ -133,14 +133,17 @@ function gotoRow(i) {
   setView('gantt'); select(i);
   const el = $('rowsL').querySelector('.row[data-i="' + i + '"]');
   if (el) { el.scrollIntoView({ block: 'center' }); const f = el.querySelector('[data-f="name"]'); if (f) f.focus({ preventScroll: true }); }
-  if (window.innerWidth <= 860) { $('board').dataset.tab = 'table'; $('tabs').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.tab === 'table'))); }
+  if (isMobile()) { $('board').dataset.tab = 'table'; $('tabs').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.tab === 'table'))); }
 }
 function setSt(i, v) {
   if (readOnly) return;
   const r = state.rows[i];
   if (!r || sched.out[i].summary || (r.st || '') === v) return;
   r.st = v;
-  const l = lanes().find(x => x.id === v); if (l && l.done) r.pct = 100;   // erledigt = 100 %
+  const l = lanes().find(x => x.id === v);
+  if (l && l.done) r.pct = 100;                               // erledigt = 100 %
+  else if (v === '' && lanes()[0].id === '') r.pct = 0;       // zurück auf Offen
+  else if ((r.pct || 0) >= 100) r.pct = 90;                   // nicht mehr erledigt
   refresh(); changed(true);
 }
 const stSelect = (i, cur) => '<select class="stsel" data-st="' + i + '" aria-label="Status" style="--lc:' + LANE_COLORS[stInfo(i).c] + '">' + lanes().map(l => '<option value="' + esc(l.id) + '"' + (l.id === cur ? ' selected' : '') + '>' + esc(l.name) + '</option>').join('') + '</select>';
@@ -157,7 +160,7 @@ function renderList() {
   idx.sort((a, b) => { const x = key(a), y = key(b); return (x < y ? -1 : x > y ? 1 : a - b) * sortDir; });
   const tree = sortK === 'psp' && sortDir === 1;
   const th = (k, t, cls) => '<th class="' + (cls || '') + (sortK === k ? ' on' : '') + '"><button type="button" data-sort="' + k + '">' + t + (sortK === k ? (sortDir === 1 ? ' ▲' : ' ▼') : '') + '</button></th>';
-  let h = '<div class="tw"><table class="lst"><thead><tr>' + th('id', 'Nr', 'n') + th('psp', 'PSP', 'n') + th('name', 'Vorgang') + th('type', 'Typ') + th('who', 'Verantwortlich') +
+  let h = progStrip() + '<div class="tw"><table class="lst"><thead><tr>' + th('id', 'Nr', 'n') + th('psp', 'PSP', 'n') + th('name', 'Vorgang') + th('type', 'Typ') + th('who', 'Verantwortlich') +
     th('S', 'Start', 'd') + th('E', 'Ende', 'd') + th('dur', 'Dauer', 'n') + th('st', 'Status') + th('pg', 'Fortschritt') + '<th>Vorgänger</th></tr></thead><tbody>';
   idx.forEach(i => {
     const r = state.rows[i], o = sched.out[i], s = stInfo(i), late = isLate(i);
@@ -184,7 +187,8 @@ function renderKanban() {
   const N = state.rows.length, L = lanes();
   const items = []; for (let i = 0; i < N; i++) if (!sched.out[i].summary && matches(i)) items.push(i);
   items.sort((a, b) => sched.out[a].S - sched.out[b].S || a - b);
-  let h = '<div class="kb" style="grid-template-columns:repeat(' + L.length + ', minmax(220px, 1fr)) 210px">';
+  let h = progStrip();
+  h += '<div class="kb" style="grid-template-columns:repeat(' + L.length + ', minmax(220px, 1fr)) 210px">';
   L.forEach((ln, ci) => {
     const list = items.filter(i => laneOfRow(state.rows[i]) === ln);
     h += '<section class="kcol" data-col="' + esc(ln.id) + '" data-li="' + ci + '"><header>' +
@@ -287,9 +291,10 @@ function renderCal() {
       const i = sg.i, r = state.rows[i], o = sched.out[i], s = stInfo(i);
       const left = (sg.s - ws) / 7 * 100, width = (sg.e - sg.s + 1) / 7 * 100;
       const cls = r.type === 'meilenstein' ? 'ms' : o.summary ? 'sum' : (r.type === 'untervorgang' && sched.parent[i] >= 0 ? 'sub' : 'task');
-      const tip = (r.name || 'ohne Namen') + ': ' + rangeTxt(i) + (assigneeNames(r) ? ' · ' + assigneeNames(r) : '') + ' · ' + s.name + (isLate(i) ? ' · überfällig' : '');
+      const pv = progOf(i), upto = o.S + (o.E - o.S + 1) * pv / 100, fill = Math.max(0, Math.min(1, (upto - sg.s) / (sg.e - sg.s + 1)));
+      const tip = (r.name || 'ohne Namen') + ': ' + rangeTxt(i) + (assigneeNames(r) ? ' · ' + assigneeNames(r) : '') + ' · ' + s.name + (r.type === 'meilenstein' ? '' : ' · ' + pv + ' %') + (isLate(i) ? ' · überfällig' : '');
       h += '<button type="button" class="cb ' + cls + (isDone(i) ? ' done' : '') + (isLate(i) ? ' late' : '') + (sg.s > o.S ? ' cl' : '') + (sg.e < o.E ? ' cr' : '') + '" data-det="' + i + '" title="' + esc(tip) + '" style="left:calc(' + left + '% + 3px);width:calc(' + width + '% - 6px);top:' + (TOP + sg.l * LH) + 'px">' +
-        (cls === 'ms' ? '<i class="msd"></i>' : '') + '<span>' + esc(r.name || 'ohne Namen') + (assigneeNames(r) && cls !== 'sum' ? ' · ' + esc(assigneeNames(r)) : '') + '</span></button>';
+        (cls === 'ms' ? '<i class="msd"></i>' : '') + (cls !== 'ms' && fill > 0 ? '<i class="cbp" style="width:' + (fill * 100).toFixed(1) + '%"></i>' : '') + '<span>' + esc(r.name || 'ohne Namen') + (assigneeNames(r) && cls !== 'sum' ? ' · ' + esc(assigneeNames(r)) : '') + '</span></button>';
     });
     h += '</div>';
   }
@@ -308,7 +313,7 @@ function initViews() {
   $('toggleFilters').addEventListener('click', () => { $('vfilters').hidden = !$('vfilters').hidden; updateFilterUi(); });
   $('resetFilters').addEventListener('click', () => { resetViewFilters(); renderFilteredViews(); });
   updateFilterUi();
-  const go = e => { const d = e.target.closest('[data-det]'); if (d) { openDetails(+d.dataset.det); return true; } const b = e.target.closest('[data-go]'); if (b) { gotoRow(+b.dataset.go); return true; } return false; };
+  const go = e => { const d = e.target.closest('[data-det],[data-pdet]'); if (d) { openDetails(+(d.dataset.det || d.dataset.pdet)); return true; } const b = e.target.closest('[data-go]'); if (b) { gotoRow(+b.dataset.go); return true; } return false; };
   $('vList').addEventListener('click', e => {
     const s = e.target.closest('[data-sort]');
     if (s) { const k = s.dataset.sort; if (sortK === k) sortDir = -sortDir; else { sortK = k; sortDir = 1; } renderList(); return; }
@@ -399,25 +404,45 @@ window.__teamChanged = () => { if (!sched) return; refreshPeopleList(); renderFi
 /* ---------- Mehrere Verantwortliche, Fortschritt ---------- */
 // „Verantwortlich“ kann mehrere Namen enthalten, getrennt durch Komma (auch ; / & + „und“)
 function splitWho(s) { return String(s || '').split(/\s*(?:,|;|\/|&|\+|\bund\b)\s*/i).map(x => x.trim()).filter(Boolean); }
-// Fortschritt in %: erledigte Bahn = 100, sonst die Angabe; Sammelvorgänge gewichtet nach Dauer der Untervorgänge
+// Fortschritt in %: jeder Untervorgang (und jeder Vorgang ohne Untervorgänge) wird in 10-%-Schritten angegeben.
+// Ein Vorgang mit Untervorgängen ist der Mittelwert seiner Untervorgänge, also erst bei 100 %, wenn alle erledigt sind.
+// Das Projekt ist der Mittelwert seiner Vorgänge und damit erst erledigt, wenn alle Vorgänge 100 % haben.
+const avgProg = idx => idx.length ? (idx.every(k => progOf(k) >= 100) ? 100 : Math.min(99, Math.round(idx.reduce((s, k) => s + progOf(k), 0) / idx.length))) : 0;
 function progOf(i) {
   const r = state.rows[i], o = sched && sched.out[i]; if (!r || !o) return 0;
   if (!o.summary) return rowDone(r) ? 100 : (r.pct || 0);
-  let w = 0, s = 0;
-  sched.kids[i].forEach(k => { if (state.rows[k].type === 'meilenstein') return; const d = Math.max(1, sched.out[k].dur || 1); w += d; s += d * progOf(k); });
-  return w ? Math.round(s / w) : 0;
+  const kids = sched.kids[i], work = kids.filter(k => state.rows[k].type !== 'meilenstein');
+  return avgProg(work.length ? work : kids);
 }
 function projectProgress() {
-  let w = 0, s = 0;
-  state.rows.forEach((r, i) => { const o = sched.out[i]; if (o.summary || r.type === 'meilenstein') return; const d = Math.max(1, o.dur || 1); w += d; s += d * progOf(i); });
-  return w ? Math.round(s / w) : 0;
+  const top = state.rows.map((r, i) => i).filter(i => sched.parent[i] < 0 && state.rows[i].type !== 'meilenstein');
+  return avgProg(top);
+}
+// Fortschritt setzen und Status passend nachziehen: 100 % = erledigt, ab 10 % in Arbeit
+function setPct(r, v) {
+  const p = Math.max(0, Math.min(100, Math.round((parseInt(v, 10) || 0) / 10) * 10)), L = lanes();
+  r.pct = p;
+  const cur = laneOfRow(r), done = L.find(l => l.done), work = L.find(l => l.id === 'arbeit' && !l.done);
+  if (p >= 100) { if (done && !cur.done) r.st = done.id; }
+  else if (cur.done) { const back = p > 0 && work ? work : L.find(l => !l.done); if (back) r.st = back.id; }
+  else if (p > 0 && cur.id === '' && L[0] === cur && work) r.st = work.id;
+}
+// Übersicht: Projekt und jeder Vorgang als Fortschrittsbalken (Kanban, Liste)
+function progStrip() {
+  const top = state.rows.map((r, i) => i).filter(i => sched.parent[i] < 0 && state.rows[i].type !== 'meilenstein');
+  if (!top.length) return '';
+  const p = projectProgress();
+  return '<div class="pstrip" aria-label="Fortschritt der Vorgänge"><div class="pst all"><span class="pn">Projekt' + (p >= 100 ? ' · erledigt' : '') + '</span>' + progBar(p) + '</div>' +
+    top.map(i => '<button type="button" class="pst" data-pdet="' + i + '" title="' + esc((state.rows[i].name || 'ohne Namen') + ': ' + progOf(i) + ' %') + '"><span class="pn"><span class="psp">' + sched.psp[i] + '</span> ' + esc(state.rows[i].name || 'ohne Namen') + '</span>' + progBar(progOf(i)) + '</button>').join('') + '</div>';
 }
 function paintProjectProgress() {
   const el = $('projProg'); if (!el || !sched) return;
-  const p = projectProgress(), bar = el.querySelector('i'), lbl = el.querySelector('b'); if (bar) bar.style.width = p + '%'; if (lbl) lbl.textContent = p + ' %';
-  el.title = 'Projektfortschritt: ' + p + ' % (gewichtet nach Dauer)';
+  const p = projectProgress(), fin = p >= 100, bar = el.querySelector('i'), lbl = el.querySelector('b');
+  if (bar) bar.style.width = p + '%'; if (lbl) lbl.textContent = fin ? '100 % · erledigt' : p + ' %';
+  el.classList.toggle('fin', fin);
+  el.title = fin ? 'Projekt erledigt: alle Vorgänge haben 100 %' : 'Projektfortschritt: ' + p + ' % (Mittelwert der Vorgänge)';
 }
-const progBar = p => '<span class="pg" title="' + p + ' % fertig"><span class="pgb"><i style="width:' + p + '%"></i></span><span class="pgt">' + p + ' %</span></span>';
+const progBar = p => '<span class="pg' + (p >= 100 ? ' full' : '') + '" title="' + p + ' % fertig"><span class="pgb"><i style="width:' + p + '%"></i></span><span class="pgt">' + (p >= 100 ? '✓ 100 %' : p + ' %') + '</span></span>';
 const commentCount = id => (window.TP_COMMENTS && typeof window.TP_COMMENTS.count === 'function') ? window.TP_COMMENTS.count(id) : 0;
 const marks = r => ((r.desc || '').trim() ? '<span class="mk" title="Hat eine Beschreibung">≡</span>' : '') + (commentCount(r.id) ? '<span class="mk" title="Kommentare">' + icon('det') + commentCount(r.id) + '</span>' : '');
 
@@ -444,7 +469,7 @@ function openDetails(i) {
     '<div class="pf"><span>Verantwortlich</span><div class="people" id="dWho"></div>' +
     (ro ? '' : '<div class="addp">' + (hasUserDirectory() ? '<select class="in" id="dWhoAdd" aria-label="Person hinzufügen"></select>' : '<input class="in" id="dWhoAdd" list="peopleList" placeholder="Person hinzufügen …" autocomplete="off">') + '<button class="btn" type="button" id="dWhoBtn">Hinzufügen</button></div>') + '</div>' +
     '<div class="pf"><span>Fortschritt</span>' + (o.summary
-      ? '<div id="dProgSum"></div><p class="hint">Ergibt sich aus den Untervorgängen, gewichtet nach Dauer.</p>'
+      ? '<div id="dProgSum"></div><p class="hint">Mittelwert der Untervorgänge, 100 % sobald alle Untervorgänge erledigt sind.</p>'
       : '<div class="prog"><input type="range" id="dPct" min="0" max="100" step="10"' + (ro ? ' disabled' : '') + '><b id="dPctV"></b></div>') + '</div>' +
     '<label class="pf">Beschreibung<textarea class="in" id="dDesc" rows="5" maxlength="4000" placeholder="Was ist zu tun? Besonderheiten, Ansprechpartner, Unterlagen …"' + (ro ? ' disabled' : '') + '></textarea></label>' +
     '<div class="btns"><button class="btn" type="button" id="dGo">Im Gantt zeigen</button></div>' +
@@ -483,7 +508,7 @@ function openDetails(i) {
   q('#dName').addEventListener('input', e => save(x => { x.name = e.target.value; }, true));
   q('#dDesc').addEventListener('input', e => save(x => { x.desc = e.target.value.slice(0, 4000); }));
   if (q('#dSt')) q('#dSt').addEventListener('change', e => { const k = cur(); if (k != null) { setSt(k, e.target.value); const rr = state.rows[k]; if (q('#dPct')) { q('#dPct').value = String(rowDone(rr) ? 100 : rr.pct || 0); q('#dPctV').textContent = q('#dPct').value + ' %'; } paintHead(); } });
-  if (q('#dPct')) q('#dPct').addEventListener('input', e => { q('#dPctV').textContent = e.target.value + ' %'; save(x => { x.pct = parseInt(e.target.value, 10) || 0; }); });
+  if (q('#dPct')) q('#dPct').addEventListener('input', e => { q('#dPctV').textContent = e.target.value + ' %'; save(x => setPct(x, e.target.value)); const k = cur(); if (k != null && q('#dSt')) q('#dSt').value = laneOfRow(state.rows[k]).id; });
   const addPerson = () => {
     const f = q('#dWhoAdd'), v = (f.value || '').trim(), k = cur(); if (!v || k == null || readOnly) return;
     const ents = assigneeEntries(state.rows[k]).map(({ id, name }) => ({ id, name }));

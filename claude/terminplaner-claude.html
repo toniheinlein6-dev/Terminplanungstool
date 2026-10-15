@@ -13,7 +13,7 @@
   --line: #d3dbd6;
   --grid: #e4e9e6;
   --hdr: #e6ece8;
-  --accent: #26664b;
+  --accent: #26664b; --accent-2: #7cc29c;
   --accent-ink: #ffffff;
   --accent-soft: #dcebe3;
   --sumrow: #e9f0ec;
@@ -41,7 +41,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #111916; --surface: #18221d; --ink: #e5eee9; --muted: #92a39a; --line: #2c3a33; --grid: #232f29;
-    --hdr: #1d2924; --accent: #5db58d; --accent-ink: #0d1f17; --accent-soft: #23372d; --sumrow: #1c2923; --sel: #223329;
+    --hdr: #1d2924; --accent: #5db58d; --accent-2: #1f5a40; --accent-ink: #0d1f17; --accent-soft: #23372d; --sumrow: #1c2923; --sel: #223329;
     --bar-sum: #a9d9c0; --bar-task: #55a57c; --bar-sub: #2f6a50; --bar-ms: #e3a23a; --link: #ea7968;
     --today: #6aa6ff; --today-bg: #1e2c44; --weekend: #1d2823; --holiday: #3b2724; --warn: #ea7968;
     --on-task: #0d1f17; --on-sub: #e5eee9; --st-arbeit-bg: #4a3512; --st-arbeit: #f3c77e;
@@ -50,7 +50,7 @@
 }
 :root[data-theme="dark"] {
   --bg: #111916; --surface: #18221d; --ink: #e5eee9; --muted: #92a39a; --line: #2c3a33; --grid: #232f29;
-  --hdr: #1d2924; --accent: #5db58d; --accent-ink: #0d1f17; --accent-soft: #23372d; --sumrow: #1c2923; --sel: #223329;
+  --hdr: #1d2924; --accent: #5db58d; --accent-2: #1f5a40; --accent-ink: #0d1f17; --accent-soft: #23372d; --sumrow: #1c2923; --sel: #223329;
   --bar-sum: #a9d9c0; --bar-task: #55a57c; --bar-sub: #2f6a50; --bar-ms: #e3a23a; --link: #ea7968;
   --today: #6aa6ff; --today-bg: #1e2c44; --weekend: #1d2823; --holiday: #3b2724; --warn: #ea7968;
     --on-task: #0d1f17; --on-sub: #e5eee9; --st-arbeit-bg: #4a3512; --st-arbeit: #f3c77e;
@@ -73,7 +73,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
 .spacer { flex: 1 1 0; }
 .settings { display: contents; }
-.toggleSet { display: none; }
 .fld { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .fld > span, .fld > label {
   font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
@@ -122,7 +121,7 @@ h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; whit
 .split { flex: none; width: 7px; background: var(--hdr); border-inline: 1px solid var(--line); cursor: col-resize; touch-action: none; }
 .split:hover, .split:focus-visible { background: var(--accent-soft); }
 
-.grid { display: grid; grid-template-columns: 84px 34px 42px 134px 220px 112px 150px 62px 58px 130px 56px 66px 98px 98px; width: 1344px; align-items: center; }
+.grid { display: grid; grid-template-columns: 84px 34px 42px 134px 220px 112px 80px 150px 62px 58px 130px 56px 98px 98px; width: 1358px; align-items: center; }
 .hrow { height: var(--headh); font-size: 11px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
 .hrow > div { padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row { height: var(--rowh); border-bottom: 1px solid var(--grid); position: relative; }
@@ -196,6 +195,7 @@ h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; whit
 .bar-sub { fill: var(--bar-sub); }
 .bar-ms { fill: var(--bar-ms); }
 .bar-prog { fill: var(--bar-sum); opacity: .42; }
+.bar-sumprog { fill: var(--accent-2); }
 .bar-err { fill: none; stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 3 2; }
 .lbl { font-size: 11px; fill: var(--muted); }
 .lbl.ms { fill: var(--ink); }
@@ -334,6 +334,9 @@ h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; whit
 .cb.sum { background: transparent; color: var(--ink); font-weight: 600; border-top: 3px solid var(--bar-sum); border-radius: 0; line-height: 15px; }
 .cb.ms { background: transparent; color: var(--ink); padding-left: 2px; }
 .cb.done { opacity: .5; }
+.cb .cbp { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(0,0,0,.22); pointer-events: none; }
+.cb.sum .cbp { top: -3px; bottom: auto; height: 3px; background: var(--accent-2); }
+.cb span { position: relative; }
 .cb.late:not(.ms):not(.sum) { box-shadow: inset 0 0 0 2px var(--warn); }
 .cb.cl { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .cb.cr { border-top-right-radius: 0; border-bottom-right-radius: 0; }
@@ -397,9 +400,28 @@ body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
 .pg { display: inline-flex; align-items: center; gap: 8px; min-width: 110px; }
 .pgb { flex: 1 1 auto; height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; min-width: 60px; display: inline-block; }
 .pgb i { display: block; height: 100%; background: var(--bar-task); border-radius: 3px; }
+.pg.full .pgb i { background: var(--accent); }
+.pg.full .pgt { color: var(--accent); font-weight: 600; }
+.pcell { position: relative; }
+.foot .disp { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.foot .disp .seg button { padding: 2px 8px; font-size: 11.5px; }
+.foot .disp + .rels { margin-left: 0; }
+.pcell::after { content: ""; position: absolute; left: 4px; right: 4px; bottom: 2px; height: 3px; border-radius: 2px; pointer-events: none;
+  background: linear-gradient(to right, var(--bar-task) var(--p, 0%), var(--grid) var(--p, 0%)); }
+.pcell.full::after { background: var(--accent); }
+.pstrip { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.pst { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; min-width: 170px; flex: 1 1 170px; max-width: 280px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; }
+.pst.all { cursor: default; border-color: var(--accent); }
+.pst:hover:not(.all), .pst:focus-visible { border-color: var(--accent); }
+.pst .pn { font-size: 12.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pst .pn .psp { font-family: var(--font-num); color: var(--muted); font-weight: 400; }
+.pst .pg { min-width: 0; }
+#vList .pstrip { margin: 12px 12px 4px; }
+#vKanban .pstrip + .kb { height: auto; }
 .pgt { font-family: var(--font-num); font-size: 11.5px; color: var(--muted); min-width: 36px; text-align: right; }
 .card .pg { display: flex; width: 100%; }
 .card .pg .pgt { flex: none; }
+.projprog.fin b { color: var(--accent); }
 .projprog { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
 .projprog .pgb { width: 110px; height: 8px; border-radius: 4px; }
 .projprog b { font-family: var(--font-num); color: var(--ink); font-size: 12.5px; min-width: 38px; }
@@ -452,20 +474,26 @@ body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
 .mlist button.on, .mlist button:hover { background: var(--sel); }
 @media (max-width: 560px) { .dgrid { grid-template-columns: 1fr; } }
 
-@media (max-width: 860px) {
-  .kb { scroll-snap-type: x mandatory; }
-  .kcol { scroll-snap-align: start; }
-  .tabs { display: inline-flex; }
-  .toggleSet { display: inline-flex; }
-  .settings { display: none; }
-  .top[data-open="1"] .settings { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-end; width: 100%; }
-  .foot .rels { display: none; }
-  .split { display: none; }
-  .pane.left { width: 100%; }
-  .board[data-tab="table"] .pane.right { display: none; }
-  .board[data-tab="chart"] .pane.left { display: none; }
-  .foot .rels { margin-left: 0; }
-}
+/* Mobile Darstellung: automatisch bei schmalem Bildschirm oder über „Darstellung: Mobil“ */
+html.m .kb { scroll-snap-type: x mandatory; }
+html.m .kcol { scroll-snap-align: start; }
+html.m .tabs { display: inline-flex; }
+html.m .settings { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-end; width: 100%; }
+html.m .foot .rels { display: none; }
+html.m .split { display: none; }
+html.m .pane.left { width: 100%; }
+html.m .board[data-tab="table"] .pane.right { display: none; }
+html.m .board[data-tab="chart"] .pane.left { display: none; }
+html.m .projprog > span:first-child { display: none; }
+html.m .foot { flex-wrap: wrap; }
+html.m .row1, html.m .row2 { gap: 8px 10px; }
+html.m h1 { font-size: 17px; width: 100%; }
+html.m #last { display: none; }
+html.m .row2 .spacer { display: none; }
+html.m .row2 .btn { padding: 6px 10px; }
+.setbox .settings { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-end; }
+/* Mobil auf einem breiten Bildschirm: schmale Spalte in der Mitte */
+html.mf body { max-width: 480px; margin: 0 auto; min-height: 100vh; box-shadow: 0 0 0 1px var(--line); }
 </style>
 
 <header class="top">
@@ -481,7 +509,6 @@ body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
     <button class="btn" id="openPanel" type="button">Listen &amp; Daten</button>
   </div>
   <div class="row2">
-    <button class="btn toggleSet" id="toggleSet" type="button" aria-expanded="false">Einstellungen</button>
     <div class="settings">
     <div class="fld"><label for="pstart">Projektstart</label><input id="pstart" class="in" type="date"></div>
     <div class="fld"><span id="lblRaster">Zeitraster</span>
@@ -531,7 +558,7 @@ body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
     <div class="hdr" id="hdrL">
       <div class="grid hrow" id="hrowL">
         <div></div><div title="Feste Nummer, auf die sich Vorgänger beziehen">Nr</div><div title="Gliederung, nur zur Anzeige">PSP</div><div>Typ</div><div>Vorgang</div><div>Verantw.</div>
-        <div title="Vorgänger über die feste Nr">Vorgänger</div><div title="EA Ende→Anfang, AA Anfang→Anfang, EE Ende→Ende, AE Anfang→Ende">Bez.</div><div title="Verschiebung in Tagen, negativ = Vorlauf">Versatz</div><div title="Frühester Starttermin, optional">Fester Start</div><div>Dauer</div><div title="Fertigstellung in Prozent">Fortschr.</div><div>Start</div><div>Ende</div>
+        <div title="Fertigstellung in Prozent, in 10-%-Schritten">Fortschr.</div><div title="Vorgänger über die feste Nr">Vorgänger</div><div title="EA Ende→Anfang, AA Anfang→Anfang, EE Ende→Ende, AE Anfang→Ende">Bez.</div><div title="Verschiebung in Tagen, negativ = Vorlauf">Versatz</div><div title="Frühester Starttermin, optional">Fester Start</div><div>Dauer</div><div>Start</div><div>Ende</div>
       </div>
     </div>
     <div class="body" id="bodyL"><div id="rowsL"></div></div>
@@ -553,6 +580,7 @@ body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
   <span class="lg"><i class="d" style="background:var(--bar-ms)"></i>Meilenstein</span>
   <span class="lg"><i class="l"></i>Abhängigkeit</span>
   <span class="lg"><i class="t"></i>Heute</span>
+  <span class="disp"><span id="lblDisp">Darstellung</span><span class="seg sm" id="segDisp" role="group" aria-labelledby="lblDisp"><button type="button" data-v="auto" title="Je nach Bildschirmbreite">Auto</button><button type="button" data-v="desktop" title="Tabelle und Diagramm nebeneinander, auch auf dem Handy">Desktop</button><button type="button" data-v="mobile" title="Schmale Ansicht für Smartphones">Mobil</button></span></span>
   <span class="rels">EA Ende→Anfang · AA Anfang→Anfang · EE Ende→Ende · AE Anfang→Ende</span>
 </footer>
 
@@ -562,6 +590,10 @@ body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
     <div id="teamBox" class="team" hidden>
       <h3>Team</h3>
       <div id="teamInfo"></div>
+    </div>
+    <div class="editonly setbox" hidden>
+      <h3>Einstellungen</h3>
+      <div id="setSlot"></div>
     </div>
     <div class="editonly">
       <h3>Dieses Projekt</h3>
@@ -854,12 +886,12 @@ function rowHTML(r, i) {
     '<div><select data-f="type" aria-label="Typ">' + Object.keys(TYPES).map(k => opt(k, TYPES[k], r.type)).join('') + '</select></div>' +
     '<div class="nm"><input data-f="name" type="text" value="' + esc(r.name) + '" aria-label="Bezeichnung" autocomplete="off"><button class="ib det" data-a="det" type="button" title="Details, Beschreibung und Kommentare" aria-label="Details öffnen">' + icon('det') + '<span class="cnt" data-c="cnt"></span></button></div>' +
     '<div class="who-cell">' + assigneeCell(r, i) + '</div>' +
+    '<div><select data-f="pct" aria-label="Fortschritt in Prozent">' + PCTS.map(p => '<option value="' + p + '"' + (p === (r.pct || 0) ? ' selected' : '') + '>' + p + ' %</option>').join('') + '</select></div>' +
     '<div><select data-f="pred" aria-label="Vorgänger"></select></div>' +
     '<div><select data-f="rel" aria-label="Beziehung">' + RELS.map(k => opt(k, k, r.rel)).join('') + '</select></div>' +
     '<div><input data-f="lag" type="number" step="1" value="' + esc(r.lag) + '" aria-label="Versatz in Tagen"></div>' +
     '<div><input data-f="fixed" type="date" value="' + esc(r.fixed) + '" aria-label="Fester Start"></div>' +
     '<div><input data-f="dur" type="number" min="0" step="1" value="' + esc(r.dur) + '" aria-label="Dauer" placeholder="1"></div>' +
-    '<div><select data-f="pct" aria-label="Fortschritt in Prozent">' + PCTS.map(p => '<option value="' + p + '"' + (p === (r.pct || 0) ? ' selected' : '') + '>' + p + ' %</option>').join('') + '</select></div>' +
     '<div class="calc" data-c="start"></div><div class="calc" data-c="end"></div></div>';
 }
 function predOptions(i) {
@@ -922,6 +954,7 @@ function updateComputed() {
     if (o.summary) { ps.innerHTML = '<option>' + progOf(i) + ' %</option>'; ps.disabled = true; }
     else if (ps.disabled || ps.options.length !== PCTS.length) { ps.innerHTML = PCTS.map(p => '<option value="' + p + '">' + p + ' %</option>').join(''); ps.disabled = false; ps.value = String(r.pct || 0); }
     else if (document.activeElement !== ps) ps.value = String(r.pct || 0);
+    const pv = progOf(i), pc = ps.parentNode; pc.className = 'pcell' + (pv >= 100 ? ' full' : ''); pc.style.setProperty('--p', pv + '%');
     const n = commentCount(r.id), cn = el.querySelector('[data-c="cnt"]'), db = el.querySelector('[data-a="det"]');
     cn.textContent = n ? String(n) : ''; db.classList.toggle('has', !!(n || (r.desc || '').trim()));
   });
@@ -1029,6 +1062,7 @@ function renderChart(indices = ganttRowIndices()) {
     const x = X(o.S), w = Math.max((o.E - o.S + 1) / step * colW, 4);
     if (o.summary) {
       s += '<g data-i="' + i + '">' + tip + '<rect class="bar-sum" x="' + x + '" y="' + (y - 7) + '" width="' + w + '" height="8" rx="1.5"/>' +
+        (progOf(i) > 0 ? '<rect class="bar-sumprog" x="' + x + '" y="' + (y - 5) + '" width="' + (w * progOf(i) / 100).toFixed(1) + '" height="4" rx="1"/>' : '') +
         '<polygon class="bar-sum" points="' + x + ',' + (y + 1) + ' ' + (x + 8) + ',' + (y + 1) + ' ' + x + ',' + (y + 8) + '"/>' +
         '<polygon class="bar-sum" points="' + (x + w) + ',' + (y + 1) + ' ' + (x + w - 8) + ',' + (y + 1) + ' ' + (x + w) + ',' + (y + 8) + '"/>' +
         '<text class="lbl" x="' + (x + w + 14) + '" y="' + (y + 4) + '">' + esc(r.name) + (progOf(i) ? ' · ' + progOf(i) + ' %' : '') + '</text></g>';
@@ -1105,7 +1139,7 @@ function onInput(e) {
   if (f === 'pred') r.pred = t.value === '' ? '' : Number(t.value);
   else if (f === 'lag') r.lag = t.value === '' ? '' : String(parseInt(t.value, 10) || 0);
   else if (f === 'dur') r.dur = t.value === '' ? '' : String(Math.max(0, parseInt(t.value, 10) || 0));
-  else if (f === 'pct') r.pct = parseInt(t.value, 10) || 0;
+  else if (f === 'pct') setPct(r, t.value);
   else { r[f] = t.value; if (f === 'who') delete r.assignees; }
   refresh(); changed(false);
 }
@@ -1437,10 +1471,33 @@ function link(a, b) {
     if (b.scrollTop !== a.scrollTop) { syncing = true; b.scrollTop = a.scrollTop; }
   });
 }
+/* ---------- Darstellung: automatisch, Desktop oder Mobil (je Gerät gespeichert) ---------- */
+let vpDefault = null;
+function dispMode() { try { const d = JSON.parse(localStorage.getItem(LS_UI) || '{}').disp; return ['desktop', 'mobile'].includes(d) ? d : 'auto'; } catch (e) { return 'auto'; } }
+function isMobile() { return document.documentElement.classList.contains('m'); }
+function applyDisplay() {
+  const mode = dispMode(), html = document.documentElement, meta = document.querySelector('meta[name="viewport"]');
+  if (meta && vpDefault == null) vpDefault = meta.getAttribute('content') || 'width=device-width,initial-scale=1';
+  // Desktop auf dem Handy: Seite in Desktopbreite darstellen, Zoomen mit den Fingern bleibt möglich
+  if (meta) meta.setAttribute('content', mode === 'desktop' && (screen.width || 9999) < 1000 ? 'width=1280' : vpDefault);
+  const narrow = window.matchMedia ? window.matchMedia('(max-width: 860px)').matches : false;
+  const m = mode === 'mobile' || (mode === 'auto' && narrow);
+  html.classList.toggle('m', m); html.classList.toggle('mf', m && !narrow);
+  // Mobil: Projekteinstellungen wandern in „Listen & Daten“, damit der Kopf schmal bleibt
+  const set = document.querySelector('.settings'), slot = document.getElementById('setSlot'), home = document.querySelector('.row2');
+  if (set && slot && home) {
+    if (m && set.parentNode !== slot) slot.appendChild(set);
+    else if (!m && set.parentNode !== home) home.insertBefore(set, home.firstChild);
+    slot.parentNode.hidden = !m;
+  }
+  const seg = document.getElementById('segDisp');
+  if (seg) seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === mode)));
+}
 function saveUi(extra) { try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); Object.assign(u, extra); localStorage.setItem(LS_UI, JSON.stringify(u)); } catch (e) { } }
 function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Math.min(px, bw - 240)); document.documentElement.style.setProperty('--leftw', px + 'px'); saveUi({ leftw: px }); }
 
 function boot() {
+  applyDisplay();
   initViews();
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (typeof u.zoom2 === 'number') zoom = Math.max(0, Math.min(ZMAX, u.zoom2)); if (u.leftw) document.documentElement.style.setProperty('--leftw', u.leftw + 'px'); } catch (e) { }
   link($('bodyL'), $('bodyR')); link($('bodyR'), $('bodyL'));
@@ -1473,7 +1530,8 @@ function boot() {
   $('addU').addEventListener('click', () => addRow('untervorgang'));
   $('addM').addEventListener('click', () => addRow('meilenstein'));
   $('undo').addEventListener('click', undo);
-  $('toggleSet').addEventListener('click', () => { const t = document.querySelector('.top'); const o = t.dataset.open === '1' ? '0' : '1'; t.dataset.open = o; $('toggleSet').setAttribute('aria-expanded', o === '1' ? 'true' : 'false'); });
+  $('segDisp').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; saveUi({ disp: b.dataset.v }); applyDisplay(); renderAll(); });
+  window.addEventListener('resize', () => { const m = isMobile(); applyDisplay(); if (m !== isMobile()) renderAll(); });
   const blank = () => loadState(blankPlan(state), 'Plan geleert');
   $('blank').addEventListener('click', blank); $('blank2').addEventListener('click', () => { blank(); closePanel(); });
   $('loadDemo').addEventListener('click', () => { addProject(demoPlan(), 'Beispielplan als neues Projekt angelegt'); closePanel(); });
@@ -1646,14 +1704,17 @@ function gotoRow(i) {
   setView('gantt'); select(i);
   const el = $('rowsL').querySelector('.row[data-i="' + i + '"]');
   if (el) { el.scrollIntoView({ block: 'center' }); const f = el.querySelector('[data-f="name"]'); if (f) f.focus({ preventScroll: true }); }
-  if (window.innerWidth <= 860) { $('board').dataset.tab = 'table'; $('tabs').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.tab === 'table'))); }
+  if (isMobile()) { $('board').dataset.tab = 'table'; $('tabs').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.tab === 'table'))); }
 }
 function setSt(i, v) {
   if (readOnly) return;
   const r = state.rows[i];
   if (!r || sched.out[i].summary || (r.st || '') === v) return;
   r.st = v;
-  const l = lanes().find(x => x.id === v); if (l && l.done) r.pct = 100;   // erledigt = 100 %
+  const l = lanes().find(x => x.id === v);
+  if (l && l.done) r.pct = 100;                               // erledigt = 100 %
+  else if (v === '' && lanes()[0].id === '') r.pct = 0;       // zurück auf Offen
+  else if ((r.pct || 0) >= 100) r.pct = 90;                   // nicht mehr erledigt
   refresh(); changed(true);
 }
 const stSelect = (i, cur) => '<select class="stsel" data-st="' + i + '" aria-label="Status" style="--lc:' + LANE_COLORS[stInfo(i).c] + '">' + lanes().map(l => '<option value="' + esc(l.id) + '"' + (l.id === cur ? ' selected' : '') + '>' + esc(l.name) + '</option>').join('') + '</select>';
@@ -1670,7 +1731,7 @@ function renderList() {
   idx.sort((a, b) => { const x = key(a), y = key(b); return (x < y ? -1 : x > y ? 1 : a - b) * sortDir; });
   const tree = sortK === 'psp' && sortDir === 1;
   const th = (k, t, cls) => '<th class="' + (cls || '') + (sortK === k ? ' on' : '') + '"><button type="button" data-sort="' + k + '">' + t + (sortK === k ? (sortDir === 1 ? ' ▲' : ' ▼') : '') + '</button></th>';
-  let h = '<div class="tw"><table class="lst"><thead><tr>' + th('id', 'Nr', 'n') + th('psp', 'PSP', 'n') + th('name', 'Vorgang') + th('type', 'Typ') + th('who', 'Verantwortlich') +
+  let h = progStrip() + '<div class="tw"><table class="lst"><thead><tr>' + th('id', 'Nr', 'n') + th('psp', 'PSP', 'n') + th('name', 'Vorgang') + th('type', 'Typ') + th('who', 'Verantwortlich') +
     th('S', 'Start', 'd') + th('E', 'Ende', 'd') + th('dur', 'Dauer', 'n') + th('st', 'Status') + th('pg', 'Fortschritt') + '<th>Vorgänger</th></tr></thead><tbody>';
   idx.forEach(i => {
     const r = state.rows[i], o = sched.out[i], s = stInfo(i), late = isLate(i);
@@ -1697,7 +1758,8 @@ function renderKanban() {
   const N = state.rows.length, L = lanes();
   const items = []; for (let i = 0; i < N; i++) if (!sched.out[i].summary && matches(i)) items.push(i);
   items.sort((a, b) => sched.out[a].S - sched.out[b].S || a - b);
-  let h = '<div class="kb" style="grid-template-columns:repeat(' + L.length + ', minmax(220px, 1fr)) 210px">';
+  let h = progStrip();
+  h += '<div class="kb" style="grid-template-columns:repeat(' + L.length + ', minmax(220px, 1fr)) 210px">';
   L.forEach((ln, ci) => {
     const list = items.filter(i => laneOfRow(state.rows[i]) === ln);
     h += '<section class="kcol" data-col="' + esc(ln.id) + '" data-li="' + ci + '"><header>' +
@@ -1800,9 +1862,10 @@ function renderCal() {
       const i = sg.i, r = state.rows[i], o = sched.out[i], s = stInfo(i);
       const left = (sg.s - ws) / 7 * 100, width = (sg.e - sg.s + 1) / 7 * 100;
       const cls = r.type === 'meilenstein' ? 'ms' : o.summary ? 'sum' : (r.type === 'untervorgang' && sched.parent[i] >= 0 ? 'sub' : 'task');
-      const tip = (r.name || 'ohne Namen') + ': ' + rangeTxt(i) + (assigneeNames(r) ? ' · ' + assigneeNames(r) : '') + ' · ' + s.name + (isLate(i) ? ' · überfällig' : '');
+      const pv = progOf(i), upto = o.S + (o.E - o.S + 1) * pv / 100, fill = Math.max(0, Math.min(1, (upto - sg.s) / (sg.e - sg.s + 1)));
+      const tip = (r.name || 'ohne Namen') + ': ' + rangeTxt(i) + (assigneeNames(r) ? ' · ' + assigneeNames(r) : '') + ' · ' + s.name + (r.type === 'meilenstein' ? '' : ' · ' + pv + ' %') + (isLate(i) ? ' · überfällig' : '');
       h += '<button type="button" class="cb ' + cls + (isDone(i) ? ' done' : '') + (isLate(i) ? ' late' : '') + (sg.s > o.S ? ' cl' : '') + (sg.e < o.E ? ' cr' : '') + '" data-det="' + i + '" title="' + esc(tip) + '" style="left:calc(' + left + '% + 3px);width:calc(' + width + '% - 6px);top:' + (TOP + sg.l * LH) + 'px">' +
-        (cls === 'ms' ? '<i class="msd"></i>' : '') + '<span>' + esc(r.name || 'ohne Namen') + (assigneeNames(r) && cls !== 'sum' ? ' · ' + esc(assigneeNames(r)) : '') + '</span></button>';
+        (cls === 'ms' ? '<i class="msd"></i>' : '') + (cls !== 'ms' && fill > 0 ? '<i class="cbp" style="width:' + (fill * 100).toFixed(1) + '%"></i>' : '') + '<span>' + esc(r.name || 'ohne Namen') + (assigneeNames(r) && cls !== 'sum' ? ' · ' + esc(assigneeNames(r)) : '') + '</span></button>';
     });
     h += '</div>';
   }
@@ -1821,7 +1884,7 @@ function initViews() {
   $('toggleFilters').addEventListener('click', () => { $('vfilters').hidden = !$('vfilters').hidden; updateFilterUi(); });
   $('resetFilters').addEventListener('click', () => { resetViewFilters(); renderFilteredViews(); });
   updateFilterUi();
-  const go = e => { const d = e.target.closest('[data-det]'); if (d) { openDetails(+d.dataset.det); return true; } const b = e.target.closest('[data-go]'); if (b) { gotoRow(+b.dataset.go); return true; } return false; };
+  const go = e => { const d = e.target.closest('[data-det],[data-pdet]'); if (d) { openDetails(+(d.dataset.det || d.dataset.pdet)); return true; } const b = e.target.closest('[data-go]'); if (b) { gotoRow(+b.dataset.go); return true; } return false; };
   $('vList').addEventListener('click', e => {
     const s = e.target.closest('[data-sort]');
     if (s) { const k = s.dataset.sort; if (sortK === k) sortDir = -sortDir; else { sortK = k; sortDir = 1; } renderList(); return; }
@@ -1912,25 +1975,45 @@ window.__teamChanged = () => { if (!sched) return; refreshPeopleList(); renderFi
 /* ---------- Mehrere Verantwortliche, Fortschritt ---------- */
 // „Verantwortlich“ kann mehrere Namen enthalten, getrennt durch Komma (auch ; / & + „und“)
 function splitWho(s) { return String(s || '').split(/\s*(?:,|;|\/|&|\+|\bund\b)\s*/i).map(x => x.trim()).filter(Boolean); }
-// Fortschritt in %: erledigte Bahn = 100, sonst die Angabe; Sammelvorgänge gewichtet nach Dauer der Untervorgänge
+// Fortschritt in %: jeder Untervorgang (und jeder Vorgang ohne Untervorgänge) wird in 10-%-Schritten angegeben.
+// Ein Vorgang mit Untervorgängen ist der Mittelwert seiner Untervorgänge, also erst bei 100 %, wenn alle erledigt sind.
+// Das Projekt ist der Mittelwert seiner Vorgänge und damit erst erledigt, wenn alle Vorgänge 100 % haben.
+const avgProg = idx => idx.length ? (idx.every(k => progOf(k) >= 100) ? 100 : Math.min(99, Math.round(idx.reduce((s, k) => s + progOf(k), 0) / idx.length))) : 0;
 function progOf(i) {
   const r = state.rows[i], o = sched && sched.out[i]; if (!r || !o) return 0;
   if (!o.summary) return rowDone(r) ? 100 : (r.pct || 0);
-  let w = 0, s = 0;
-  sched.kids[i].forEach(k => { if (state.rows[k].type === 'meilenstein') return; const d = Math.max(1, sched.out[k].dur || 1); w += d; s += d * progOf(k); });
-  return w ? Math.round(s / w) : 0;
+  const kids = sched.kids[i], work = kids.filter(k => state.rows[k].type !== 'meilenstein');
+  return avgProg(work.length ? work : kids);
 }
 function projectProgress() {
-  let w = 0, s = 0;
-  state.rows.forEach((r, i) => { const o = sched.out[i]; if (o.summary || r.type === 'meilenstein') return; const d = Math.max(1, o.dur || 1); w += d; s += d * progOf(i); });
-  return w ? Math.round(s / w) : 0;
+  const top = state.rows.map((r, i) => i).filter(i => sched.parent[i] < 0 && state.rows[i].type !== 'meilenstein');
+  return avgProg(top);
+}
+// Fortschritt setzen und Status passend nachziehen: 100 % = erledigt, ab 10 % in Arbeit
+function setPct(r, v) {
+  const p = Math.max(0, Math.min(100, Math.round((parseInt(v, 10) || 0) / 10) * 10)), L = lanes();
+  r.pct = p;
+  const cur = laneOfRow(r), done = L.find(l => l.done), work = L.find(l => l.id === 'arbeit' && !l.done);
+  if (p >= 100) { if (done && !cur.done) r.st = done.id; }
+  else if (cur.done) { const back = p > 0 && work ? work : L.find(l => !l.done); if (back) r.st = back.id; }
+  else if (p > 0 && cur.id === '' && L[0] === cur && work) r.st = work.id;
+}
+// Übersicht: Projekt und jeder Vorgang als Fortschrittsbalken (Kanban, Liste)
+function progStrip() {
+  const top = state.rows.map((r, i) => i).filter(i => sched.parent[i] < 0 && state.rows[i].type !== 'meilenstein');
+  if (!top.length) return '';
+  const p = projectProgress();
+  return '<div class="pstrip" aria-label="Fortschritt der Vorgänge"><div class="pst all"><span class="pn">Projekt' + (p >= 100 ? ' · erledigt' : '') + '</span>' + progBar(p) + '</div>' +
+    top.map(i => '<button type="button" class="pst" data-pdet="' + i + '" title="' + esc((state.rows[i].name || 'ohne Namen') + ': ' + progOf(i) + ' %') + '"><span class="pn"><span class="psp">' + sched.psp[i] + '</span> ' + esc(state.rows[i].name || 'ohne Namen') + '</span>' + progBar(progOf(i)) + '</button>').join('') + '</div>';
 }
 function paintProjectProgress() {
   const el = $('projProg'); if (!el || !sched) return;
-  const p = projectProgress(), bar = el.querySelector('i'), lbl = el.querySelector('b'); if (bar) bar.style.width = p + '%'; if (lbl) lbl.textContent = p + ' %';
-  el.title = 'Projektfortschritt: ' + p + ' % (gewichtet nach Dauer)';
+  const p = projectProgress(), fin = p >= 100, bar = el.querySelector('i'), lbl = el.querySelector('b');
+  if (bar) bar.style.width = p + '%'; if (lbl) lbl.textContent = fin ? '100 % · erledigt' : p + ' %';
+  el.classList.toggle('fin', fin);
+  el.title = fin ? 'Projekt erledigt: alle Vorgänge haben 100 %' : 'Projektfortschritt: ' + p + ' % (Mittelwert der Vorgänge)';
 }
-const progBar = p => '<span class="pg" title="' + p + ' % fertig"><span class="pgb"><i style="width:' + p + '%"></i></span><span class="pgt">' + p + ' %</span></span>';
+const progBar = p => '<span class="pg' + (p >= 100 ? ' full' : '') + '" title="' + p + ' % fertig"><span class="pgb"><i style="width:' + p + '%"></i></span><span class="pgt">' + (p >= 100 ? '✓ 100 %' : p + ' %') + '</span></span>';
 const commentCount = id => (window.TP_COMMENTS && typeof window.TP_COMMENTS.count === 'function') ? window.TP_COMMENTS.count(id) : 0;
 const marks = r => ((r.desc || '').trim() ? '<span class="mk" title="Hat eine Beschreibung">≡</span>' : '') + (commentCount(r.id) ? '<span class="mk" title="Kommentare">' + icon('det') + commentCount(r.id) + '</span>' : '');
 
@@ -1957,7 +2040,7 @@ function openDetails(i) {
     '<div class="pf"><span>Verantwortlich</span><div class="people" id="dWho"></div>' +
     (ro ? '' : '<div class="addp">' + (hasUserDirectory() ? '<select class="in" id="dWhoAdd" aria-label="Person hinzufügen"></select>' : '<input class="in" id="dWhoAdd" list="peopleList" placeholder="Person hinzufügen …" autocomplete="off">') + '<button class="btn" type="button" id="dWhoBtn">Hinzufügen</button></div>') + '</div>' +
     '<div class="pf"><span>Fortschritt</span>' + (o.summary
-      ? '<div id="dProgSum"></div><p class="hint">Ergibt sich aus den Untervorgängen, gewichtet nach Dauer.</p>'
+      ? '<div id="dProgSum"></div><p class="hint">Mittelwert der Untervorgänge, 100 % sobald alle Untervorgänge erledigt sind.</p>'
       : '<div class="prog"><input type="range" id="dPct" min="0" max="100" step="10"' + (ro ? ' disabled' : '') + '><b id="dPctV"></b></div>') + '</div>' +
     '<label class="pf">Beschreibung<textarea class="in" id="dDesc" rows="5" maxlength="4000" placeholder="Was ist zu tun? Besonderheiten, Ansprechpartner, Unterlagen …"' + (ro ? ' disabled' : '') + '></textarea></label>' +
     '<div class="btns"><button class="btn" type="button" id="dGo">Im Gantt zeigen</button></div>' +
@@ -1996,7 +2079,7 @@ function openDetails(i) {
   q('#dName').addEventListener('input', e => save(x => { x.name = e.target.value; }, true));
   q('#dDesc').addEventListener('input', e => save(x => { x.desc = e.target.value.slice(0, 4000); }));
   if (q('#dSt')) q('#dSt').addEventListener('change', e => { const k = cur(); if (k != null) { setSt(k, e.target.value); const rr = state.rows[k]; if (q('#dPct')) { q('#dPct').value = String(rowDone(rr) ? 100 : rr.pct || 0); q('#dPctV').textContent = q('#dPct').value + ' %'; } paintHead(); } });
-  if (q('#dPct')) q('#dPct').addEventListener('input', e => { q('#dPctV').textContent = e.target.value + ' %'; save(x => { x.pct = parseInt(e.target.value, 10) || 0; }); });
+  if (q('#dPct')) q('#dPct').addEventListener('input', e => { q('#dPctV').textContent = e.target.value + ' %'; save(x => setPct(x, e.target.value)); const k = cur(); if (k != null && q('#dSt')) q('#dSt').value = laneOfRow(state.rows[k]).id; });
   const addPerson = () => {
     const f = q('#dWhoAdd'), v = (f.value || '').trim(), k = cur(); if (!v || k == null || readOnly) return;
     const ents = assigneeEntries(state.rows[k]).map(({ id, name }) => ({ id, name }));

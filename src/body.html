@@ -11,7 +11,6 @@
     <button class="btn" id="openPanel" type="button">Listen &amp; Daten</button>
   </div>
   <div class="row2">
-    <button class="btn toggleSet" id="toggleSet" type="button" aria-expanded="false">Einstellungen</button>
     <div class="settings">
     <div class="fld"><label for="pstart">Projektstart</label><input id="pstart" class="in" type="date"></div>
     <div class="fld"><span id="lblRaster">Zeitraster</span>
@@ -61,7 +60,7 @@
     <div class="hdr" id="hdrL">
       <div class="grid hrow" id="hrowL">
         <div></div><div title="Feste Nummer, auf die sich Vorgänger beziehen">Nr</div><div title="Gliederung, nur zur Anzeige">PSP</div><div>Typ</div><div>Vorgang</div><div>Verantw.</div>
-        <div title="Vorgänger über die feste Nr">Vorgänger</div><div title="EA Ende→Anfang, AA Anfang→Anfang, EE Ende→Ende, AE Anfang→Ende">Bez.</div><div title="Verschiebung in Tagen, negativ = Vorlauf">Versatz</div><div title="Frühester Starttermin, optional">Fester Start</div><div>Dauer</div><div title="Fertigstellung in Prozent">Fortschr.</div><div>Start</div><div>Ende</div>
+        <div title="Fertigstellung in Prozent, in 10-%-Schritten">Fortschr.</div><div title="Vorgänger über die feste Nr">Vorgänger</div><div title="EA Ende→Anfang, AA Anfang→Anfang, EE Ende→Ende, AE Anfang→Ende">Bez.</div><div title="Verschiebung in Tagen, negativ = Vorlauf">Versatz</div><div title="Frühester Starttermin, optional">Fester Start</div><div>Dauer</div><div>Start</div><div>Ende</div>
       </div>
     </div>
     <div class="body" id="bodyL"><div id="rowsL"></div></div>
@@ -83,6 +82,7 @@
   <span class="lg"><i class="d" style="background:var(--bar-ms)"></i>Meilenstein</span>
   <span class="lg"><i class="l"></i>Abhängigkeit</span>
   <span class="lg"><i class="t"></i>Heute</span>
+  <span class="disp"><span id="lblDisp">Darstellung</span><span class="seg sm" id="segDisp" role="group" aria-labelledby="lblDisp"><button type="button" data-v="auto" title="Je nach Bildschirmbreite">Auto</button><button type="button" data-v="desktop" title="Tabelle und Diagramm nebeneinander, auch auf dem Handy">Desktop</button><button type="button" data-v="mobile" title="Schmale Ansicht für Smartphones">Mobil</button></span></span>
   <span class="rels">EA Ende→Anfang · AA Anfang→Anfang · EE Ende→Ende · AE Anfang→Ende</span>
 </footer>
 
@@ -92,6 +92,10 @@
     <div id="teamBox" class="team" hidden>
       <h3>Team</h3>
       <div id="teamInfo"></div>
+    </div>
+    <div class="editonly setbox" hidden>
+      <h3>Einstellungen</h3>
+      <div id="setSlot"></div>
     </div>
     <div class="editonly">
       <h3>Dieses Projekt</h3>
