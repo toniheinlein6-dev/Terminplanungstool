@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "node scripts/build.mjs && node scripts/dev-server.mjs",
-    "test": "node scripts/build.mjs && node src/test_logic.cjs"
+    "test": "node scripts/build.mjs && node src/test_logic.cjs && node src/test_filters.cjs"
   },
   "dependencies": {
     "jspdf": "4.2.1",

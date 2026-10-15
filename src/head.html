@@ -202,9 +202,17 @@ h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; whit
 
 /* Ansichten */
 .viewbar { flex: none; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
-.vfilters { display: flex; flex-wrap: wrap; gap: 8px; }
-.vfilters .in { height: 32px; }
-#fQ { width: 170px; }
+.filter-toggle { padding: 4px 8px; gap: 5px; min-height: 30px; font-size: 12px; color: var(--muted); }
+.filter-toggle.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.filter-count { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; padding: 0 4px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); font-size: 10px; line-height: 16px; }
+.filter-summary { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.vfilters { flex: none; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); min-width: 0; }
+.filter-field { display: flex; flex: 1 1 160px; flex-direction: column; gap: 3px; min-width: 0; max-width: 100%; }
+.filter-field label { font-size: 11px; color: var(--muted); }
+.filter-field.filter-search { flex-basis: 220px; flex-grow: 2; }
+.vfilters .in { height: 32px; width: 100%; min-width: 0; max-width: 100%; }
+.filter-reset { height: 32px; padding: 5px 10px; font-size: 12px; }
+.vfilters[hidden], .filter-count[hidden], .filter-summary[hidden] { display: none; }
 .vw { flex: 1 1 0; min-height: 320px; overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
 .bars g.done { opacity: 0.5; }
 .stb { font-size: 12px; padding: 2px 8px 2px 18px; border-radius: 10px; white-space: nowrap; position: relative; background: color-mix(in srgb, var(--lc, var(--muted)) 16%, transparent); }
@@ -360,8 +368,6 @@ body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
 @media (max-width: 860px) {
   .kb { scroll-snap-type: x mandatory; }
   .kcol { scroll-snap-align: start; }
-  #fQ { width: 130px; }
-
   .tabs { display: inline-flex; }
   .toggleSet { display: inline-flex; }
   .settings { display: none; }

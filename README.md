@@ -8,6 +8,7 @@ Gantt-Terminplaner für die gemeinsame Projektplanung im Team.
 - Abhängigkeiten Ende-Anfang, Anfang-Anfang, Ende-Ende, Anfang-Ende mit Versatz, grafisch als Pfeile
 - Dauer in Arbeitstagen (mit Feiertagen) oder Kalendertagen, Raster Tage oder Wochen
 - Ansichten: Gantt, Liste, Kanban (eigene Bahnen), Kalender
+- Aufklappbare Filter für Suche, Person und Status in allen Ansichten, auch bei mehreren Verantwortlichen
 - PDF-Export als eine durchgehende Seite im Querformat, CSV- und JSON-Export
 - Mehrere Projekte, Teamarbeit mit Live-Abgleich, zeilenweises Zusammenführen gleichzeitiger Änderungen
 - Benutzer mit Rollen und Profilbild, eigenes Passwort und E-Mail-Adresse unter „Mein Profil“
@@ -84,4 +85,4 @@ In einem Kanal *+ → Website* wählen und die Vercel-Adresse eintragen. Die nö
 
 ## Entwickeln
 
-Änderungen an der Oberfläche in `src/` vornehmen, dann `npm run build`. `npm test` prüft die Terminberechnung.
+Änderungen an der Oberfläche in `src/` vornehmen, dann `npm run build`. `npm test` prüft die Terminberechnung und die Filterfunktionen.

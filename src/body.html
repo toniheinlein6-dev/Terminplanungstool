@@ -39,17 +39,20 @@
   <div class="seg" id="segView" role="group" aria-label="Ansicht">
     <button type="button" data-v="gantt" aria-pressed="true">Gantt</button><button type="button" data-v="list" aria-pressed="false">Liste</button><button type="button" data-v="kanban" aria-pressed="false">Kanban</button><button type="button" data-v="cal" aria-pressed="false">Kalender</button>
   </div>
+  <button class="btn filter-toggle" id="toggleFilters" type="button" aria-controls="vfilters" aria-expanded="false"><span id="filterArrow" aria-hidden="true">▸</span>Filter<span class="filter-count" id="filterCount" hidden></span></button>
   <div class="tabs seg" id="tabs" role="tablist">
     <button type="button" role="tab" data-tab="table" aria-pressed="true">Tabelle</button>
     <button type="button" role="tab" data-tab="chart" aria-pressed="false">Diagramm</button>
   </div>
-  <div class="vfilters" id="vfilters" hidden>
-    <input id="fQ" class="in" type="search" placeholder="Suchen" aria-label="Vorgänge durchsuchen" autocomplete="off">
-    <select id="fWho" class="in" aria-label="Nach Verantwortlichem filtern"><option value="">Alle Verantwortlichen</option></select>
-    <select id="fSt" class="in" aria-label="Nach Status filtern"><option value="all">Alle Status</option><option value="open">Nicht erledigt</option><option value="">Offen</option><option value="arbeit">In Arbeit</option><option value="fertig">Erledigt</option><option value="late">Überfällig</option></select>
-  </div>
+  <span class="filter-summary" id="filterSummary" aria-live="polite" hidden></span>
   <span class="spacer"></span>
   <button class="btn" id="pdfBtn" type="button" title="Gantt-Diagramm als PDF, eine Seite im Querformat">PDF exportieren</button>
+</div>
+<div class="vfilters" id="vfilters" role="group" aria-label="Vorgänge filtern" hidden>
+  <div class="filter-field filter-search"><label for="fQ">Suche</label><input id="fQ" class="in" type="search" placeholder="Vorgänge durchsuchen" autocomplete="off"></div>
+  <div class="filter-field"><label for="fWho">Person</label><select id="fWho" class="in"><option value="">Alle Personen</option></select></div>
+  <div class="filter-field"><label for="fSt">Status</label><select id="fSt" class="in"><option value="all">Alle Status</option><option value="open">Nicht erledigt</option><option value="">Offen</option><option value="arbeit">In Arbeit</option><option value="fertig">Erledigt</option><option value="late">Überfällig</option></select></div>
+  <button class="btn filter-reset" id="resetFilters" type="button">Zurücksetzen</button>
 </div>
 
 <main class="board" id="board" data-tab="table">

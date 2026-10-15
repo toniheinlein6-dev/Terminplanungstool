@@ -32,28 +32,82 @@ function durTxt(i) {
   return o.dur + (sched.work ? ' AT' : ' T');
 }
 function rangeTxt(i) { const o = sched.out[i]; return o.E === o.S ? fmt(o.S) : fmt(o.S) + ' – ' + fmt(o.E); }
-function matches(i, ignoreSt) {
-  const r = state.rows[i], o = sched.out[i];
-  const kidsOf = o.summary ? sched.kids[i] : [];
-  if (fWho && r.who !== fWho && !kidsOf.some(k => state.rows[k].who === fWho)) return false;
-  if (!ignoreSt && fSt !== 'all') {
+const splitFilterPeople = value => String(value || '').split(/\s*(?:,|;|\/|&|\+|\bund\b)\s*/i).map(name => name.trim()).filter(Boolean);
+function filterPeople() {
+  const names = new Map();
+  (state.people || []).concat(state.rows.map(r => r.who)).forEach(value => {
+    splitFilterPeople(value).forEach(name => { const key = name.toLowerCase(); if (!names.has(key)) names.set(key, name); });
+  });
+  return [...names.values()].sort((a, b) => a.localeCompare(b, 'de'));
+}
+// Alle Kriterien müssen auf derselben Zeile passen. Eltern werden erst anschließend
+// als Orientierung ergänzt und erben keine voneinander unabhängigen Kindtreffer.
+function matches(i) {
+  const r = state.rows[i], o = sched && sched.out[i];
+  if (!r || !o) return false;
+  const person = fWho.trim().toLowerCase();
+  if (person && !splitFilterPeople(r.who).some(name => name.toLowerCase() === person)) return false;
+  if (fSt !== 'all') {
     if (fSt === 'late') { if (!isLate(i)) return false; }
     else if (fSt === 'open') { if (isDone(i)) return false; }
-    else if (fSt.startsWith('lane:')) {
-      const id = fSt.slice(5), hit = k => laneOfRow(state.rows[k]).id === id;
-      if (!(kidsOf.length ? kidsOf.some(hit) : hit(i))) return false;
-    }
+    else if (fSt.startsWith('lane:') && stInfo(i).id !== fSt.slice(5)) return false;
   }
   if (fQ) {
-    const q = fQ.toLowerCase(), hay = (r.name + ' ' + r.who + ' ' + sched.psp[i]).toLowerCase();
-    if (!hay.includes(q) && !kidsOf.some(k => (state.rows[k].name + ' ' + state.rows[k].who).toLowerCase().includes(q))) return false;
+    const q = fQ.trim().toLowerCase(), hay = (r.name + ' ' + r.who + ' ' + sched.psp[i]).toLowerCase();
+    if (!hay.includes(q)) return false;
   }
   return true;
 }
-function whoOptions() {
-  const names = [...new Set(state.people.concat(state.rows.map(r => r.who)).map(s => String(s).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
-  if (fWho && !names.includes(fWho)) names.unshift(fWho);
-  return '<option value="">Alle Verantwortlichen</option>' + names.map(n => '<option value="' + esc(n) + '"' + (n === fWho ? ' selected' : '') + '>' + esc(n) + '</option>').join('');
+function visibleRowIndices() {
+  const indices = state.rows.map((_, i) => i);
+  if (!sched) return indices;
+  const visible = new Set();
+  indices.forEach(i => {
+    if (!matches(i)) return;
+    visible.add(i);
+    for (let parent = sched.parent[i]; parent >= 0 && !visible.has(parent); parent = sched.parent[parent]) visible.add(parent);
+  });
+  return indices.filter(i => visible.has(i));
+}
+function whoOptions(names = filterPeople()) {
+  return '<option value="">Alle Personen</option>' + names.map(n => '<option value="' + esc(n) + '"' + (n === fWho ? ' selected' : '') + '>' + esc(n) + '</option>').join('');
+}
+function updateFilterUi() {
+  const names = filterPeople();
+  if (fWho) fWho = names.find(name => name.toLowerCase() === fWho.trim().toLowerCase()) || '';
+  if (fSt.startsWith('lane:') && !lanes().some(lane => 'lane:' + lane.id === fSt)) fSt = 'all';
+  const fw = $('fWho'), fs = $('fSt'), fq = $('fQ');
+  if (fw) {
+    if (document.activeElement !== fw) fw.innerHTML = whoOptions(names);
+    fw.value = fWho;
+  }
+  if (fs) {
+    if (document.activeElement !== fs) {
+      fs.innerHTML = [['all', 'Alle Status'], ['open', 'Nicht erledigt']].concat(lanes().map(lane => ['lane:' + lane.id, lane.name]), [['late', 'Überfällig']])
+        .map(([value, title]) => '<option value="' + esc(value) + '"' + (value === fSt ? ' selected' : '') + '>' + esc(title) + '</option>').join('');
+    }
+    fs.value = fSt;
+  }
+  if (fq && document.activeElement !== fq) fq.value = fQ;
+  const active = Number(!!fQ.trim()) + Number(!!fWho) + Number(fSt !== 'all');
+  const count = $('filterCount'), summary = $('filterSummary'), reset = $('resetFilters');
+  if (count) { count.hidden = !active; count.textContent = String(active); }
+  if (summary) {
+    summary.hidden = !active;
+    const leaf = active && sched ? state.rows.map((_, i) => i).filter(i => sched.out[i] && !sched.out[i].summary) : [];
+    summary.textContent = active ? leaf.filter(matches).length + ' von ' + leaf.length + ' Vorgängen' : '';
+  }
+  if (reset) reset.disabled = !active;
+  const panel = $('vfilters'), toggle = $('toggleFilters'), arrow = $('filterArrow');
+  if (toggle && panel) { toggle.setAttribute('aria-expanded', String(!panel.hidden)); toggle.classList.toggle('active', !!active); }
+  if (arrow && panel) arrow.textContent = panel.hidden ? '▸' : '▾';
+}
+function resetViewFilters() {
+  fWho = ''; fSt = 'all'; fQ = ''; filterEditId = null;
+  if ($('fWho')) $('fWho').value = '';
+  if ($('fSt')) $('fSt').value = 'all';
+  if ($('fQ')) $('fQ').value = '';
+  updateFilterUi();
 }
 
 function setView(v) {
@@ -62,21 +116,13 @@ function setView(v) {
   $('segView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
   $('board').hidden = v !== 'gantt'; $('tabs').hidden = v !== 'gantt';
   document.querySelector('.foot').hidden = v !== 'gantt';
-  $('vfilters').hidden = v === 'gantt';
-  $('fSt').hidden = v === 'kanban';
   $('vList').hidden = v !== 'list'; $('vKanban').hidden = v !== 'kanban'; $('vCal').hidden = v !== 'cal';
-  if (v === 'gantt' && sched) { renderChart(); syncHeaderScroll(); }
-  renderView();
+  if (v === 'gantt' && sched) renderFilteredViews();
+  else renderView();
 }
 function renderView() {
   if (!sched || typeof view === 'undefined') return;
-  const fw = $('fWho'); if (fw && document.activeElement !== fw) fw.innerHTML = whoOptions();
-  const fs = $('fSt');
-  if (fs && document.activeElement !== fs) {
-    if (fSt.startsWith('lane:') && !lanes().some(l => 'lane:' + l.id === fSt)) fSt = 'all';
-    fs.innerHTML = [['all', 'Alle Status'], ['open', 'Nicht erledigt']].concat(lanes().map(l => ['lane:' + l.id, l.name]), [['late', 'Überfällig']])
-      .map(([v, t]) => '<option value="' + esc(v) + '"' + (v === fSt ? ' selected' : '') + '>' + esc(t) + '</option>').join('');
-  }
+  updateFilterUi();
   if (view === 'list') renderList(); else if (view === 'kanban') renderKanban(); else if (view === 'cal') renderCal();
 }
 function gotoRow(i) {
@@ -96,8 +142,8 @@ const stBadge = s => '<span class="stb" style="--lc:' + LANE_COLORS[s.c] + '">' 
 
 /* ---------- Liste ---------- */
 function renderList() {
-  const N = state.rows.length, today = todayDn();
-  let idx = []; for (let i = 0; i < N; i++) if (matches(i)) idx.push(i);
+  const N = state.rows.length;
+  const idx = visibleRowIndices();
   const key = {
     psp: i => i, id: i => state.rows[i].id, name: i => (state.rows[i].name || '').toLowerCase(), who: i => (state.rows[i].who || '~').toLowerCase(),
     S: i => sched.out[i].S, E: i => sched.out[i].E, dur: i => sched.out[i].E - sched.out[i].S, st: i => sched.out[i].summary ? (isDone(i) ? 99 : 50) : laneIx(i), type: i => state.rows[i].type
@@ -121,7 +167,7 @@ function renderList() {
   });
   h += '</tbody></table></div>';
   if (!idx.length) h += '<div class="empty">' + (N ? 'Kein Vorgang passt zum Filter.' : 'Noch keine Vorgänge. Lege oben mit „+ Vorgang“ los.') + '</div>';
-  const leaf = state.rows.map((_, i) => i).filter(i => !sched.out[i].summary);
+  const leaf = idx.filter(i => !sched.out[i].summary && matches(i));
   const lateN = leaf.filter(isLate).length;
   h += '<p class="sumline">' + leaf.length + ' Vorgänge und Meilensteine · ' + lanes().map(l => leaf.filter(i => laneOfRow(state.rows[i]) === l).length + ' ' + esc(l.name)).join(' · ') + (lateN ? ' · <b class="late">' + lateN + ' überfällig</b>' : '') + '</p>';
   $('vList').innerHTML = h;
@@ -130,7 +176,7 @@ function renderList() {
 /* ---------- Kanban ---------- */
 function renderKanban() {
   const N = state.rows.length, L = lanes();
-  const items = []; for (let i = 0; i < N; i++) if (!sched.out[i].summary && matches(i, true)) items.push(i);
+  const items = []; for (let i = 0; i < N; i++) if (!sched.out[i].summary && matches(i)) items.push(i);
   items.sort((a, b) => sched.out[a].S - sched.out[b].S || a - b);
   let h = '<div class="kb" style="grid-template-columns:repeat(' + L.length + ', minmax(220px, 1fr)) 210px">';
   L.forEach((ln, ci) => {
@@ -247,9 +293,13 @@ function renderCal() {
 function initViews() {
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (u.view) view = u.view; } catch (e) { }
   $('segView').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); });
-  $('fWho').addEventListener('change', e => { fWho = e.target.value; renderView(); });
-  $('fSt').addEventListener('change', e => { fSt = e.target.value; renderView(); });
-  $('fQ').addEventListener('input', e => { fQ = e.target.value.trim(); renderView(); });
+  const applyFilters = () => { filterEditId = null; renderFilteredViews(); };
+  $('fWho').addEventListener('change', e => { fWho = e.target.value; applyFilters(); });
+  $('fSt').addEventListener('change', e => { fSt = e.target.value; applyFilters(); });
+  $('fQ').addEventListener('input', e => { fQ = e.target.value.trim(); applyFilters(); });
+  $('toggleFilters').addEventListener('click', () => { $('vfilters').hidden = !$('vfilters').hidden; updateFilterUi(); });
+  $('resetFilters').addEventListener('click', () => { resetViewFilters(); renderFilteredViews(); });
+  updateFilterUi();
   const go = e => { const b = e.target.closest('[data-go]'); if (b) { gotoRow(+b.dataset.go); return true; } return false; };
   $('vList').addEventListener('click', e => {
     const s = e.target.closest('[data-sort]');

@@ -65,7 +65,7 @@ function sanitize(p) {
 }
 
 let state = demoPlan();
-let sched = null, sel = -1, zoom = 3, readOnly = false;
+let sched = null, sel = -1, zoom = 3, readOnly = false, filterEditId = null;
 let hist = [], lastJson = JSON.stringify(state), lastPushT = 0;
 let saving = false, pending = false, saveTimer = 0, edited = false;
 let dl = null, uid = null, userNs = null, roomNs = null;
@@ -99,14 +99,34 @@ function predOptions(i) {
   state.rows.forEach((r, k) => { if (k !== i) h += '<option value="' + r.id + '"' + (String(cur) === String(r.id) ? ' selected' : '') + '>' + r.id + ' · ' + esc(r.name || 'ohne Namen') + '</option>'; });
   return h;
 }
-function renderLeft() {
+// Eine gerade bearbeitete Zeile bleibt bis zum Verlassen der Tabelle sichtbar,
+// auch wenn der neue Name oder die Zuordnung nicht mehr zum Filter passt.
+function ganttRowIndices() {
+  const indices = visibleRowIndices();
+  const i = filterEditId == null ? -1 : state.rows.findIndex(r => r.id === filterEditId);
+  if (i >= 0 && state.rows[i] && !indices.includes(i)) {
+    indices.push(i);
+    for (let p = sched.parent[i]; p >= 0 && !indices.includes(p); p = sched.parent[p]) indices.push(p);
+    indices.sort((a, b) => a - b);
+  }
+  return indices;
+}
+function renderLeft(force = false, indices = ganttRowIndices()) {
   const box = $('rowsL');
-  if (!state.rows.length) {
-    box.innerHTML = '<div class="empty"><b>Noch keine Vorgänge.</b><br>Lege oben mit „+ Vorgang“ los. Untervorgänge fügst du mit „+ Untervorgang“ oder dem Pfeil-Symbol in der Zeile ein.</div>';
+  if (!indices.length) {
+    box.innerHTML = state.rows.length ? '<div class="empty">Kein Vorgang passt zum Filter.</div>' : '<div class="empty"><b>Noch keine Vorgänge.</b><br>Lege oben mit „+ Vorgang“ los. Untervorgänge fügst du mit „+ Untervorgang“ oder dem Pfeil-Symbol in der Zeile ein.</div>';
     return;
   }
-  box.innerHTML = state.rows.map(rowHTML).join('');
+  const shown = [...box.querySelectorAll('.row')];
+  if (!force && shown.length === indices.length && shown.every((el, k) => +el.dataset.i === indices[k])) return;
+  const active = !force && box.contains(document.activeElement) ? document.activeElement : null;
+  const focusRow = active ? rowIdx(active) : -1, field = active && active.dataset.f;
+  let start = null, end = null;
+  if (active) { try { start = active.selectionStart; end = active.selectionEnd; } catch (e) { } }
+  box.innerHTML = indices.map(i => rowHTML(state.rows[i], i)).join('');
   box.querySelectorAll('.row').forEach(el => { el.querySelector('[data-f="pred"]').innerHTML = predOptions(+el.dataset.i); });
+  const target = field && box.querySelector('.row[data-i="' + focusRow + '"] [data-f="' + field + '"]');
+  if (target) { target.focus({ preventScroll: true }); if (start != null) { try { target.setSelectionRange(start, end); } catch (e) { } } }
 }
 function refreshPredOptions() {
   $('rowsL').querySelectorAll('.row').forEach(el => { const s = el.querySelector('[data-f="pred"]'); if (s) s.innerHTML = predOptions(+el.dataset.i); });
@@ -130,8 +150,9 @@ function updateComputed() {
 }
 
 /* ---------- Zeitachse rechts ---------- */
-function renderChart() {
-  const N = state.rows.length, step = state.raster === 'weeks' ? 7 : 1;
+function renderChart(indices = ganttRowIndices()) {
+  const positions = new Map(indices.map((i, k) => [i, k]));
+  const N = indices.length, step = state.raster === 'weeks' ? 7 : 1;
   const colW = (step === 7 ? 38 : 26) * ZOOMS[zoom];
   const first = step === 7 ? mondayOf(sched.P) : sched.P;
   let maxE = sched.P; sched.out.forEach(o => { if (o.E > maxE) maxE = o.E; });
@@ -183,7 +204,7 @@ function renderChart() {
   h += '</svg>';
   $('hdrR').innerHTML = h;
   // Körper
-  if (!N) { $('chart').innerHTML = '<div class="empty">Sobald Vorgänge vorhanden sind, erscheint hier das Gantt-Diagramm.</div>'; return; }
+  if (!N) { $('chart').innerHTML = '<div class="empty">' + (state.rows.length ? 'Kein Vorgang passt zum Filter.' : 'Sobald Vorgänge vorhanden sind, erscheint hier das Gantt-Diagramm.') + '</div>'; return; }
   let s = '<svg width="' + W + '" height="' + H + '" xmlns="http://www.w3.org/2000/svg">';
   if (step === 1) for (let k = 0; k < nCols; k++) {
     const d = first + k, wd = isoWd(d), hl = sched.hol.has(d);
@@ -191,18 +212,18 @@ function renderChart() {
     else if (hl && wd <= 5) s += '<rect class="g-holiday" x="' + (k * colW) + '" y="0" width="' + colW + '" height="' + H + '"/>';
     else if (wd > 5) s += '<rect class="g-weekend" x="' + (k * colW) + '" y="0" width="' + colW + '" height="' + H + '"/>';
   } else if (todayCol >= 0 && todayCol < nCols) s += '<rect class="g-todaybg" x="' + (todayCol * colW) + '" y="0" width="' + colW + '" height="' + H + '"/>';
-  if (sel >= 0) s += '<rect class="g-sel" x="0" y="' + (sel * RH) + '" width="' + W + '" height="' + RH + '"/>';
+  if (positions.has(sel)) s += '<rect class="g-sel" x="0" y="' + (positions.get(sel) * RH) + '" width="' + W + '" height="' + RH + '"/>';
   for (let k = 0; k <= nCols; k++) s += '<line class="' + (step === 1 && isoWd(first + k) !== 1 ? 'g-v' : 'g-vw') + '" x1="' + (k * colW) + '" x2="' + (k * colW) + '" y1="0" y2="' + H + '"/>';
   for (let i = 1; i <= N; i++) s += '<line class="g-h" x1="0" x2="' + W + '" y1="' + (i * RH) + '" y2="' + (i * RH) + '"/>';
   if (todayCol >= 0 && todayCol < nCols) { const tx = X(today) + (step === 7 ? colW / 14 : colW / 2); s += '<line class="g-today" x1="' + tx + '" x2="' + tx + '" y1="0" y2="' + H + '"/>'; }
-  const cy = i => i * RH + RH / 2;
+  const cy = i => positions.get(i) * RH + RH / 2;
   const isMs = i => state.rows[i].type === 'meilenstein';
   const msX = i => X(sched.out[i].S + 0.5);
   const ax = (i, end) => isMs(i) ? msX(i) + (end ? 8 : -8) : (end ? X(sched.out[i].E + 1) : X(sched.out[i].S));
   if (state.lines) {
     let ls = '';
     sched.out.forEach((o, i) => {
-      if (o.pred < 0 || o.err) return;
+      if (o.pred < 0 || o.err || !positions.has(i) || !positions.has(o.pred)) return;
       const r = state.rows[i], rel = r.rel, p = o.pred;
       const x1 = ax(p, !(rel === 'AA' || rel === 'AE')), y1 = cy(p);
       const e = (rel === 'EE' || rel === 'AE') ? -1 : 1, x2 = ax(i, e === -1), y2 = cy(i);
@@ -216,9 +237,9 @@ function renderChart() {
     s += ls;
   }
   s += '<g class="bars">';
-  state.rows.forEach((r, i) => {
-    const o = sched.out[i], y = cy(i);
-    const tip = '<title>' + esc((r.name || 'ohne Namen') + ': ' + fmt(o.S) + (o.E !== o.S ? ' bis ' + fmt(o.E) : '') + (r.type === 'meilenstein' ? '' : ' (' + (o.summary ? (o.E - o.S + 1) + ' Kalendertage' : o.dur + (sched.work ? ' Arbeitstage' : ' Tage')) + ')') + (o.err ? ' · Zirkelbezug' : '')) + '</title>';
+  indices.forEach(i => {
+    const r = state.rows[i], o = sched.out[i], y = cy(i);
+    const tip = '<title>' + esc((r.name || 'ohne Namen') + ': ' + fmt(o.S) + (o.E !== o.S ? ' bis ' + fmt(o.E) : '') + (r.type === 'meilenstein' ? '' : ' (' + (o.summary ? (o.E - o.S + 1) + ' Kalendertage' : o.dur + (sched.work ? ' Arbeitstage' : ' Tage')) + ')') + (o.err ? ' · Zirkelbezug' : '') + (o.pred >= 0 && !positions.has(o.pred) ? ' · Vorgänger ausgeblendet' : '')) + '</title>';
     if (r.type === 'meilenstein') {
       const cx = msX(i);
       s += '<g data-i="' + i + '">' + tip + '<polygon class="bar-ms" points="' + cx + ',' + (y - 8) + ' ' + (cx + 8) + ',' + y + ' ' + cx + ',' + (y + 8) + ' ' + (cx - 8) + ',' + y + '"/>' +
@@ -244,7 +265,12 @@ function renderChart() {
 }
 
 /* ---------- Zusammenspiel ---------- */
-function refresh() { sched = schedule(state); updateComputed(); renderChart(); syncHeaderScroll(); renderView(); }
+function renderFilteredViews(force = false) {
+  renderView();
+  const indices = ganttRowIndices();
+  renderLeft(force, indices); updateComputed(); renderChart(indices); syncHeaderScroll();
+}
+function refresh() { sched = schedule(state); renderFilteredViews(); }
 function paintZoom() {
   const l = $('zoomLbl'); if (l) l.textContent = Math.round(ZOOMS[zoom] * 100) + ' %';
   $('zoomIn').disabled = zoom >= ZMAX; $('zoomOut').disabled = zoom <= 0;
@@ -261,7 +287,7 @@ function renderAll() {
   $('lines').checked = !!state.lines;
   $('banner').hidden = !state.example;
   refreshPeopleList();
-  renderLeft(); sched = schedule(state); updateComputed(); renderChart(); syncHeaderScroll(); renderView();
+  sched = schedule(state); renderFilteredViews(true);
 }
 function changed(force) {
   if (state.example) { delete state.example; $('banner').hidden = true; }
@@ -271,12 +297,12 @@ function changed(force) {
   lastJson = j; edited = true; $('undo').disabled = !hist.length; scheduleSave();
 }
 function structural(focusSel) {
-  renderLeft(); refresh(); changed(true);
+  sched = schedule(state); renderFilteredViews(true); changed(true);
   if (focusSel) { const el = $('rowsL').querySelector(focusSel); if (el) el.focus(); }
 }
 function undo() {
   if (!hist.length) return;
-  const j = hist.pop(); state = JSON.parse(j); lastJson = j; lastPushT = 0; sel = -1; edited = true;
+  const j = hist.pop(); state = JSON.parse(j); lastJson = j; lastPushT = 0; sel = -1; filterEditId = null; edited = true;
   $('undo').disabled = !hist.length; renderAll(); scheduleSave();
 }
 function rowIdx(el) { const r = el.closest('.row'); return r ? +r.dataset.i : -1; }
@@ -289,6 +315,7 @@ function select(i) {
 function onInput(e) {
   const t = e.target, f = t.dataset.f; if (!f) return;
   const i = rowIdx(t), r = state.rows[i]; if (!r) return;
+  filterEditId = r.id;
   if (f === 'type') { r.type = t.value; changedFirst(); structural('.row[data-i="' + i + '"] [data-f="type"]'); return; }
   if (f === 'pred') r.pred = t.value === '' ? '' : Number(t.value);
   else if (f === 'lag') r.lag = t.value === '' ? '' : String(parseInt(t.value, 10) || 0);
@@ -299,6 +326,7 @@ function onInput(e) {
 function changedFirst() { lastPushT = 0; }
 function addRow(type, at) {
   if (readOnly) return;
+  resetViewFilters();
   const r = { id: state.nextId++, type, name: '', who: '', pred: '', rel: 'EA', lag: '', fixed: '', dur: '', st: '' };
   let idx = at;
   if (idx == null) {
@@ -394,7 +422,8 @@ async function persist() {
   saving = false; if (pending) { pending = false; persist(); }
 }
 function applyProject(id, p) {
-  curId = id; state = p; lastJson = JSON.stringify(state); hist = []; lastPushT = 0; sel = -1; $('undo').disabled = true;
+  curId = id; state = p; lastJson = JSON.stringify(state); hist = []; lastPushT = 0; sel = -1; filterEditId = null; $('undo').disabled = true;
+  resetViewFilters();
   saveUi({ active: id }); renderAll();
 }
 async function switchTo(id) {
@@ -616,6 +645,10 @@ function boot() {
   rl.addEventListener('input', onInput); rl.addEventListener('click', onClick);
   rl.addEventListener('change', e => { if (e.target.dataset.f === 'name') refreshPredOptions(); });
   rl.addEventListener('focusin', e => { const i = rowIdx(e.target); if (i >= 0) select(i); });
+  rl.addEventListener('focusout', e => {
+    if (rl.contains(e.relatedTarget)) return;
+    queueMicrotask(() => { if (!rl.contains(document.activeElement)) { filterEditId = null; renderFilteredViews(); } });
+  });
   $('chart').addEventListener('click', e => { const g = e.target.closest('[data-i]'); if (g) select(+g.dataset.i); });
   $('pname').addEventListener('input', e => { state.name = e.target.value; refreshSelect(); changed(false); });
   $('projSel').addEventListener('change', e => switchTo(e.target.value));
