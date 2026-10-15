@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Einrichtung – Terminplaner</title>
+<style>
+:root{--bg:#f1f4f2;--panel:#fff;--ink:#16231d;--muted:#5a6a62;--line:#d3dbd6;--accent:#26664b;--bad:#b23a2b}
+@media (prefers-color-scheme:dark){:root{--bg:#111916;--panel:#18221d;--ink:#e5eee9;--muted:#92a39a;--line:#2c3a33;--accent:#5db58d;--bad:#ea7968;color-scheme:dark}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px system-ui,sans-serif;display:flex;justify-content:center;padding:40px 16px}
+form{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;width:min(420px,100%);display:flex;flex-direction:column;gap:12px;box-sizing:border-box}
+h1{font-size:20px;margin:0}p{margin:0;color:var(--muted);font-size:14px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+input{font:inherit;padding:9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+button{font:inherit;padding:10px;border:0;border-radius:6px;background:var(--accent);color:#fff;cursor:pointer}
+#err{color:var(--bad);min-height:20px;font-size:14px}
+</style></head><body>
+<form id="f">
+  <h1>Terminplaner einrichten</h1>
+  <p>Lege den ersten Administrator an. Den Einrichtungsschlüssel hast du in Vercel als <code>SETUP_KEY</code> hinterlegt.</p>
+  <label>Einrichtungsschlüssel<input id="key" type="password" autocomplete="off" required></label>
+  <label>Name<input id="name" autocomplete="username" required></label>
+  <label>Passwort (mindestens 8 Zeichen)<input id="pw" type="password" autocomplete="new-password" required minlength="8"></label>
+  <div id="err"></div>
+  <button>Einrichten</button>
+</form>
+<script>
+const $ = id => document.getElementById(id);
+fetch('api/tp?a=setup_state', { cache: 'no-store' }).then(r => r.json()).then(s => {
+  if (!s.needsSetup) location.href = 'index.html';
+  else if (!s.keySet) $('err').textContent = 'In Vercel fehlt noch die Umgebungsvariable SETUP_KEY.';
+}).catch(() => { $('err').textContent = 'Server nicht erreichbar.'; });
+$('f').addEventListener('submit', async e => {
+  e.preventDefault(); $('err').textContent = '';
+  try {
+    const r = await fetch('api/tp?a=setup', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-TP': '1' }, body: JSON.stringify({ key: $('key').value, name: $('name').value, password: $('pw').value }) });
+    const j = await r.json();
+    if (!r.ok) { $('err').textContent = j.error || 'Einrichtung fehlgeschlagen'; return; }
+    location.href = 'admin.html';
+  } catch (x) { $('err').textContent = 'Server nicht erreichbar.'; }
+});
+</script></body></html>

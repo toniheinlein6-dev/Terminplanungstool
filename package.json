@@ -1,0 +1,22 @@
+{
+  "name": "terminplaner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gantt-Terminplaner mit Liste, Kanban, Kalender, PDF-Export und Teamarbeit (Vercel + Postgres)",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs && node scripts/dev-server.mjs",
+    "test": "node scripts/build.mjs && node src/test_logic.cjs"
+  },
+  "dependencies": {
+    "jspdf": "4.2.1",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "pg-mem": "^3.0.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

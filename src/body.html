@@ -1,0 +1,126 @@
+<header class="top">
+  <div class="row1">
+    <h1>Terminplaner</h1>
+    <div class="fld"><label for="projSel">Projekt</label><div class="pj"><select id="projSel" class="in" aria-label="Projekt wählen"></select><button class="btn" id="newProj" type="button">+ Neu</button></div></div>
+    <div class="fld"><label for="pname">Projektname</label><input id="pname" class="in" type="text" placeholder="Projektname" autocomplete="off"></div>
+    <span class="spacer"></span>
+    <span class="online" id="online" aria-label="Gerade online"></span>
+    <span class="last" id="last"></span>
+    <span class="status" id="status" data-k="local"><i></i><span id="statusTxt">Wird geladen</span></span>
+    <button class="btn" id="undo" type="button" disabled>Rückgängig</button>
+    <button class="btn" id="openPanel" type="button">Listen &amp; Daten</button>
+  </div>
+  <div class="row2">
+    <button class="btn toggleSet" id="toggleSet" type="button" aria-expanded="false">Einstellungen</button>
+    <div class="settings">
+    <div class="fld"><label for="pstart">Projektstart</label><input id="pstart" class="in" type="date"></div>
+    <div class="fld"><span id="lblRaster">Zeitraster</span>
+      <div class="seg" id="segRaster" role="group" aria-labelledby="lblRaster"><button type="button" data-v="days">Tage</button><button type="button" data-v="weeks">Wochen</button></div></div>
+    <div class="fld"><span id="lblMode">Dauer in</span>
+      <div class="seg" id="segMode" role="group" aria-labelledby="lblMode"><button type="button" data-v="work">Arbeitstagen</button><button type="button" data-v="cal">Kalendertagen</button></div></div>
+    <div class="fld"><span id="lblZoom">Zoom</span>
+      <div class="seg" role="group" aria-labelledby="lblZoom"><button type="button" id="zoomOut" aria-label="Zeitachse verkleinern">−</button><button type="button" id="zoomIn" aria-label="Zeitachse vergrößern">+</button></div></div>
+    <label class="chk"><input type="checkbox" id="lines"> Abhängigkeitslinien</label>
+    </div>
+    <span class="spacer"></span>
+    <button class="btn primary" id="addV" type="button">+ Vorgang</button>
+    <button class="btn" id="addU" type="button">+ Untervorgang</button>
+    <button class="btn" id="addM" type="button">+ Meilenstein</button>
+  </div>
+</header>
+
+<div class="banner ro-banner" id="roBanner" hidden><span><b>Nur Ansicht.</b> Du kannst die Projekte ansehen und exportieren, aber nicht ändern.</span></div>
+<div class="banner" id="banner" hidden>
+  <span>Das ist ein Beispielplan. Überschreibe die Einträge oder beginne mit einem leeren Plan.</span>
+  <button class="btn" id="blank" type="button">Leerer Plan</button>
+</div>
+
+<div class="viewbar">
+  <div class="seg" id="segView" role="group" aria-label="Ansicht">
+    <button type="button" data-v="gantt" aria-pressed="true">Gantt</button><button type="button" data-v="list" aria-pressed="false">Liste</button><button type="button" data-v="kanban" aria-pressed="false">Kanban</button><button type="button" data-v="cal" aria-pressed="false">Kalender</button>
+  </div>
+  <div class="tabs seg" id="tabs" role="tablist">
+    <button type="button" role="tab" data-tab="table" aria-pressed="true">Tabelle</button>
+    <button type="button" role="tab" data-tab="chart" aria-pressed="false">Diagramm</button>
+  </div>
+  <div class="vfilters" id="vfilters" hidden>
+    <input id="fQ" class="in" type="search" placeholder="Suchen" aria-label="Vorgänge durchsuchen" autocomplete="off">
+    <select id="fWho" class="in" aria-label="Nach Verantwortlichem filtern"><option value="">Alle Verantwortlichen</option></select>
+    <select id="fSt" class="in" aria-label="Nach Status filtern"><option value="all">Alle Status</option><option value="open">Nicht erledigt</option><option value="">Offen</option><option value="arbeit">In Arbeit</option><option value="fertig">Erledigt</option><option value="late">Überfällig</option></select>
+  </div>
+  <span class="spacer"></span>
+  <button class="btn" id="pdfBtn" type="button" title="Gantt-Diagramm als PDF, eine Seite im Querformat">PDF exportieren</button>
+</div>
+
+<main class="board" id="board" data-tab="table">
+  <section class="pane left" id="paneL" aria-label="Vorgänge">
+    <div class="hdr" id="hdrL">
+      <div class="grid hrow" id="hrowL">
+        <div></div><div title="Feste Nummer, auf die sich Vorgänger beziehen">Nr</div><div title="Gliederung, nur zur Anzeige">PSP</div><div>Typ</div><div>Vorgang</div><div>Verantw.</div>
+        <div title="Vorgänger über die feste Nr">Vorgänger</div><div title="EA Ende→Anfang, AA Anfang→Anfang, EE Ende→Ende, AE Anfang→Ende">Bez.</div><div title="Verschiebung in Tagen, negativ = Vorlauf">Versatz</div><div title="Frühester Starttermin, optional">Fester Start</div><div>Dauer</div><div>Start</div><div>Ende</div>
+      </div>
+    </div>
+    <div class="body" id="bodyL"><div id="rowsL"></div></div>
+  </section>
+  <div class="split" id="split" role="separator" aria-orientation="vertical" aria-label="Breite der Tabelle ändern" tabindex="0"></div>
+  <section class="pane right" id="paneR" aria-label="Zeitachse">
+    <div class="hdr" id="hdrR"></div>
+    <div class="body" id="bodyR"><div class="chart" id="chart"></div></div>
+  </section>
+</main>
+<section class="vw" id="vList" aria-label="Listenansicht" hidden></section>
+<section class="vw" id="vKanban" aria-label="Kanban-Board" hidden></section>
+<section class="vw" id="vCal" aria-label="Kalender" hidden></section>
+
+<footer class="foot">
+  <span class="lg"><i style="background:var(--bar-sum)"></i>Sammelvorgang</span>
+  <span class="lg"><i style="background:var(--bar-task)"></i>Vorgang</span>
+  <span class="lg"><i style="background:var(--bar-sub)"></i>Untervorgang</span>
+  <span class="lg"><i class="d" style="background:var(--bar-ms)"></i>Meilenstein</span>
+  <span class="lg"><i class="l"></i>Abhängigkeit</span>
+  <span class="lg"><i class="t"></i>Heute</span>
+  <span class="rels">EA Ende→Anfang · AA Anfang→Anfang · EE Ende→Ende · AE Anfang→Ende</span>
+</footer>
+
+<div class="scrim" id="scrim" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="ptitle">
+    <div class="head"><h2 id="ptitle">Listen &amp; Daten</h2><button class="btn" id="closePanel" type="button">Schließen</button></div>
+    <div id="teamBox" class="team" hidden>
+      <h3>Team</h3>
+      <div id="teamInfo"></div>
+    </div>
+    <div class="editonly">
+      <h3>Dieses Projekt</h3>
+      <div class="btns"><button class="btn" id="dupProj" type="button">Duplizieren</button><button class="btn" id="delProj" type="button">Projekt löschen</button></div>
+      <p class="hint">Jedes Projekt hat eigene Vorgänge, Verantwortliche und Feiertage. Ein neues Projekt übernimmt Raster, Listen und Feiertage des aktuellen.</p>
+    </div>
+    <div class="editonly">
+      <h3>Verantwortliche</h3>
+      <textarea id="people" class="in" spellcheck="false" aria-label="Verantwortliche, eine Person pro Zeile"></textarea>
+      <p class="hint">Eine Person oder ein Gewerk pro Zeile. Die Namen erscheinen als Vorschlag in der Spalte Verantwortlich.</p>
+    </div>
+    <div class="editonly">
+      <h3>Feiertage und freie Tage</h3>
+      <textarea id="hols" class="in" spellcheck="false" aria-label="Feiertage, ein Datum pro Zeile"></textarea>
+      <p class="hint" id="holsHint">Ein Eintrag pro Zeile, zum Beispiel 26.03.2027 Karfreitag. Sie zählen nicht als Arbeitstage.</p>
+    </div>
+    <div>
+      <h3>Daten</h3>
+      <div class="btns">
+        <button class="btn" id="expJson" type="button">Als JSON sichern</button>
+        <button class="btn" id="expCsv" type="button">Als CSV für Excel</button>
+        <label class="btn editonly" for="impFile">JSON laden</label><input id="impFile" type="file" accept=".json,application/json" hidden>
+        <button class="btn editonly" id="loadDemo" type="button">Beispielplan laden</button>
+        <button class="btn editonly" id="blank2" type="button">Leerer Plan</button>
+      </div>
+      <p class="hint">Der Plan wird automatisch gespeichert. Leeren und Laden lassen sich mit Rückgängig zurücknehmen.</p>
+      <div id="outWrap" hidden>
+        <p class="hint">Speichern als Datei ist hier nicht möglich. Kopiere den Inhalt und lege ihn in einer Datei ab.</p>
+        <textarea id="outbox" class="in" readonly aria-label="Exportierter Inhalt"></textarea>
+        <div class="btns"><button class="btn" id="copyOut" type="button">Kopieren</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden><span id="toastTxt"></span><button type="button" id="toastBtn" hidden></button></div>
+<datalist id="peopleList"></datalist>
