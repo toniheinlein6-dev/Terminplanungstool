@@ -42,7 +42,7 @@ async function offerBin(name, buf) {
 }
 
 function buildPdf(JsPDF) {
-  const rows = state.rows, N = rows.length, o = sched.out, today = todayDn();
+  const rows = state.rows.map(row => ({ ...row, who: assigneeNames(row) })), N = rows.length, o = sched.out, today = todayDn();
   const M = 28, RH = 16, HH = 36, step = state.raster === 'weeks' ? 7 : 1;
   // Spalten ab Nr; leere Spalten (Versatz, Fester Start …) entfallen
   const anyPred = o.some(x => x.pred >= 0), anyLag = rows.some(r => parseInt(r.lag, 10)), anyFixed = rows.some(r => r.fixed);

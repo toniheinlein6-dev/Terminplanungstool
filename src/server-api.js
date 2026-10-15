@@ -54,6 +54,7 @@
   window.tpAvatars = who => String(who || '').split(/\s*(?:,|;|\/|&|\+|\bund\b)\s*/i).filter(Boolean)
     .map(n => findMember(n)).filter(Boolean).map(m => avatarHtml(m.name, m.avatar)).join('');
   window.TP_TEAM_NAMES = () => team.map(m => m.name);
+  window.TP_TEAM = () => team.map(m => ({ id: m.id, name: m.name, avatar: m.avatar }));
   async function loadTeam() {
     try {
       const r = await api('team'); if (!r.ok) return;
@@ -134,7 +135,7 @@
       '<div><h3>Profilbild</h3><div class="avrow"><span id="pAv"></span><div class="btns"><label class="btn" for="pFile">Bild wählen</label><input id="pFile" type="file" accept="image/*" hidden><button class="btn" type="button" id="pAvDel">Entfernen</button></div></div><p class="hint">Das Bild wird quadratisch zugeschnitten und verkleinert.</p></div>' +
       '<div><h3>E-Mail und Erinnerungen</h3><label class="pf">E-Mail-Adresse<input id="pMail" class="in" type="email" autocomplete="email" value="' + esc(me.email) + '"></label>' +
       '<label class="chk"><input type="checkbox" id="pRemind"' + (me.remind ? ' checked' : '') + '> Erinnerung per E-Mail 2 Tage vor dem Ende meiner Vorgänge</label>' +
-      '<p class="hint">Erinnert wird an Vorgänge, bei denen unter „Verantwortlich“ <b>' + esc(me.name) + '</b> eingetragen ist.</p>' +
+      '<p class="hint">Erinnert wird an Vorgänge, denen du als Benutzer zugeordnet bist.</p>' +
       '<div class="btns"><button class="btn primary" type="button" id="pSave">Profil speichern</button><span id="pMsg" class="msg"></span></div></div>' +
       '<div><h3>Passwort ändern</h3><label class="pf">Bisheriges Passwort<input id="pOld" class="in" type="password" autocomplete="current-password"></label>' +
       '<label class="pf">Neues Passwort (mindestens 8 Zeichen)<input id="pNew" class="in" type="password" autocomplete="new-password"></label>' +

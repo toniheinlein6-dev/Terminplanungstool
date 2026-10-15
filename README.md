@@ -5,6 +5,7 @@ Gantt-Terminplaner für die gemeinsame Projektplanung im Team.
 **Funktionen**
 
 - Vorgänge, Untervorgänge (Sammelvorgänge) und Meilensteine mit Verantwortlichen
+- Verantwortliche aus den Benutzerkonten suchen und per Häkchen zuordnen; mehrere Personen als Initialen mit vollständigen Namen beim Darüberfahren anzeigen
 - Abhängigkeiten Ende-Anfang, Anfang-Anfang, Ende-Ende, Anfang-Ende mit Versatz, grafisch als Pfeile
 - Dauer in Arbeitstagen (mit Feiertagen) oder Kalendertagen, Raster Tage oder Wochen
 - Ansichten: Gantt, Liste, Kanban (eigene Bahnen), Kalender
@@ -58,7 +59,7 @@ Der Terminplaner verschickt Erinnerungen und Ticket-Benachrichtigungen. Dafür e
 
 Unter *Verwaltung → E-Mail und Erinnerungen* zeigt der Terminplaner, ob der Versand eingerichtet ist, und kann eine Testmail schicken.
 
-**Erinnerungen:** Täglich gegen 7 Uhr (Winterzeit 6 Uhr) prüft der Job alle Projekte. Wer bei einem noch nicht erledigten Vorgang unter „Verantwortlich“ mit seinem Benutzernamen eingetragen ist (mehrere Namen durch Komma trennen), eine E-Mail-Adresse hinterlegt und Erinnerungen eingeschaltet hat, bekommt 2 Tage vor dem Ende eine Mail. Jede Erinnerung geht nur einmal raus; verschiebt sich das Ende, wird neu erinnert.
+**Erinnerungen:** Täglich gegen 7 Uhr (Winterzeit 6 Uhr) prüft der Job alle Projekte. Wer einem noch nicht erledigten Vorgang als Benutzer zugeordnet ist, eine E-Mail-Adresse hinterlegt und Erinnerungen eingeschaltet hat, bekommt 2 Tage vor dem Ende eine Mail. Bestehende Namenseinträge werden bei eindeutiger Übereinstimmung zugeordnet. Jede Erinnerung geht nur einmal raus; verschiebt sich das Ende, wird neu erinnert.
 
 ## Lokal ausprobieren
 

@@ -135,6 +135,33 @@ h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; whit
 .row input:hover, .row select:hover { border-color: var(--line); }
 .row input:focus, .row select:focus { background: var(--surface); border-color: var(--accent); outline: none; }
 .row input:disabled, .row select:disabled { opacity: 0.35; cursor: default; background: transparent; border-color: transparent; }
+.who-picker-btn { display: flex; align-items: center; gap: 3px; width: 100%; min-width: 0; height: 28px; padding: 2px 4px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--ink); cursor: pointer; }
+.who-picker-btn:hover, .who-picker-btn[aria-expanded="true"] { border-color: var(--line); background: var(--surface); }
+.who-initials { display: inline-flex; flex: none; align-items: center; justify-content: center; min-width: 24px; height: 22px; padding: 0 4px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); font-size: 10px; font-weight: 600; line-height: 1; }
+.who-more, .who-empty { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.who-caret { margin-left: auto; color: var(--muted); font-size: 10px; }
+.people-picker { box-sizing: border-box; position: fixed; z-index: 35; display: flex; flex-direction: column; width: 340px; max-width: calc(100vw - 16px); max-height: min(440px, calc(100dvh - 16px)); padding: 12px; gap: 9px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); box-shadow: 0 10px 32px rgba(0, 0, 0, .2); overflow: hidden; }
+.people-picker[hidden] { display: none; }
+.people-picker-head { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 10px; }
+.people-picker-head h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.people-picker-head .btn { padding: 4px 7px; font-size: 11px; }
+.people-picker-row { flex: none; margin: 0; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; max-height: 36px; overflow: auto; }
+.people-picker-search { display: flex; flex: none; flex-direction: column; gap: 4px; }
+.people-picker-search label { font-size: 11px; color: var(--muted); }
+.people-picker-search .in { width: 100%; min-width: 0; }
+.people-picker-hint { flex: none; margin: 0; color: var(--muted); font-size: 11px; }
+.people-picker-options { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.people-picker-group { min-width: 0; padding: 0; margin: 0 0 10px; border: 0; }
+.people-picker-group:last-child { margin-bottom: 0; }
+.people-picker-group legend { padding: 0 0 4px; font-size: 11px; font-weight: 600; color: var(--muted); }
+.people-picker-option { display: flex; align-items: flex-start; gap: 9px; padding: 8px 6px; border-radius: 5px; cursor: pointer; }
+.people-picker-option:hover, .people-picker-option:focus-within { background: var(--sel); }
+.people-picker-option input { flex: none; width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--accent); }
+.people-picker-option input:disabled { opacity: .65; }
+.people-picker-name { min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
+.people-picker-name small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+.people-picker-empty { margin: 8px 0; font-size: 12px; color: var(--muted); }
+.people-picker-status { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .row.sum { background: var(--sumrow); }
 .row.sum input[data-f="name"], .row.sum .calc { font-weight: 600; }
 .row.sel { background: var(--sel); }

@@ -18,7 +18,7 @@ function app() {
     document: { getElementById: el, querySelector: el, activeElement: null },
     localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) } });
   const run = code => vm.runInContext(code, context);
-  run(['logic.js', 'ui.js', 'views.js'].map(file => fs.readFileSync(path.join(__dirname, file), 'utf8')).join('\n'));
+  run(['logic.js', 'people.js', 'ui.js', 'views.js', 'assignee-picker.js'].map(file => fs.readFileSync(path.join(__dirname, file), 'utf8')).join('\n'));
   run('todayDn = () => dn(2026, 10, 15)');
   const data = expression => JSON.parse(run(`JSON.stringify(${expression})`));
   const load = plan => { context.fixture = plan; run('state = JSON.parse(JSON.stringify(fixture)); sched = schedule(state); resetViewFilters()'); };

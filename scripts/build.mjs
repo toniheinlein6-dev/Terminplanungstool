@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const rd = f => fs.readFileSync(path.join(root, 'src', f), 'utf8');
 const head = rd('head.html'), body = rd('body.html');
-const js = ['logic.js', 'ui.js', 'views.js', 'pdf.js'].map(rd).join('\n');
+const js = ['logic.js', 'people.js', 'ui.js', 'views.js', 'assignee-picker.js', 'pdf.js'].map(rd).join('\n');
 const app = "(function(){\n'use strict';\n" + js + "\nboot();\n})();\n";
 
 // 1) Website für Vercel: ohne externe Schriften und CDNs (DSGVO), PDF-Baustein lokal

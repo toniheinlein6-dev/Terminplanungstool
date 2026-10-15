@@ -34,8 +34,9 @@ function durTxt(i) {
 function rangeTxt(i) { const o = sched.out[i]; return o.E === o.S ? fmt(o.S) : fmt(o.S) + ' – ' + fmt(o.E); }
 const splitFilterPeople = value => String(value || '').split(/\s*(?:,|;|\/|&|\+|\bund\b)\s*/i).map(name => name.trim()).filter(Boolean);
 function filterPeople() {
+  if (hasUserDirectory()) return assigneeTeam().map(user => user.name);
   const names = new Map();
-  (state.people || []).concat(state.rows.map(r => r.who)).forEach(value => {
+  (state.people || []).concat(state.rows.map(assigneeNames)).forEach(value => {
     splitFilterPeople(value).forEach(name => { const key = name.toLowerCase(); if (!names.has(key)) names.set(key, name); });
   });
   return [...names.values()].sort((a, b) => a.localeCompare(b, 'de'));
@@ -46,14 +47,15 @@ function matches(i) {
   const r = state.rows[i], o = sched && sched.out[i];
   if (!r || !o) return false;
   const person = fWho.trim().toLowerCase();
-  if (person && !splitFilterPeople(r.who).some(name => name.toLowerCase() === person)) return false;
+  if (person.startsWith('user:')) { if (!assigneeEntries(r).some(entry => entry.id === fWho.slice(5))) return false; }
+  else if (person && !splitFilterPeople(assigneeNames(r)).some(name => name.toLowerCase() === person)) return false;
   if (fSt !== 'all') {
     if (fSt === 'late') { if (!isLate(i)) return false; }
     else if (fSt === 'open') { if (isDone(i)) return false; }
     else if (fSt.startsWith('lane:') && stInfo(i).id !== fSt.slice(5)) return false;
   }
   if (fQ) {
-    const q = fQ.trim().toLowerCase(), hay = (r.name + ' ' + r.who + ' ' + sched.psp[i]).toLowerCase();
+    const q = fQ.trim().toLowerCase(), hay = (r.name + ' ' + assigneeNames(r) + ' ' + sched.psp[i]).toLowerCase();
     if (!hay.includes(q)) return false;
   }
   return true;
@@ -70,11 +72,13 @@ function visibleRowIndices() {
   return indices.filter(i => visible.has(i));
 }
 function whoOptions(names = filterPeople()) {
+  if (hasUserDirectory()) return '<option value="">Alle Personen</option>' + assigneeTeam().map(user => '<option value="user:' + esc(user.id) + '"' + (fWho === 'user:' + user.id ? ' selected' : '') + '>' + esc(user.name) + '</option>').join('');
   return '<option value="">Alle Personen</option>' + names.map(n => '<option value="' + esc(n) + '"' + (n === fWho ? ' selected' : '') + '>' + esc(n) + '</option>').join('');
 }
 function updateFilterUi() {
   const names = filterPeople();
-  if (fWho) fWho = names.find(name => name.toLowerCase() === fWho.trim().toLowerCase()) || '';
+  if (hasUserDirectory()) { if (fWho && !assigneeTeam().some(user => 'user:' + user.id === fWho)) fWho = ''; }
+  else if (fWho) fWho = names.find(name => name.toLowerCase() === fWho.trim().toLowerCase()) || '';
   if (fSt.startsWith('lane:') && !lanes().some(lane => 'lane:' + lane.id === fSt)) fSt = 'all';
   const fw = $('fWho'), fs = $('fSt'), fq = $('fQ');
   if (fw) {
@@ -145,7 +149,7 @@ function renderList() {
   const N = state.rows.length;
   const idx = visibleRowIndices();
   const key = {
-    psp: i => i, id: i => state.rows[i].id, name: i => (state.rows[i].name || '').toLowerCase(), who: i => (state.rows[i].who || '~').toLowerCase(),
+    psp: i => i, id: i => state.rows[i].id, name: i => (state.rows[i].name || '').toLowerCase(), who: i => (assigneeNames(state.rows[i]) || '~').toLowerCase(),
     S: i => sched.out[i].S, E: i => sched.out[i].E, dur: i => sched.out[i].E - sched.out[i].S, st: i => sched.out[i].summary ? (isDone(i) ? 99 : 50) : laneIx(i), type: i => state.rows[i].type
   }[sortK] || (i => i);
   idx.sort((a, b) => { const x = key(a), y = key(b); return (x < y ? -1 : x > y ? 1 : a - b) * sortDir; });
@@ -161,7 +165,7 @@ function renderList() {
     h += '<tr class="' + (o.summary ? 'sum' : '') + (isDone(i) ? ' done' : '') + '">' +
       '<td class="n">' + r.id + '</td><td class="n">' + sched.psp[i] + '</td>' +
       '<td class="nm' + (tree && sub ? ' ind' : '') + '"><button type="button" class="go" data-go="' + i + '" title="Im Gantt-Diagramm öffnen">' + (r.type === 'meilenstein' ? '<i class="msd"></i>' : '') + esc(r.name || 'ohne Namen') + '</button></td>' +
-      '<td>' + (o.summary ? 'Sammelvorgang' : TYPES[r.type]) + '</td><td class="whoc">' + avs(r.who) + esc(r.who || '') + '</td>' +
+      '<td>' + (o.summary ? 'Sammelvorgang' : TYPES[r.type]) + '</td><td class="whoc">' + avs(assigneeNames(r)) + esc(assigneeNames(r)) + '</td>' +
       '<td class="d">' + fmt(o.S) + '</td><td class="d' + (late ? ' late' : '') + '">' + fmt(o.E) + (late ? ' <span class="lt">überfällig</span>' : '') + '</td>' +
       '<td class="n">' + durTxt(i) + '</td><td>' + (o.summary ? stBadge(s) : stSelect(i, s.id)) + '</td><td class="n">' + esc(pred) + '</td></tr>';
   });
@@ -202,7 +206,7 @@ function renderKanban() {
         '<button type="button" class="cname" data-go="' + i + '" title="Im Gantt-Diagramm öffnen">' + esc(r.name || 'ohne Namen') + '</button>' +
         (par >= 0 ? '<div class="cpar">' + esc(state.rows[par].name || '') + '</div>' : '') +
         '<div class="cmeta"><span>' + rangeTxt(i) + '</span>' + (r.type === 'meilenstein' ? '' : '<span>' + durTxt(i) + '</span>') + '</div>' +
-        '<div class="cfoot">' + (r.who ? '<span class="who">' + avs(r.who) + esc(r.who) + '</span>' : '<span class="who none">ohne Verantwortlichen</span>') +
+        '<div class="cfoot">' + (assigneeNames(r) ? '<span class="who">' + avs(assigneeNames(r)) + esc(assigneeNames(r)) + '</span>' : '<span class="who none">ohne Verantwortlichen</span>') +
         '<span class="mv"><button type="button" class="ib" data-mv="-1" data-i="' + i + '" aria-label="In die linke Bahn"' + (ci === 0 ? ' disabled' : '') + '>‹</button><button type="button" class="ib" data-mv="1" data-i="' + i + '" aria-label="In die rechte Bahn"' + (ci === L.length - 1 ? ' disabled' : '') + '>›</button></span></div></article>';
     });
     if (!list.length) h += '<div class="kempty">Keine Einträge</div>';
@@ -279,9 +283,9 @@ function renderCal() {
       const i = sg.i, r = state.rows[i], o = sched.out[i], s = stInfo(i);
       const left = (sg.s - ws) / 7 * 100, width = (sg.e - sg.s + 1) / 7 * 100;
       const cls = r.type === 'meilenstein' ? 'ms' : o.summary ? 'sum' : (r.type === 'untervorgang' && sched.parent[i] >= 0 ? 'sub' : 'task');
-      const tip = (r.name || 'ohne Namen') + ': ' + rangeTxt(i) + (r.who ? ' · ' + r.who : '') + ' · ' + s.name + (isLate(i) ? ' · überfällig' : '');
+      const tip = (r.name || 'ohne Namen') + ': ' + rangeTxt(i) + (assigneeNames(r) ? ' · ' + assigneeNames(r) : '') + ' · ' + s.name + (isLate(i) ? ' · überfällig' : '');
       h += '<button type="button" class="cb ' + cls + (isDone(i) ? ' done' : '') + (isLate(i) ? ' late' : '') + (sg.s > o.S ? ' cl' : '') + (sg.e < o.E ? ' cr' : '') + '" data-go="' + i + '" title="' + esc(tip) + '" style="left:calc(' + left + '% + 3px);width:calc(' + width + '% - 6px);top:' + (TOP + sg.l * LH) + 'px">' +
-        (cls === 'ms' ? '<i class="msd"></i>' : '') + '<span>' + esc(r.name || 'ohne Namen') + (r.who && cls !== 'sum' ? ' · ' + esc(r.who) : '') + '</span></button>';
+        (cls === 'ms' ? '<i class="msd"></i>' : '') + '<span>' + esc(r.name || 'ohne Namen') + (assigneeNames(r) && cls !== 'sum' ? ' · ' + esc(assigneeNames(r)) : '') + '</span></button>';
     });
     h += '</div>';
   }
@@ -372,7 +376,8 @@ async function teamInit() {
 
 // Schreibrechte fehlen: Bearbeitung sperren, Hinweis zeigen und, falls schon lokal getippt wurde, den gespeicherten Stand wiederherstellen
 function lockReadOnly(afterFailedSave) {
-  readOnly = true; document.body.classList.add('ro'); $('rowsL').inert = true;
+  readOnly = true; document.body.classList.add('ro'); $('rowsL').inert = false;
+  if (sched) updateComputed();
   const b = $('roBanner'); b.hidden = false;
   if (afterFailedSave) {
     b.querySelector('span').innerHTML = '<b>Nur Ansicht.</b> Deine Änderung wurde nicht gespeichert, weil dein Zugang nur Lesen erlaubt. ' +
@@ -385,4 +390,4 @@ function lockReadOnly(afterFailedSave) {
 
 /* ---------- Profilbilder der Teammitglieder (nur Webversion mit Benutzerkonten) ---------- */
 const avs = who => (typeof window.tpAvatars === 'function' && who) ? window.tpAvatars(who) : '';
-window.__teamChanged = () => { if (!sched) return; refreshPeopleList(); renderView(); };
+window.__teamChanged = () => { if (!sched) return; refreshPeopleList(); renderFilteredViews(); };

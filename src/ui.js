@@ -58,7 +58,8 @@ function sanitize(p) {
     s.rows.push({ id, type: TYPES[r.type] ? r.type : 'vorgang', name: String(r.name || ''), who: String(r.who || ''),
       pred: (r.pred === '' || r.pred == null || !Number.isFinite(Number(r.pred))) ? '' : Number(r.pred), rel: RELS.includes(r.rel) ? r.rel : 'EA',
       lag: r.lag === '' || r.lag == null ? '' : String(parseInt(r.lag, 10) || 0), fixed: parseISO(r.fixed) != null ? r.fixed : '',
-      dur: r.dur === '' || r.dur == null ? '' : String(Math.max(0, parseInt(r.dur, 10) || 0)), st: typeof r.st === 'string' && /^[A-Za-z0-9_-]{0,40}$/.test(r.st) ? r.st : '' });
+      dur: r.dur === '' || r.dur == null ? '' : String(Math.max(0, parseInt(r.dur, 10) || 0)), st: typeof r.st === 'string' && /^[A-Za-z0-9_-]{0,40}$/.test(r.st) ? r.st : '',
+      ...(Array.isArray(r.assignees) ? { assignees: sanitizeAssignees(r.assignees) } : {}) });
   });
   s.nextId = max + 1; if (p.example) s.example = true;
   return s;
@@ -85,7 +86,7 @@ function rowHTML(r, i) {
     '<div class="num">' + r.id + '</div><div class="num" data-c="psp"></div>' +
     '<div><select data-f="type" aria-label="Typ">' + Object.keys(TYPES).map(k => opt(k, TYPES[k], r.type)).join('') + '</select></div>' +
     '<div class="nm"><input data-f="name" type="text" value="' + esc(r.name) + '" aria-label="Bezeichnung" autocomplete="off"></div>' +
-    '<div><input data-f="who" type="text" list="peopleList" value="' + esc(r.who) + '" aria-label="Verantwortlich" autocomplete="off"></div>' +
+    '<div class="who-cell">' + assigneeCell(r, i) + '</div>' +
     '<div><select data-f="pred" aria-label="Vorgänger"></select></div>' +
     '<div><select data-f="rel" aria-label="Beziehung">' + RELS.map(k => opt(k, k, r.rel)).join('') + '</select></div>' +
     '<div><input data-f="lag" type="number" step="1" value="' + esc(r.lag) + '" aria-label="Versatz in Tagen"></div>' +
@@ -140,11 +141,14 @@ function updateComputed() {
     el.classList.toggle('sub', r.type === 'untervorgang' && sched.parent[i] >= 0);
     el.classList.toggle('err', !!o.err);
     el.classList.toggle('sel', i === sel);
+    const whoCell = el.querySelector('.who-cell');
+    if (whoCell && hasUserDirectory()) { const html = assigneeCell(r, i); if (whoCell.innerHTML !== html) whoCell.innerHTML = html; }
+    el.querySelectorAll('input, select').forEach(control => { control.disabled = readOnly; });
     el.querySelector('[data-c="psp"]').textContent = sched.psp[i];
     const st = el.querySelector('[data-c="start"]'), en = el.querySelector('[data-c="end"]');
     st.textContent = fmt(o.S); en.textContent = fmt(o.E);
     st.title = en.title = o.err ? 'Zirkelbezug: der Vorgänger hängt selbst von dieser Zeile ab' : '';
-    ['pred', 'rel', 'lag', 'fixed', 'dur'].forEach(f => { const c = el.querySelector('[data-f="' + f + '"]'); c.disabled = o.summary || (f === 'dur' && r.type === 'meilenstein'); });
+    ['pred', 'rel', 'lag', 'fixed', 'dur'].forEach(f => { const c = el.querySelector('[data-f="' + f + '"]'); c.disabled = readOnly || o.summary || (f === 'dur' && r.type === 'meilenstein'); });
     el.querySelector('[data-a="sub"]').style.visibility = r.type === 'meilenstein' ? 'hidden' : '';
   });
 }
@@ -239,7 +243,8 @@ function renderChart(indices = ganttRowIndices()) {
   s += '<g class="bars">';
   indices.forEach(i => {
     const r = state.rows[i], o = sched.out[i], y = cy(i);
-    const tip = '<title>' + esc((r.name || 'ohne Namen') + ': ' + fmt(o.S) + (o.E !== o.S ? ' bis ' + fmt(o.E) : '') + (r.type === 'meilenstein' ? '' : ' (' + (o.summary ? (o.E - o.S + 1) + ' Kalendertage' : o.dur + (sched.work ? ' Arbeitstage' : ' Tage')) + ')') + (o.err ? ' · Zirkelbezug' : '') + (o.pred >= 0 && !positions.has(o.pred) ? ' · Vorgänger ausgeblendet' : '')) + '</title>';
+    const who = assigneeNames(r);
+    const tip = '<title>' + esc((r.name || 'ohne Namen') + ': ' + fmt(o.S) + (o.E !== o.S ? ' bis ' + fmt(o.E) : '') + (r.type === 'meilenstein' ? '' : ' (' + (o.summary ? (o.E - o.S + 1) + ' Kalendertage' : o.dur + (sched.work ? ' Arbeitstage' : ' Tage')) + ')') + (who ? ' · ' + who : '') + (o.err ? ' · Zirkelbezug' : '') + (o.pred >= 0 && !positions.has(o.pred) ? ' · Vorgänger ausgeblendet' : '')) + '</title>';
     if (r.type === 'meilenstein') {
       const cx = msX(i);
       s += '<g data-i="' + i + '">' + tip + '<polygon class="bar-ms" points="' + cx + ',' + (y - 8) + ' ' + (cx + 8) + ',' + y + ' ' + cx + ',' + (y + 8) + ' ' + (cx - 8) + ',' + y + '"/>' +
@@ -256,7 +261,7 @@ function renderChart(indices = ganttRowIndices()) {
       const sub = r.type === 'untervorgang' && sched.parent[i] >= 0;
       s += '<g data-i="' + i + '"' + (rowDone(r) ? ' class="done"' : '') + '>' + tip + '<rect class="' + (sub ? 'bar-sub' : 'bar-task') + '" x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' +
         (o.err ? '<rect class="bar-err" x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' : '') +
-        (r.who ? '<text class="lbl" x="' + (x + w + 14) + '" y="' + (y + 4) + '">' + esc(r.who) + '</text>' : '') + '</g>';
+        (who ? '<text class="lbl" x="' + (x + w + 14) + '" y="' + (y + 4) + '">' + esc(assigneeShortText(r)) + '</text>' : '') + '</g>';
     }
   });
   s += '</g>';
@@ -269,6 +274,7 @@ function renderFilteredViews(force = false) {
   renderView();
   const indices = ganttRowIndices();
   renderLeft(force, indices); updateComputed(); renderChart(indices); syncHeaderScroll();
+  refreshAssigneePicker();
 }
 function refresh() { sched = schedule(state); renderFilteredViews(); }
 function paintZoom() {
@@ -302,6 +308,7 @@ function structural(focusSel) {
 }
 function undo() {
   if (!hist.length) return;
+  closeAssigneePicker(false, false);
   const j = hist.pop(); state = JSON.parse(j); lastJson = j; lastPushT = 0; sel = -1; filterEditId = null; edited = true;
   $('undo').disabled = !hist.length; renderAll(); scheduleSave();
 }
@@ -313,6 +320,7 @@ function select(i) {
 }
 
 function onInput(e) {
+  if (readOnly) return;
   const t = e.target, f = t.dataset.f; if (!f) return;
   const i = rowIdx(t), r = state.rows[i]; if (!r) return;
   filterEditId = r.id;
@@ -320,7 +328,7 @@ function onInput(e) {
   if (f === 'pred') r.pred = t.value === '' ? '' : Number(t.value);
   else if (f === 'lag') r.lag = t.value === '' ? '' : String(parseInt(t.value, 10) || 0);
   else if (f === 'dur') r.dur = t.value === '' ? '' : String(Math.max(0, parseInt(t.value, 10) || 0));
-  else r[f] = t.value;
+  else { r[f] = t.value; if (f === 'who') delete r.assignees; }
   refresh(); changed(false);
 }
 function changedFirst() { lastPushT = 0; }
@@ -422,6 +430,7 @@ async function persist() {
   saving = false; if (pending) { pending = false; persist(); }
 }
 function applyProject(id, p) {
+  closeAssigneePicker(false, false);
   curId = id; state = p; lastJson = JSON.stringify(state); hist = []; lastPushT = 0; sel = -1; filterEditId = null; $('undo').disabled = true;
   resetViewFilters();
   saveUi({ active: id }); renderAll();
@@ -484,7 +493,12 @@ function attach(col, pick, cl) {
     if (first) {
       first = false;
       snap.docs.forEach(d => { const dd = d.data(); if (dd && typeof dd.json === 'string') { proj.set(d.id, { name: nameOf(dd.json), json: dd.json }); base.set(d.id, norm(dd.json)); srv.set(d.id, { by: dd.by, savedAt: dd.savedAt, byName: dd.byName }); } });
-      if (!edited && snap.docs.length) { const id = pick(); const p = id ? sanitize(JSON.parse(proj.get(id).json)) : null; if (p) applyProject(id, p); }
+      if (!edited && snap.docs.length) {
+        for (const [id, entry] of proj) if (typeof entry.json !== 'string') proj.delete(id);
+        const id = pick(), entry = id && proj.get(id);
+        const p = entry && typeof entry.json === 'string' ? sanitize(JSON.parse(entry.json)) : null;
+        if (p) applyProject(id, p);
+      }
       refreshSelect(); showLast();
       setStatus(snap.docs.length ? 'saved' : 'local', snap.docs.length ? 'Gespeichert' : 'Noch nicht gespeichert, wird mit der ersten Änderung angelegt');
       if (cl) startRoom(cl); return;
@@ -518,7 +532,15 @@ function mergePlans(b, m, t) {
   out.nextId = Math.max(m.nextId || 0, t.nextId || 0, ...out.rows.map(r => +r.id || 0), 0) + (out.rows.length ? 0 : 0);
   return out;
 }
-function mergeRow(b, m, t) { const o = { ...t }; Object.keys(m).forEach(k => { if (!same(m[k], b[k])) o[k] = m[k]; }); return o; }
+function mergeRow(b, m, t) {
+  const o = { ...t };
+  Object.keys(m).forEach(k => { if (k !== 'who' && k !== 'assignees' && !same(m[k], b[k])) o[k] = m[k]; });
+  if (!same(m.who, b.who) || !same(m.assignees, b.assignees)) {
+    o.who = m.who;
+    if (Array.isArray(m.assignees)) o.assignees = m.assignees; else delete o.assignees;
+  }
+  return o;
+}
 function applyRemote(p) {
   const a = document.activeElement; let fid = null, ff = null, ss = 0, se = 0;
   if (a && a.dataset && a.dataset.f) { const row = a.closest('.row'); const r = row && state.rows[+row.dataset.i]; if (r) { fid = r.id; ff = a.dataset.f; try { ss = a.selectionStart; se = a.selectionEnd; } catch (e) { } } }
@@ -594,6 +616,7 @@ async function startRoom(cl) {
 
 /* ---------- Dialog, Export, Import ---------- */
 function openPanel() {
+  $('peopleEditor').hidden = hasUserDirectory();
   $('people').value = state.people.join('\n');
   $('hols').value = state.holidays.map(h => fmtLong(parseISO(h.d)) + (h.n ? ' ' + h.n : '')).join('\n');
   $('holsHint').classList.remove('bad'); $('outWrap').hidden = true;
@@ -617,7 +640,7 @@ function csvText() {
   const lines = [head.map(q).join(';')];
   state.rows.forEach((r, i) => {
     const o = sched.out[i];
-    lines.push([r.id, sched.psp[i], TYPES[r.type], r.name, r.who, r.pred, o.summary ? '' : r.rel, o.summary ? '' : r.lag, r.fixed ? fmtLong(parseISO(r.fixed)) : '',
+    lines.push([r.id, sched.psp[i], TYPES[r.type], r.name, assigneeNames(r), r.pred, o.summary ? '' : r.rel, o.summary ? '' : r.lag, r.fixed ? fmtLong(parseISO(r.fixed)) : '',
       o.summary ? o.E - o.S + 1 : (r.type === 'meilenstein' ? '' : o.dur), fmtLong(o.S), fmtLong(o.E), stInfo(i).name].map(q).join(';'));
   });
   return '﻿' + lines.join('\r\n');
@@ -646,9 +669,10 @@ function boot() {
   rl.addEventListener('change', e => { if (e.target.dataset.f === 'name') refreshPredOptions(); });
   rl.addEventListener('focusin', e => { const i = rowIdx(e.target); if (i >= 0) select(i); });
   rl.addEventListener('focusout', e => {
-    if (rl.contains(e.relatedTarget)) return;
-    queueMicrotask(() => { if (!rl.contains(document.activeElement)) { filterEditId = null; renderFilteredViews(); } });
+    if (rl.contains(e.relatedTarget) || $('peoplePicker').contains(e.relatedTarget)) return;
+    queueMicrotask(() => { if (!rl.contains(document.activeElement) && !$('peoplePicker').contains(document.activeElement)) { filterEditId = null; renderFilteredViews(); } });
   });
+  initAssigneePicker();
   $('chart').addEventListener('click', e => { const g = e.target.closest('[data-i]'); if (g) select(+g.dataset.i); });
   $('pname').addEventListener('input', e => { state.name = e.target.value; refreshSelect(); changed(false); });
   $('projSel').addEventListener('change', e => switchTo(e.target.value));
@@ -686,7 +710,7 @@ function boot() {
     hint.textContent = bad.length ? 'Zeile ' + bad.join(', ') + ' nicht lesbar. Erwartet wird zum Beispiel 26.03.2027 Karfreitag.' : 'Ein Eintrag pro Zeile, zum Beispiel 26.03.2027 Karfreitag. Sie zählen nicht als Arbeitstage.';
     refresh(); changed(false);
   });
-  $('expJson').addEventListener('click', () => { const o = JSON.parse(JSON.stringify(state)); delete o.example; offer('terminplan-' + slug() + '.json', JSON.stringify(o, null, 2)); });
+  $('expJson').addEventListener('click', () => { const o = planWithAssignees(state); delete o.example; offer('terminplan-' + slug() + '.json', JSON.stringify(o, null, 2)); });
   $('expCsv').addEventListener('click', () => offer('terminplan-' + slug() + '.csv', csvText()));
   $('copyOut').addEventListener('click', async () => { const t = $('outbox'); try { await navigator.clipboard.writeText(t.value); toast('Kopiert'); } catch (e) { t.select(); toast('Markiert, mit Strg+C kopieren'); } });
   $('impFile').addEventListener('change', e => {

@@ -135,6 +135,33 @@ h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; whit
 .row input:hover, .row select:hover { border-color: var(--line); }
 .row input:focus, .row select:focus { background: var(--surface); border-color: var(--accent); outline: none; }
 .row input:disabled, .row select:disabled { opacity: 0.35; cursor: default; background: transparent; border-color: transparent; }
+.who-picker-btn { display: flex; align-items: center; gap: 3px; width: 100%; min-width: 0; height: 28px; padding: 2px 4px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--ink); cursor: pointer; }
+.who-picker-btn:hover, .who-picker-btn[aria-expanded="true"] { border-color: var(--line); background: var(--surface); }
+.who-initials { display: inline-flex; flex: none; align-items: center; justify-content: center; min-width: 24px; height: 22px; padding: 0 4px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); font-size: 10px; font-weight: 600; line-height: 1; }
+.who-more, .who-empty { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.who-caret { margin-left: auto; color: var(--muted); font-size: 10px; }
+.people-picker { box-sizing: border-box; position: fixed; z-index: 35; display: flex; flex-direction: column; width: 340px; max-width: calc(100vw - 16px); max-height: min(440px, calc(100dvh - 16px)); padding: 12px; gap: 9px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); box-shadow: 0 10px 32px rgba(0, 0, 0, .2); overflow: hidden; }
+.people-picker[hidden] { display: none; }
+.people-picker-head { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 10px; }
+.people-picker-head h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.people-picker-head .btn { padding: 4px 7px; font-size: 11px; }
+.people-picker-row { flex: none; margin: 0; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; max-height: 36px; overflow: auto; }
+.people-picker-search { display: flex; flex: none; flex-direction: column; gap: 4px; }
+.people-picker-search label { font-size: 11px; color: var(--muted); }
+.people-picker-search .in { width: 100%; min-width: 0; }
+.people-picker-hint { flex: none; margin: 0; color: var(--muted); font-size: 11px; }
+.people-picker-options { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.people-picker-group { min-width: 0; padding: 0; margin: 0 0 10px; border: 0; }
+.people-picker-group:last-child { margin-bottom: 0; }
+.people-picker-group legend { padding: 0 0 4px; font-size: 11px; font-weight: 600; color: var(--muted); }
+.people-picker-option { display: flex; align-items: flex-start; gap: 9px; padding: 8px 6px; border-radius: 5px; cursor: pointer; }
+.people-picker-option:hover, .people-picker-option:focus-within { background: var(--sel); }
+.people-picker-option input { flex: none; width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--accent); }
+.people-picker-option input:disabled { opacity: .65; }
+.people-picker-name { min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
+.people-picker-name small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+.people-picker-empty { margin: 8px 0; font-size: 12px; color: var(--muted); }
+.people-picker-status { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .row.sum { background: var(--sumrow); }
 .row.sum input[data-f="name"], .row.sum .calc { font-weight: 600; }
 .row.sel { background: var(--sel); }
@@ -480,7 +507,7 @@ body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
       <div class="btns"><button class="btn" id="dupProj" type="button">Duplizieren</button><button class="btn" id="delProj" type="button">Projekt löschen</button></div>
       <p class="hint">Jedes Projekt hat eigene Vorgänge, Verantwortliche und Feiertage. Ein neues Projekt übernimmt Raster, Listen und Feiertage des aktuellen.</p>
     </div>
-    <div class="editonly">
+    <div class="editonly" id="peopleEditor">
       <h3>Verantwortliche</h3>
       <textarea id="people" class="in" spellcheck="false" aria-label="Verantwortliche, eine Person pro Zeile"></textarea>
       <p class="hint">Eine Person oder ein Gewerk pro Zeile. Die Namen erscheinen als Vorschlag in der Spalte Verantwortlich.</p>
@@ -510,6 +537,14 @@ body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
 </div>
 <div class="toast" id="toast" role="status" hidden><span id="toastTxt"></span><button type="button" id="toastBtn" hidden></button></div>
 <datalist id="peopleList"></datalist>
+<div class="people-picker" id="peoplePicker" role="dialog" aria-labelledby="peoplePickerTitle" aria-describedby="peoplePickerHint" hidden>
+  <div class="people-picker-head"><h2 id="peoplePickerTitle">Verantwortliche</h2><button class="btn" id="peoplePickerClose" type="button">Schließen</button></div>
+  <p class="people-picker-row" id="peoplePickerRow"></p>
+  <div class="people-picker-search"><label for="peoplePickerSearch">Personen suchen</label><input class="in" id="peoplePickerSearch" type="search" autocomplete="off" placeholder="Name eingeben"></div>
+  <p class="people-picker-hint" id="peoplePickerHint"></p>
+  <div class="people-picker-options" id="peoplePickerOptions"></div>
+  <p class="people-picker-status" id="peoplePickerStatus" role="status" aria-live="polite"></p>
+</div>
 
 <script>
 (function(){
@@ -606,6 +641,67 @@ function schedule(st) {
 }
 // ===== LOGIC END =====
 
+// Benutzerkonten sind die Quelle neuer Zuordnungen. Namen bleiben als lesbare
+// Momentaufnahme für Exporte, alte Pläne und inzwischen gelöschte Konten erhalten.
+function hasUserDirectory() { return typeof window.TP_TEAM === 'function'; }
+function assigneeTeam() {
+  return hasUserDirectory() ? window.TP_TEAM().map(user => ({ ...user, id: String(user.id) })) : [];
+}
+const splitAssigneeNames = value => String(value || '').split(/\s*(?:,|;|\/|&|\+|\bund\b)\s*/i).map(name => name.trim()).filter(Boolean);
+function sanitizeAssignees(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set(), result = [];
+  value.forEach(value => {
+    const entry = value && typeof value === 'object' && !Array.isArray(value) ? value : { name: value };
+    const raw = String(entry.id ?? ''), id = /^[1-9]\d*$/.test(raw) ? raw : null;
+    const name = String(entry.name ?? '').trim() || (id ? 'Benutzer #' + id : raw.trim());
+    if (!name) return;
+    const key = id ? 'user:' + id : 'name:' + name.toLowerCase();
+    if (!seen.has(key)) { seen.add(key); result.push({ id, name }); }
+  });
+  return result;
+}
+function assigneeEntries(row) {
+  const team = assigneeTeam();
+  if (Array.isArray(row.assignees)) {
+    return sanitizeAssignees(row.assignees).map(entry => {
+      const member = entry.id && team.find(user => user.id === entry.id);
+      return { id: entry.id, name: member ? member.name : entry.name, available: !!member };
+    });
+  }
+  return sanitizeAssignees(splitAssigneeNames(row.who).map(name => {
+    const candidates = team.filter(user => user.name.trim().toLowerCase() === name.toLowerCase());
+    return candidates.length === 1 ? { id: candidates[0].id, name: candidates[0].name } : { id: null, name };
+  })).map(entry => ({ ...entry, available: !!entry.id }));
+}
+function assigneeNames(row) { return assigneeEntries(row).map(entry => entry.name).join(', '); }
+function assigneeInitials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  return (parts.length === 1 ? [...parts[0]].slice(0, 2).join('') : [...parts[0]][0] + [...parts.at(-1)][0]).toUpperCase();
+}
+function assigneeShortText(row) {
+  const entries = assigneeEntries(row);
+  return entries.slice(0, 2).map(entry => assigneeInitials(entry.name)).join(' · ') + (entries.length > 2 ? ' +' + (entries.length - 2) : '');
+}
+function planWithAssignees(plan) {
+  return { ...plan, rows: plan.rows.map(row => {
+    const assignees = assigneeEntries(row).map(({ id, name }) => ({ id, name }));
+    return { ...row, assignees, who: assignees.map(entry => entry.name).join(', ') };
+  }) };
+}
+function setRowAssignees(i, entries) {
+  const row = state.rows[i]; if (!row || readOnly) return;
+  const chosen = sanitizeAssignees(entries), existing = assigneeEntries(row), team = assigneeTeam();
+  // Neue Einträge kommen ausschließlich aus der Benutzerliste; bisherige
+  // ungebundene oder gelöschte Zuordnungen dürfen erhalten bleiben.
+  row.assignees = chosen.filter(entry => entry.id ? team.some(user => user.id === entry.id) || existing.some(old => old.id === entry.id)
+    : existing.some(old => old.id === null && old.name.toLowerCase() === entry.name.toLowerCase()));
+  row.who = assigneeNames(row);
+  filterEditId = row.id;
+  refresh(); changed(true);
+}
+
 // ===== UI =====
 const LS_PLAN = 'gantt-plan-v1', LS_UI = 'gantt-ui-v1';
 const $ = id => document.getElementById(id);
@@ -666,7 +762,8 @@ function sanitize(p) {
     s.rows.push({ id, type: TYPES[r.type] ? r.type : 'vorgang', name: String(r.name || ''), who: String(r.who || ''),
       pred: (r.pred === '' || r.pred == null || !Number.isFinite(Number(r.pred))) ? '' : Number(r.pred), rel: RELS.includes(r.rel) ? r.rel : 'EA',
       lag: r.lag === '' || r.lag == null ? '' : String(parseInt(r.lag, 10) || 0), fixed: parseISO(r.fixed) != null ? r.fixed : '',
-      dur: r.dur === '' || r.dur == null ? '' : String(Math.max(0, parseInt(r.dur, 10) || 0)), st: typeof r.st === 'string' && /^[A-Za-z0-9_-]{0,40}$/.test(r.st) ? r.st : '' });
+      dur: r.dur === '' || r.dur == null ? '' : String(Math.max(0, parseInt(r.dur, 10) || 0)), st: typeof r.st === 'string' && /^[A-Za-z0-9_-]{0,40}$/.test(r.st) ? r.st : '',
+      ...(Array.isArray(r.assignees) ? { assignees: sanitizeAssignees(r.assignees) } : {}) });
   });
   s.nextId = max + 1; if (p.example) s.example = true;
   return s;
@@ -693,7 +790,7 @@ function rowHTML(r, i) {
     '<div class="num">' + r.id + '</div><div class="num" data-c="psp"></div>' +
     '<div><select data-f="type" aria-label="Typ">' + Object.keys(TYPES).map(k => opt(k, TYPES[k], r.type)).join('') + '</select></div>' +
     '<div class="nm"><input data-f="name" type="text" value="' + esc(r.name) + '" aria-label="Bezeichnung" autocomplete="off"></div>' +
-    '<div><input data-f="who" type="text" list="peopleList" value="' + esc(r.who) + '" aria-label="Verantwortlich" autocomplete="off"></div>' +
+    '<div class="who-cell">' + assigneeCell(r, i) + '</div>' +
     '<div><select data-f="pred" aria-label="Vorgänger"></select></div>' +
     '<div><select data-f="rel" aria-label="Beziehung">' + RELS.map(k => opt(k, k, r.rel)).join('') + '</select></div>' +
     '<div><input data-f="lag" type="number" step="1" value="' + esc(r.lag) + '" aria-label="Versatz in Tagen"></div>' +
@@ -748,11 +845,14 @@ function updateComputed() {
     el.classList.toggle('sub', r.type === 'untervorgang' && sched.parent[i] >= 0);
     el.classList.toggle('err', !!o.err);
     el.classList.toggle('sel', i === sel);
+    const whoCell = el.querySelector('.who-cell');
+    if (whoCell && hasUserDirectory()) { const html = assigneeCell(r, i); if (whoCell.innerHTML !== html) whoCell.innerHTML = html; }
+    el.querySelectorAll('input, select').forEach(control => { control.disabled = readOnly; });
     el.querySelector('[data-c="psp"]').textContent = sched.psp[i];
     const st = el.querySelector('[data-c="start"]'), en = el.querySelector('[data-c="end"]');
     st.textContent = fmt(o.S); en.textContent = fmt(o.E);
     st.title = en.title = o.err ? 'Zirkelbezug: der Vorgänger hängt selbst von dieser Zeile ab' : '';
-    ['pred', 'rel', 'lag', 'fixed', 'dur'].forEach(f => { const c = el.querySelector('[data-f="' + f + '"]'); c.disabled = o.summary || (f === 'dur' && r.type === 'meilenstein'); });
+    ['pred', 'rel', 'lag', 'fixed', 'dur'].forEach(f => { const c = el.querySelector('[data-f="' + f + '"]'); c.disabled = readOnly || o.summary || (f === 'dur' && r.type === 'meilenstein'); });
     el.querySelector('[data-a="sub"]').style.visibility = r.type === 'meilenstein' ? 'hidden' : '';
   });
 }
@@ -847,7 +947,8 @@ function renderChart(indices = ganttRowIndices()) {
   s += '<g class="bars">';
   indices.forEach(i => {
     const r = state.rows[i], o = sched.out[i], y = cy(i);
-    const tip = '<title>' + esc((r.name || 'ohne Namen') + ': ' + fmt(o.S) + (o.E !== o.S ? ' bis ' + fmt(o.E) : '') + (r.type === 'meilenstein' ? '' : ' (' + (o.summary ? (o.E - o.S + 1) + ' Kalendertage' : o.dur + (sched.work ? ' Arbeitstage' : ' Tage')) + ')') + (o.err ? ' · Zirkelbezug' : '') + (o.pred >= 0 && !positions.has(o.pred) ? ' · Vorgänger ausgeblendet' : '')) + '</title>';
+    const who = assigneeNames(r);
+    const tip = '<title>' + esc((r.name || 'ohne Namen') + ': ' + fmt(o.S) + (o.E !== o.S ? ' bis ' + fmt(o.E) : '') + (r.type === 'meilenstein' ? '' : ' (' + (o.summary ? (o.E - o.S + 1) + ' Kalendertage' : o.dur + (sched.work ? ' Arbeitstage' : ' Tage')) + ')') + (who ? ' · ' + who : '') + (o.err ? ' · Zirkelbezug' : '') + (o.pred >= 0 && !positions.has(o.pred) ? ' · Vorgänger ausgeblendet' : '')) + '</title>';
     if (r.type === 'meilenstein') {
       const cx = msX(i);
       s += '<g data-i="' + i + '">' + tip + '<polygon class="bar-ms" points="' + cx + ',' + (y - 8) + ' ' + (cx + 8) + ',' + y + ' ' + cx + ',' + (y + 8) + ' ' + (cx - 8) + ',' + y + '"/>' +
@@ -864,7 +965,7 @@ function renderChart(indices = ganttRowIndices()) {
       const sub = r.type === 'untervorgang' && sched.parent[i] >= 0;
       s += '<g data-i="' + i + '"' + (rowDone(r) ? ' class="done"' : '') + '>' + tip + '<rect class="' + (sub ? 'bar-sub' : 'bar-task') + '" x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' +
         (o.err ? '<rect class="bar-err" x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' : '') +
-        (r.who ? '<text class="lbl" x="' + (x + w + 14) + '" y="' + (y + 4) + '">' + esc(r.who) + '</text>' : '') + '</g>';
+        (who ? '<text class="lbl" x="' + (x + w + 14) + '" y="' + (y + 4) + '">' + esc(assigneeShortText(r)) + '</text>' : '') + '</g>';
     }
   });
   s += '</g>';
@@ -877,6 +978,7 @@ function renderFilteredViews(force = false) {
   renderView();
   const indices = ganttRowIndices();
   renderLeft(force, indices); updateComputed(); renderChart(indices); syncHeaderScroll();
+  refreshAssigneePicker();
 }
 function refresh() { sched = schedule(state); renderFilteredViews(); }
 function paintZoom() {
@@ -910,6 +1012,7 @@ function structural(focusSel) {
 }
 function undo() {
   if (!hist.length) return;
+  closeAssigneePicker(false, false);
   const j = hist.pop(); state = JSON.parse(j); lastJson = j; lastPushT = 0; sel = -1; filterEditId = null; edited = true;
   $('undo').disabled = !hist.length; renderAll(); scheduleSave();
 }
@@ -921,6 +1024,7 @@ function select(i) {
 }
 
 function onInput(e) {
+  if (readOnly) return;
   const t = e.target, f = t.dataset.f; if (!f) return;
   const i = rowIdx(t), r = state.rows[i]; if (!r) return;
   filterEditId = r.id;
@@ -928,7 +1032,7 @@ function onInput(e) {
   if (f === 'pred') r.pred = t.value === '' ? '' : Number(t.value);
   else if (f === 'lag') r.lag = t.value === '' ? '' : String(parseInt(t.value, 10) || 0);
   else if (f === 'dur') r.dur = t.value === '' ? '' : String(Math.max(0, parseInt(t.value, 10) || 0));
-  else r[f] = t.value;
+  else { r[f] = t.value; if (f === 'who') delete r.assignees; }
   refresh(); changed(false);
 }
 function changedFirst() { lastPushT = 0; }
@@ -1030,6 +1134,7 @@ async function persist() {
   saving = false; if (pending) { pending = false; persist(); }
 }
 function applyProject(id, p) {
+  closeAssigneePicker(false, false);
   curId = id; state = p; lastJson = JSON.stringify(state); hist = []; lastPushT = 0; sel = -1; filterEditId = null; $('undo').disabled = true;
   resetViewFilters();
   saveUi({ active: id }); renderAll();
@@ -1092,7 +1197,12 @@ function attach(col, pick, cl) {
     if (first) {
       first = false;
       snap.docs.forEach(d => { const dd = d.data(); if (dd && typeof dd.json === 'string') { proj.set(d.id, { name: nameOf(dd.json), json: dd.json }); base.set(d.id, norm(dd.json)); srv.set(d.id, { by: dd.by, savedAt: dd.savedAt, byName: dd.byName }); } });
-      if (!edited && snap.docs.length) { const id = pick(); const p = id ? sanitize(JSON.parse(proj.get(id).json)) : null; if (p) applyProject(id, p); }
+      if (!edited && snap.docs.length) {
+        for (const [id, entry] of proj) if (typeof entry.json !== 'string') proj.delete(id);
+        const id = pick(), entry = id && proj.get(id);
+        const p = entry && typeof entry.json === 'string' ? sanitize(JSON.parse(entry.json)) : null;
+        if (p) applyProject(id, p);
+      }
       refreshSelect(); showLast();
       setStatus(snap.docs.length ? 'saved' : 'local', snap.docs.length ? 'Gespeichert' : 'Noch nicht gespeichert, wird mit der ersten Änderung angelegt');
       if (cl) startRoom(cl); return;
@@ -1126,7 +1236,15 @@ function mergePlans(b, m, t) {
   out.nextId = Math.max(m.nextId || 0, t.nextId || 0, ...out.rows.map(r => +r.id || 0), 0) + (out.rows.length ? 0 : 0);
   return out;
 }
-function mergeRow(b, m, t) { const o = { ...t }; Object.keys(m).forEach(k => { if (!same(m[k], b[k])) o[k] = m[k]; }); return o; }
+function mergeRow(b, m, t) {
+  const o = { ...t };
+  Object.keys(m).forEach(k => { if (k !== 'who' && k !== 'assignees' && !same(m[k], b[k])) o[k] = m[k]; });
+  if (!same(m.who, b.who) || !same(m.assignees, b.assignees)) {
+    o.who = m.who;
+    if (Array.isArray(m.assignees)) o.assignees = m.assignees; else delete o.assignees;
+  }
+  return o;
+}
 function applyRemote(p) {
   const a = document.activeElement; let fid = null, ff = null, ss = 0, se = 0;
   if (a && a.dataset && a.dataset.f) { const row = a.closest('.row'); const r = row && state.rows[+row.dataset.i]; if (r) { fid = r.id; ff = a.dataset.f; try { ss = a.selectionStart; se = a.selectionEnd; } catch (e) { } } }
@@ -1202,6 +1320,7 @@ async function startRoom(cl) {
 
 /* ---------- Dialog, Export, Import ---------- */
 function openPanel() {
+  $('peopleEditor').hidden = hasUserDirectory();
   $('people').value = state.people.join('\n');
   $('hols').value = state.holidays.map(h => fmtLong(parseISO(h.d)) + (h.n ? ' ' + h.n : '')).join('\n');
   $('holsHint').classList.remove('bad'); $('outWrap').hidden = true;
@@ -1225,7 +1344,7 @@ function csvText() {
   const lines = [head.map(q).join(';')];
   state.rows.forEach((r, i) => {
     const o = sched.out[i];
-    lines.push([r.id, sched.psp[i], TYPES[r.type], r.name, r.who, r.pred, o.summary ? '' : r.rel, o.summary ? '' : r.lag, r.fixed ? fmtLong(parseISO(r.fixed)) : '',
+    lines.push([r.id, sched.psp[i], TYPES[r.type], r.name, assigneeNames(r), r.pred, o.summary ? '' : r.rel, o.summary ? '' : r.lag, r.fixed ? fmtLong(parseISO(r.fixed)) : '',
       o.summary ? o.E - o.S + 1 : (r.type === 'meilenstein' ? '' : o.dur), fmtLong(o.S), fmtLong(o.E), stInfo(i).name].map(q).join(';'));
   });
   return '﻿' + lines.join('\r\n');
@@ -1254,9 +1373,10 @@ function boot() {
   rl.addEventListener('change', e => { if (e.target.dataset.f === 'name') refreshPredOptions(); });
   rl.addEventListener('focusin', e => { const i = rowIdx(e.target); if (i >= 0) select(i); });
   rl.addEventListener('focusout', e => {
-    if (rl.contains(e.relatedTarget)) return;
-    queueMicrotask(() => { if (!rl.contains(document.activeElement)) { filterEditId = null; renderFilteredViews(); } });
+    if (rl.contains(e.relatedTarget) || $('peoplePicker').contains(e.relatedTarget)) return;
+    queueMicrotask(() => { if (!rl.contains(document.activeElement) && !$('peoplePicker').contains(document.activeElement)) { filterEditId = null; renderFilteredViews(); } });
   });
+  initAssigneePicker();
   $('chart').addEventListener('click', e => { const g = e.target.closest('[data-i]'); if (g) select(+g.dataset.i); });
   $('pname').addEventListener('input', e => { state.name = e.target.value; refreshSelect(); changed(false); });
   $('projSel').addEventListener('change', e => switchTo(e.target.value));
@@ -1294,7 +1414,7 @@ function boot() {
     hint.textContent = bad.length ? 'Zeile ' + bad.join(', ') + ' nicht lesbar. Erwartet wird zum Beispiel 26.03.2027 Karfreitag.' : 'Ein Eintrag pro Zeile, zum Beispiel 26.03.2027 Karfreitag. Sie zählen nicht als Arbeitstage.';
     refresh(); changed(false);
   });
-  $('expJson').addEventListener('click', () => { const o = JSON.parse(JSON.stringify(state)); delete o.example; offer('terminplan-' + slug() + '.json', JSON.stringify(o, null, 2)); });
+  $('expJson').addEventListener('click', () => { const o = planWithAssignees(state); delete o.example; offer('terminplan-' + slug() + '.json', JSON.stringify(o, null, 2)); });
   $('expCsv').addEventListener('click', () => offer('terminplan-' + slug() + '.csv', csvText()));
   $('copyOut').addEventListener('click', async () => { const t = $('outbox'); try { await navigator.clipboard.writeText(t.value); toast('Kopiert'); } catch (e) { t.select(); toast('Markiert, mit Strg+C kopieren'); } });
   $('impFile').addEventListener('change', e => {
@@ -1350,8 +1470,9 @@ function durTxt(i) {
 function rangeTxt(i) { const o = sched.out[i]; return o.E === o.S ? fmt(o.S) : fmt(o.S) + ' – ' + fmt(o.E); }
 const splitFilterPeople = value => String(value || '').split(/\s*(?:,|;|\/|&|\+|\bund\b)\s*/i).map(name => name.trim()).filter(Boolean);
 function filterPeople() {
+  if (hasUserDirectory()) return assigneeTeam().map(user => user.name);
   const names = new Map();
-  (state.people || []).concat(state.rows.map(r => r.who)).forEach(value => {
+  (state.people || []).concat(state.rows.map(assigneeNames)).forEach(value => {
     splitFilterPeople(value).forEach(name => { const key = name.toLowerCase(); if (!names.has(key)) names.set(key, name); });
   });
   return [...names.values()].sort((a, b) => a.localeCompare(b, 'de'));
@@ -1362,14 +1483,15 @@ function matches(i) {
   const r = state.rows[i], o = sched && sched.out[i];
   if (!r || !o) return false;
   const person = fWho.trim().toLowerCase();
-  if (person && !splitFilterPeople(r.who).some(name => name.toLowerCase() === person)) return false;
+  if (person.startsWith('user:')) { if (!assigneeEntries(r).some(entry => entry.id === fWho.slice(5))) return false; }
+  else if (person && !splitFilterPeople(assigneeNames(r)).some(name => name.toLowerCase() === person)) return false;
   if (fSt !== 'all') {
     if (fSt === 'late') { if (!isLate(i)) return false; }
     else if (fSt === 'open') { if (isDone(i)) return false; }
     else if (fSt.startsWith('lane:') && stInfo(i).id !== fSt.slice(5)) return false;
   }
   if (fQ) {
-    const q = fQ.trim().toLowerCase(), hay = (r.name + ' ' + r.who + ' ' + sched.psp[i]).toLowerCase();
+    const q = fQ.trim().toLowerCase(), hay = (r.name + ' ' + assigneeNames(r) + ' ' + sched.psp[i]).toLowerCase();
     if (!hay.includes(q)) return false;
   }
   return true;
@@ -1386,11 +1508,13 @@ function visibleRowIndices() {
   return indices.filter(i => visible.has(i));
 }
 function whoOptions(names = filterPeople()) {
+  if (hasUserDirectory()) return '<option value="">Alle Personen</option>' + assigneeTeam().map(user => '<option value="user:' + esc(user.id) + '"' + (fWho === 'user:' + user.id ? ' selected' : '') + '>' + esc(user.name) + '</option>').join('');
   return '<option value="">Alle Personen</option>' + names.map(n => '<option value="' + esc(n) + '"' + (n === fWho ? ' selected' : '') + '>' + esc(n) + '</option>').join('');
 }
 function updateFilterUi() {
   const names = filterPeople();
-  if (fWho) fWho = names.find(name => name.toLowerCase() === fWho.trim().toLowerCase()) || '';
+  if (hasUserDirectory()) { if (fWho && !assigneeTeam().some(user => 'user:' + user.id === fWho)) fWho = ''; }
+  else if (fWho) fWho = names.find(name => name.toLowerCase() === fWho.trim().toLowerCase()) || '';
   if (fSt.startsWith('lane:') && !lanes().some(lane => 'lane:' + lane.id === fSt)) fSt = 'all';
   const fw = $('fWho'), fs = $('fSt'), fq = $('fQ');
   if (fw) {
@@ -1461,7 +1585,7 @@ function renderList() {
   const N = state.rows.length;
   const idx = visibleRowIndices();
   const key = {
-    psp: i => i, id: i => state.rows[i].id, name: i => (state.rows[i].name || '').toLowerCase(), who: i => (state.rows[i].who || '~').toLowerCase(),
+    psp: i => i, id: i => state.rows[i].id, name: i => (state.rows[i].name || '').toLowerCase(), who: i => (assigneeNames(state.rows[i]) || '~').toLowerCase(),
     S: i => sched.out[i].S, E: i => sched.out[i].E, dur: i => sched.out[i].E - sched.out[i].S, st: i => sched.out[i].summary ? (isDone(i) ? 99 : 50) : laneIx(i), type: i => state.rows[i].type
   }[sortK] || (i => i);
   idx.sort((a, b) => { const x = key(a), y = key(b); return (x < y ? -1 : x > y ? 1 : a - b) * sortDir; });
@@ -1477,7 +1601,7 @@ function renderList() {
     h += '<tr class="' + (o.summary ? 'sum' : '') + (isDone(i) ? ' done' : '') + '">' +
       '<td class="n">' + r.id + '</td><td class="n">' + sched.psp[i] + '</td>' +
       '<td class="nm' + (tree && sub ? ' ind' : '') + '"><button type="button" class="go" data-go="' + i + '" title="Im Gantt-Diagramm öffnen">' + (r.type === 'meilenstein' ? '<i class="msd"></i>' : '') + esc(r.name || 'ohne Namen') + '</button></td>' +
-      '<td>' + (o.summary ? 'Sammelvorgang' : TYPES[r.type]) + '</td><td class="whoc">' + avs(r.who) + esc(r.who || '') + '</td>' +
+      '<td>' + (o.summary ? 'Sammelvorgang' : TYPES[r.type]) + '</td><td class="whoc">' + avs(assigneeNames(r)) + esc(assigneeNames(r)) + '</td>' +
       '<td class="d">' + fmt(o.S) + '</td><td class="d' + (late ? ' late' : '') + '">' + fmt(o.E) + (late ? ' <span class="lt">überfällig</span>' : '') + '</td>' +
       '<td class="n">' + durTxt(i) + '</td><td>' + (o.summary ? stBadge(s) : stSelect(i, s.id)) + '</td><td class="n">' + esc(pred) + '</td></tr>';
   });
@@ -1518,7 +1642,7 @@ function renderKanban() {
         '<button type="button" class="cname" data-go="' + i + '" title="Im Gantt-Diagramm öffnen">' + esc(r.name || 'ohne Namen') + '</button>' +
         (par >= 0 ? '<div class="cpar">' + esc(state.rows[par].name || '') + '</div>' : '') +
         '<div class="cmeta"><span>' + rangeTxt(i) + '</span>' + (r.type === 'meilenstein' ? '' : '<span>' + durTxt(i) + '</span>') + '</div>' +
-        '<div class="cfoot">' + (r.who ? '<span class="who">' + avs(r.who) + esc(r.who) + '</span>' : '<span class="who none">ohne Verantwortlichen</span>') +
+        '<div class="cfoot">' + (assigneeNames(r) ? '<span class="who">' + avs(assigneeNames(r)) + esc(assigneeNames(r)) + '</span>' : '<span class="who none">ohne Verantwortlichen</span>') +
         '<span class="mv"><button type="button" class="ib" data-mv="-1" data-i="' + i + '" aria-label="In die linke Bahn"' + (ci === 0 ? ' disabled' : '') + '>‹</button><button type="button" class="ib" data-mv="1" data-i="' + i + '" aria-label="In die rechte Bahn"' + (ci === L.length - 1 ? ' disabled' : '') + '>›</button></span></div></article>';
     });
     if (!list.length) h += '<div class="kempty">Keine Einträge</div>';
@@ -1595,9 +1719,9 @@ function renderCal() {
       const i = sg.i, r = state.rows[i], o = sched.out[i], s = stInfo(i);
       const left = (sg.s - ws) / 7 * 100, width = (sg.e - sg.s + 1) / 7 * 100;
       const cls = r.type === 'meilenstein' ? 'ms' : o.summary ? 'sum' : (r.type === 'untervorgang' && sched.parent[i] >= 0 ? 'sub' : 'task');
-      const tip = (r.name || 'ohne Namen') + ': ' + rangeTxt(i) + (r.who ? ' · ' + r.who : '') + ' · ' + s.name + (isLate(i) ? ' · überfällig' : '');
+      const tip = (r.name || 'ohne Namen') + ': ' + rangeTxt(i) + (assigneeNames(r) ? ' · ' + assigneeNames(r) : '') + ' · ' + s.name + (isLate(i) ? ' · überfällig' : '');
       h += '<button type="button" class="cb ' + cls + (isDone(i) ? ' done' : '') + (isLate(i) ? ' late' : '') + (sg.s > o.S ? ' cl' : '') + (sg.e < o.E ? ' cr' : '') + '" data-go="' + i + '" title="' + esc(tip) + '" style="left:calc(' + left + '% + 3px);width:calc(' + width + '% - 6px);top:' + (TOP + sg.l * LH) + 'px">' +
-        (cls === 'ms' ? '<i class="msd"></i>' : '') + '<span>' + esc(r.name || 'ohne Namen') + (r.who && cls !== 'sum' ? ' · ' + esc(r.who) : '') + '</span></button>';
+        (cls === 'ms' ? '<i class="msd"></i>' : '') + '<span>' + esc(r.name || 'ohne Namen') + (assigneeNames(r) && cls !== 'sum' ? ' · ' + esc(assigneeNames(r)) : '') + '</span></button>';
     });
     h += '</div>';
   }
@@ -1688,7 +1812,8 @@ async function teamInit() {
 
 // Schreibrechte fehlen: Bearbeitung sperren, Hinweis zeigen und, falls schon lokal getippt wurde, den gespeicherten Stand wiederherstellen
 function lockReadOnly(afterFailedSave) {
-  readOnly = true; document.body.classList.add('ro'); $('rowsL').inert = true;
+  readOnly = true; document.body.classList.add('ro'); $('rowsL').inert = false;
+  if (sched) updateComputed();
   const b = $('roBanner'); b.hidden = false;
   if (afterFailedSave) {
     b.querySelector('span').innerHTML = '<b>Nur Ansicht.</b> Deine Änderung wurde nicht gespeichert, weil dein Zugang nur Lesen erlaubt. ' +
@@ -1701,7 +1826,194 @@ function lockReadOnly(afterFailedSave) {
 
 /* ---------- Profilbilder der Teammitglieder (nur Webversion mit Benutzerkonten) ---------- */
 const avs = who => (typeof window.tpAvatars === 'function' && who) ? window.tpAvatars(who) : '';
-window.__teamChanged = () => { if (!sched) return; refreshPeopleList(); renderView(); };
+window.__teamChanged = () => { if (!sched) return; refreshPeopleList(); renderFilteredViews(); };
+
+// Mehrfachauswahl der Verantwortlichen aus dem Benutzerverzeichnis.
+let apState = null, apInitialized = false, apPositionFrame = 0;
+
+const apEl = id => document.getElementById(id);
+const apEsc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+const apKey = entry => entry.id != null ? 'user:' + String(entry.id) : 'legacy:' + String(entry.name || '');
+const apIsReadOnly = () => typeof readOnly !== 'undefined' && readOnly;
+
+function assigneeCell(row, i) {
+  if (!hasUserDirectory()) return '<input data-f="who" type="text" list="peopleList" value="' + apEsc(assigneeNames(row)) + '" aria-label="Verantwortlich" autocomplete="off">';
+  const entries = assigneeEntries(row), names = assigneeNames(row);
+  const label = names ? 'Verantwortliche: ' + names : 'Verantwortliche auswählen';
+  const initials = entries.slice(0, 2).map(entry => '<span class="who-initials" aria-hidden="true">' + apEsc(assigneeInitials(entry.name)) + '</span>').join('');
+  const extra = entries.length > 2 ? '<span class="who-more" aria-hidden="true">+' + (entries.length - 2) + '</span>' : '';
+  return '<button class="who-picker-btn" type="button" data-who-row="' + apEsc(row.id) + '" title="' + apEsc(names || 'Keine Verantwortlichen zugeordnet') + '" aria-label="' + apEsc(label) + '" aria-haspopup="dialog" aria-controls="peoplePicker" aria-expanded="' + String(!!apState && String(apState.rowId) === String(row.id)) + '">' +
+    (entries.length ? initials + extra : '<span class="who-empty" aria-hidden="true">–</span>') + '<span class="who-caret" aria-hidden="true">▾</span></button>';
+}
+
+function apFindRow() {
+  if (!apState) return null;
+  const index = state.rows.findIndex(row => String(row.id) === String(apState.rowId));
+  return index < 0 ? null : { row: state.rows[index], index };
+}
+function apFindAnchor(rowId) {
+  const box = apEl('rowsL');
+  if (!box) return null;
+  return [...box.querySelectorAll('[data-who-row]')].find(button => String(button.dataset.whoRow) === String(rowId)) || null;
+}
+function apExpanded(rowId, value) {
+  const button = apFindAnchor(rowId);
+  if (button) button.setAttribute('aria-expanded', String(value));
+}
+function apPosition() {
+  apPositionFrame = 0;
+  if (!apState) return;
+  const panel = apEl('peoplePicker'), anchor = apFindAnchor(apState.rowId);
+  if (!panel || panel.hidden) return;
+  if (!anchor) { closeAssigneePicker(false, false); return; }
+  const viewport = window.visualViewport;
+  const viewportLeft = viewport ? viewport.offsetLeft : 0, viewportTop = viewport ? viewport.offsetTop : 0;
+  const viewportWidth = viewport ? viewport.width : document.documentElement.clientWidth;
+  const viewportHeight = viewport ? viewport.height : window.innerHeight;
+  const margin = 8, gap = 6, rect = anchor.getBoundingClientRect();
+  const bounds = anchor.closest('.body');
+  if (bounds) {
+    const clip = bounds.getBoundingClientRect();
+    if (rect.bottom <= clip.top || rect.top >= clip.bottom || rect.right <= clip.left || rect.left >= clip.right) { closeAssigneePicker(false, true); return; }
+  }
+  // Eine Bildschirmtastatur verkleinert den sichtbaren Ausschnitt; die Suche bleibt dabei geöffnet.
+  if (rect.bottom <= 0 || rect.top >= document.documentElement.clientHeight || rect.right <= 0 || rect.left >= document.documentElement.clientWidth) { closeAssigneePicker(false, true); return; }
+  const width = Math.max(0, Math.min(340, viewportWidth - margin * 2));
+  panel.style.width = width + 'px';
+  panel.style.maxWidth = Math.max(0, viewportWidth - margin * 2) + 'px';
+  panel.style.maxHeight = Math.max(0, Math.min(440, viewportHeight - margin * 2)) + 'px';
+  const panelHeight = panel.getBoundingClientRect().height;
+  const below = viewportTop + viewportHeight - margin - rect.bottom - gap;
+  const above = rect.top - viewportTop - margin - gap;
+  const top = below < Math.min(240, panelHeight) && above > below ? rect.top - gap - panelHeight : rect.bottom + gap;
+  panel.style.left = Math.max(viewportLeft + margin, Math.min(rect.left, viewportLeft + viewportWidth - margin - width)) + 'px';
+  panel.style.top = Math.max(viewportTop + margin, Math.min(top, viewportTop + viewportHeight - margin - panelHeight)) + 'px';
+}
+function apSchedulePosition() {
+  if (apState && !apPositionFrame) apPositionFrame = requestAnimationFrame(apPosition);
+}
+function apText(tag, value, className) {
+  const element = document.createElement(tag);
+  if (value != null) element.textContent = String(value);
+  if (className) element.className = className;
+  return element;
+}
+function apRenderOptions(row) {
+  const container = apEl('peoplePickerOptions'), search = apEl('peoplePickerSearch').value.trim().toLocaleLowerCase('de-DE');
+  const selected = assigneeEntries(row), selectedKeys = new Set(selected.map(apKey));
+  const seen = new Set();
+  const team = assigneeTeam().filter(user => {
+    if (user.id == null || seen.has(String(user.id))) return false;
+    seen.add(String(user.id)); return true;
+  }).map(user => ({ id: String(user.id), name: user.name, available: true })).sort((a, b) => a.name.localeCompare(b.name, 'de-DE') || a.id.localeCompare(b.id));
+  const previous = selected.filter(entry => entry.id == null || !seen.has(String(entry.id)));
+  const duplicates = new Map();
+  team.forEach(user => duplicates.set(user.name, (duplicates.get(user.name) || 0) + 1));
+  const active = document.activeElement;
+  const focusedKey = active && container.contains(active) ? active.dataset.assigneeKey : null;
+  const fragment = document.createDocumentFragment();
+  let resultCount = 0, focusTarget = null;
+  const group = (title, entries, historical) => {
+    const matching = entries.filter(entry => !search || String(entry.name).toLocaleLowerCase('de-DE').includes(search));
+    if (!matching.length) return;
+    const fieldset = apText('fieldset', null, 'people-picker-group');
+    fieldset.append(apText('legend', title));
+    matching.forEach(entry => {
+      const key = apKey(entry), label = apText('label', null, 'people-picker-option'), checkbox = document.createElement('input');
+      checkbox.type = 'checkbox'; checkbox.checked = selectedKeys.has(key); checkbox.disabled = apIsReadOnly(); checkbox.dataset.assigneeKey = key;
+      const name = apText('span', entry.name, 'people-picker-name');
+      if (historical || duplicates.get(entry.name) > 1) {
+        const detail = historical ? (entry.id == null ? 'Bisheriger Eintrag' : 'Benutzer nicht mehr vorhanden') : 'Benutzer ' + entry.id;
+        name.append(apText('small', detail));
+      }
+      checkbox.addEventListener('change', () => {
+        const current = apFindRow();
+        if (!current || apIsReadOnly()) { refreshAssigneePicker(); return; }
+        let next = assigneeEntries(current.row).map(value => ({ id: value.id == null ? null : String(value.id), name: value.name }));
+        if (checkbox.checked && !next.some(value => apKey(value) === key)) next.push({ id: entry.id, name: entry.name });
+        else if (!checkbox.checked) next = next.filter(value => apKey(value) !== key);
+        setRowAssignees(current.index, next);
+        refreshAssigneePicker();
+        apEl('peoplePickerStatus').textContent = next.length ? next.length + (next.length === 1 ? ' Person zugeordnet.' : ' Personen zugeordnet.') : 'Keine Person zugeordnet.';
+      });
+      label.append(checkbox, name); fieldset.append(label); resultCount++;
+      if (focusedKey === key) focusTarget = checkbox;
+    });
+    fragment.append(fieldset);
+  };
+  group('Benutzer', team, false);
+  group('Bisherige Zuordnung', previous, true);
+  if (!resultCount) fragment.append(apText('p', search ? 'Keine passenden Personen gefunden.' : 'Noch keine Benutzer verfügbar.', 'people-picker-empty'));
+  container.replaceChildren(fragment);
+  if (focusTarget && !focusTarget.disabled) focusTarget.focus({ preventScroll: true });
+}
+
+function refreshAssigneePicker() {
+  if (!apState) return;
+  const current = apFindRow(), anchor = apFindAnchor(apState.rowId);
+  if (!current || !anchor || !hasUserDirectory()) { closeAssigneePicker(false, false); return; }
+  apExpanded(apState.rowId, true);
+  apEl('peoplePickerRow').textContent = current.row.name || 'Vorgang ' + current.row.id;
+  apEl('peoplePickerHint').textContent = apIsReadOnly() ? 'Nur Ansicht: Du kannst die zugeordneten Personen ansehen.' : 'Häkchen ändern die Zuordnung. Der Plan wird automatisch gespeichert.';
+  apRenderOptions(current.row);
+  apPosition();
+}
+function closeAssigneePicker(restoreFocus = true, redraw = true) {
+  if (!apState) return;
+  const rowId = apState.rowId;
+  apState = null;
+  if (apPositionFrame) { cancelAnimationFrame(apPositionFrame); apPositionFrame = 0; }
+  const panel = apEl('peoplePicker');
+  if (panel) panel.hidden = true;
+  apExpanded(rowId, false);
+  filterEditId = null;
+  if (redraw) renderFilteredViews();
+  if (restoreFocus) {
+    const anchor = apFindAnchor(rowId);
+    if (anchor) anchor.focus({ preventScroll: true });
+  }
+}
+function initAssigneePicker() {
+  if (apInitialized || !apEl('rowsL') || !apEl('peoplePicker')) return;
+  apInitialized = true;
+  const panel = apEl('peoplePicker'), search = apEl('peoplePickerSearch');
+  apEl('rowsL').addEventListener('click', event => {
+    const button = event.target.closest('[data-who-row]');
+    if (!button || !hasUserDirectory()) return;
+    event.preventDefault();
+    const row = state.rows.find(value => String(value.id) === String(button.dataset.whoRow));
+    if (!row) return;
+    if (apState && String(apState.rowId) === String(row.id)) { closeAssigneePicker(true, true); return; }
+    if (apState) closeAssigneePicker(false, false);
+    apState = { rowId: row.id }; filterEditId = row.id;
+    search.value = ''; apEl('peoplePickerStatus').textContent = ''; panel.hidden = false;
+    refreshAssigneePicker();
+    if (apState) search.focus({ preventScroll: true });
+  });
+  search.addEventListener('input', () => { const current = apFindRow(); if (current) { apRenderOptions(current.row); apPosition(); } });
+  apEl('peoplePickerClose').addEventListener('click', () => closeAssigneePicker(true, true));
+  // Erst nach dem Zielklick neu rendern, damit gepinnte Zeilen keine Klickziele entfernen.
+  document.addEventListener('click', event => {
+    if (!apState || panel.contains(event.target)) return;
+    const anchor = apFindAnchor(apState.rowId);
+    if (!anchor || !anchor.contains(event.target)) closeAssigneePicker(false, true);
+  });
+  document.addEventListener('focusin', event => {
+    if (!apState || panel.contains(event.target)) return;
+    const anchor = apFindAnchor(apState.rowId);
+    if (!anchor || !anchor.contains(event.target)) closeAssigneePicker(false, !apEl('rowsL').contains(event.target));
+  });
+  document.addEventListener('keydown', event => {
+    if (!apState || event.key !== 'Escape') return;
+    event.preventDefault(); closeAssigneePicker(true, true);
+  });
+  window.addEventListener('resize', apSchedulePosition);
+  document.addEventListener('scroll', apSchedulePosition, true);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', apSchedulePosition);
+    window.visualViewport.addEventListener('scroll', apSchedulePosition);
+  }
+}
 
 // ===== PDF-Ausgabe: eine durchgehende Seite im Querformat, Aufbau wie im Planer =====
 const PC = { ink: '#16231d', muted: '#5a6a62', line: '#d3dbd6', grid: '#e4e9e6', hdr: '#e6ece8', sumrow: '#e9f0ec', sum: '#1d3b2e', task: '#3d7e5e', sub: '#94c4aa',
@@ -1747,7 +2059,7 @@ async function offerBin(name, buf) {
 }
 
 function buildPdf(JsPDF) {
-  const rows = state.rows, N = rows.length, o = sched.out, today = todayDn();
+  const rows = state.rows.map(row => ({ ...row, who: assigneeNames(row) })), N = rows.length, o = sched.out, today = todayDn();
   const M = 28, RH = 16, HH = 36, step = state.raster === 'weeks' ? 7 : 1;
   // Spalten ab Nr; leere Spalten (Versatz, Fester Start …) entfallen
   const anyPred = o.some(x => x.pred >= 0), anyLag = rows.some(r => parseInt(r.lag, 10)), anyFixed = rows.some(r => r.fixed);

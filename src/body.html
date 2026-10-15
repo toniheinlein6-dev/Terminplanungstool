@@ -97,7 +97,7 @@
       <div class="btns"><button class="btn" id="dupProj" type="button">Duplizieren</button><button class="btn" id="delProj" type="button">Projekt löschen</button></div>
       <p class="hint">Jedes Projekt hat eigene Vorgänge, Verantwortliche und Feiertage. Ein neues Projekt übernimmt Raster, Listen und Feiertage des aktuellen.</p>
     </div>
-    <div class="editonly">
+    <div class="editonly" id="peopleEditor">
       <h3>Verantwortliche</h3>
       <textarea id="people" class="in" spellcheck="false" aria-label="Verantwortliche, eine Person pro Zeile"></textarea>
       <p class="hint">Eine Person oder ein Gewerk pro Zeile. Die Namen erscheinen als Vorschlag in der Spalte Verantwortlich.</p>
@@ -127,3 +127,11 @@
 </div>
 <div class="toast" id="toast" role="status" hidden><span id="toastTxt"></span><button type="button" id="toastBtn" hidden></button></div>
 <datalist id="peopleList"></datalist>
+<div class="people-picker" id="peoplePicker" role="dialog" aria-labelledby="peoplePickerTitle" aria-describedby="peoplePickerHint" hidden>
+  <div class="people-picker-head"><h2 id="peoplePickerTitle">Verantwortliche</h2><button class="btn" id="peoplePickerClose" type="button">Schließen</button></div>
+  <p class="people-picker-row" id="peoplePickerRow"></p>
+  <div class="people-picker-search"><label for="peoplePickerSearch">Personen suchen</label><input class="in" id="peoplePickerSearch" type="search" autocomplete="off" placeholder="Name eingeben"></div>
+  <p class="people-picker-hint" id="peoplePickerHint"></p>
+  <div class="people-picker-options" id="peoplePickerOptions"></div>
+  <p class="people-picker-status" id="peoplePickerStatus" role="status" aria-live="polite"></p>
+</div>
