@@ -21,9 +21,7 @@ button{cursor:pointer}button.pri{background:var(--accent);color:#fff;border-colo
 </style></head><body><main>
 <div class="row"><h1>Verwaltung</h1><span style="flex:1"></span><a href="index.html">← Zum Terminplaner</a></div>
 <div id="msg" role="status"></div>
-<section><h2>Tickets <span id="tcount" class="pill"></span></h2>
- <div class="row"><select id="tf"><option value="offen">Offen (Neu und In Bearbeitung)</option><option value="alle">Alle</option><option value="erledigt">Erledigt</option><option value="abgelehnt">Abgelehnt</option></select></div>
- <div id="tickets" style="margin-top:10px"></div></section>
+<section><h2>Tickets</h2><p>Alle eingereichten Fehler, Verbesserungswünsche und Fragen mit Status und Verlauf.</p><a href="tickets.html">Tickets ansehen und bearbeiten →</a></section>
 <section><h2>Benutzer</h2>
  <div class="tw"><table><thead><tr><th></th><th>Name</th><th>E-Mail</th><th>Rolle</th><th>Neues Passwort</th><th></th></tr></thead><tbody id="users"></tbody></table></div>
  <h2 style="margin-top:16px">Neuer Benutzer</h2>
@@ -34,8 +32,8 @@ button{cursor:pointer}button.pri{background:var(--accent);color:#fff;border-colo
  <div class="row" style="margin-top:10px"><button id="mtest">Testmail an mich senden</button><button id="mrun">Erinnerungen jetzt prüfen und senden</button></div>
  <p class="hint">Täglich um 7 Uhr verschickt der Terminplaner Erinnerungen für Vorgänge, die in den nächsten 2 Tagen enden und noch nicht erledigt sind. Zugeordnet wird über die Spalte „Verantwortlich“: Dort muss genau der Benutzername stehen (mehrere Namen durch Komma trennen). Die Person braucht eine E-Mail-Adresse und eingeschaltete Erinnerungen (Mein Profil).</p></section>
 <section><h2>Sicherung</h2>
- <div class="row"><button class="pri" id="exp">Alle Projekte sichern (Download)</button><label>Sicherung einspielen: <input type="file" id="imp" accept=".json,application/json"></label></div>
- <p class="hint">Die Sicherung ist eine JSON-Datei mit allen Projekten. Beim Einspielen werden Projekte mit gleicher Kennung durch den Stand der Datei ersetzt (der bisherige Stand bleibt im Versionsverlauf). Zusätzlich sollte die Datenbank selbst regelmäßig vom Server gesichert werden.</p></section>
+ <div class="row"><button class="pri" id="exp">Projekte und Tickets sichern (Download)</button><label>Sicherung einspielen: <input type="file" id="imp" accept=".json,application/json"></label></div>
+ <p class="hint">Die Sicherung enthält alle Projekte und Tickets einschließlich Ticketverlauf. Beim Einspielen werden vorhandene Einträge wiederhergestellt und ihre bisherigen Versionen aufbewahrt. Ältere Projektsicherungen bleiben verwendbar. Zusätzlich sollte die Datenbank selbst regelmäßig vom Server gesichert werden.</p></section>
 <section><h2>Versionsverlauf</h2>
  <div class="row"><select id="hp"></select><button id="hl">Anzeigen</button></div>
  <div class="tw"><table><tbody id="hist"></tbody></table></div>
@@ -71,8 +69,21 @@ $('add').onclick = async () => {
 $('exp').onclick = () => { location.href = 'api/tp?a=export'; };
 $('imp').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
-  try { const j = JSON.parse(await f.text()); const r = await post('import', j); const o = await r.json(); say(r.ok ? o.imported + ' Projekt(e) eingespielt' + (o.skipped ? ', ' + o.skipped + ' übersprungen' : '') + '.' : o.error, !r.ok); }
-  catch (x) { say('Die Datei konnte nicht gelesen werden.', true); } e.target.value = '';
+  try {
+    const j = JSON.parse(await f.text());
+    if (j.v === 2 && Array.isArray(j.tickets)) {
+      const current = await api('tickets_list');
+      if (!current.ok) throw new Error('Der aktuelle Ticketstand konnte nicht geprüft werden. Bitte erneut anmelden und die Sicherung noch einmal auswählen.');
+      j.ticketBases = Object.fromEntries((await current.json()).tickets.map(t => [t.id, t.version]));
+    }
+    const { encodeBackupPayload } = await import('./backup.js');
+    const r = await post('import', await encodeBackupPayload(j)); const o = await r.json();
+    const result = o.imported + ' Projekt(e) und ' + (o.ticketsImported || 0) + ' Ticket(s) eingespielt.';
+    say(r.ok ? result + (o.ticketsSkipped ? ' ' + o.ticketsSkipped + ' unveränderte Ticket(s).' : '') :
+      (r.status === 409 ? 'Ein Ticket wurde inzwischen geändert. Bitte die Sicherung erneut auswählen und den aktuellen Stand prüfen.' : o.error), !r.ok);
+    if (r.ok) projects();
+  } catch (x) { say(x instanceof SyntaxError ? 'Die Datei enthält kein gültiges JSON.' : (x.message || 'Die Sicherung konnte nicht eingespielt werden.'), true); }
+  e.target.value = '';
 };
 async function projects() {
   const r = await api('projects_all'); if (!r.ok) return; const j = await r.json();
@@ -91,37 +102,6 @@ const COLORS = ['#3d7e5e', '#2f6fb2', '#8a5cb8', '#b0612a', '#2a8c8c', '#a33f6d'
 const colorOf = n => { let h = 0; for (const ch of String(n)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return COLORS[h % COLORS.length]; };
 function av(u) { return u.avatar ? '<img class="av" src="' + esc(u.avatar) + '" alt="">' : '<span class="av" style="background:' + colorOf(u.name) + '">' + esc(String(u.name).trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()) + '</span>'; }
 
-/* Tickets */
-const KINDS = { idee: 'Idee', problem: 'Problem', frage: 'Frage' };
-const STATES = { neu: 'Neu', arbeit: 'In Bearbeitung', erledigt: 'Erledigt', abgelehnt: 'Abgelehnt' };
-let allTickets = [];
-async function tickets() {
-  const r = await api('tickets'); if (!r.ok) return;
-  allTickets = (await r.json()).tickets; paintTickets();
-}
-function paintTickets() {
-  const f = $('tf').value, open = allTickets.filter(t => t.status === 'neu' || t.status === 'arbeit');
-  $('tcount').textContent = open.length + ' offen';
-  const list = allTickets.filter(t => f === 'alle' ? true : f === 'offen' ? (t.status === 'neu' || t.status === 'arbeit') : t.status === f);
-  $('tickets').innerHTML = list.length ? list.map(t => '<article class="tk" data-id="' + t.id + '"><div class="meta"><span class="pill">' + KINDS[t.kind] + '</span><span>von ' + esc(t.user) + '</span><span>' + new Date(t.createdAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) + '</span>' +
-    (t.projectName ? '<span>Projekt: ' + esc(t.projectName) + '</span>' : '') + '</div><b>' + esc(t.title) + '</b>' + (t.body ? '<p>' + esc(t.body) + '</p>' : '') +
-    '<textarea data-f="note" placeholder="Antwort an ' + esc(t.user) + ' (optional, wird per E-Mail geschickt, wenn hinterlegt)">' + esc(t.note) + '</textarea>' +
-    '<div class="row"><select data-f="status">' + Object.entries(STATES).map(([k, v]) => '<option value="' + k + '"' + (k === t.status ? ' selected' : '') + '>' + v + '</option>').join('') + '</select>' +
-    '<button class="pri" data-act="tsave">Speichern</button><button class="del" data-act="tdel">Löschen</button></div></article>').join('')
-    : '<p class="hint">Keine Tickets in dieser Auswahl.</p>';
-}
-$('tf').onchange = paintTickets;
-$('tickets').addEventListener('click', async e => {
-  const b = e.target.closest('button[data-act]'); if (!b) return; const card = b.closest('[data-id]'), id = +card.dataset.id;
-  if (b.dataset.act === 'tsave') {
-    const r = await post('ticket_update', { id, status: card.querySelector('[data-f=status]').value, note: card.querySelector('[data-f=note]').value });
-    say(r.ok ? 'Ticket gespeichert.' : 'Speichern fehlgeschlagen.', !r.ok); tickets();
-  } else {
-    if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Wirklich löschen?'; return; }
-    const r = await post('ticket_del', { id }); say(r.ok ? 'Ticket gelöscht.' : 'Löschen fehlgeschlagen.', !r.ok); tickets();
-  }
-});
-
 /* E-Mail */
 async function mail() {
   const r = await api('mail_status'); if (!r.ok) { $('mailInfo').textContent = 'Konnte nicht geladen werden.'; return; }
@@ -136,6 +116,6 @@ $('mrun').onclick = async () => {
   const r = await post('reminders_run'); const j = await r.json();
   say(r.ok ? (j.sent ? j.sent + ' Erinnerungsmail(s) mit ' + j.items + ' Vorgang/Vorgängen verschickt.' : 'Keine neuen Erinnerungen fällig (bereits verschickte werden nicht wiederholt).') + (j.errors && j.errors.length ? ' Fehler: ' + j.errors.join('; ') : '') : (j.error || 'Fehlgeschlagen'), !r.ok || (j.errors && j.errors.length));
 };
-users(); projects(); tickets(); mail();
+users(); projects(); mail();
 </script>
 </body></html>

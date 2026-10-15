@@ -937,6 +937,14 @@ function onClick(e) {
 
 /* ---------- Meldungen ---------- */
 window.__cur = () => curId;
+window.__saveBeforeNavigation = async () => {
+  await flush();
+  if (saving || pending || saveTimer || (edited && !readOnly && (!dbc || base.get(curId) !== JSON.stringify(state)))) {
+    toast('Der Terminplan ist noch nicht gespeichert. Bitte warte oder prüfe die Verbindung.');
+    return false;
+  }
+  return true;
+};
 let toastT = 0;
 function toast(txt, btn, fn) {
   $('toastTxt').textContent = txt; const b = $('toastBtn');

@@ -73,11 +73,24 @@
   }
   function chrome() {
     const anchor = document.getElementById('openPanel'); if (!anchor || document.getElementById('userBtn')) return;
+    let leavingForTickets = false;
+    const openTickets = async () => {
+      if (leavingForTickets) return;
+      leavingForTickets = true;
+      try {
+        if (window.__saveBeforeNavigation && !await window.__saveBeforeNavigation()) return;
+        location.href = 'tickets.html';
+      } finally { leavingForTickets = false; }
+    };
+    const ticketsBtn = document.createElement('button');
+    ticketsBtn.id = 'ticketsBtn'; ticketsBtn.className = 'btn'; ticketsBtn.type = 'button'; ticketsBtn.textContent = 'Tickets';
+    ticketsBtn.addEventListener('click', openTickets);
+    anchor.parentNode.insertBefore(ticketsBtn, anchor);
     const wrap = document.createElement('div'); wrap.className = 'umenu-wrap';
     wrap.innerHTML = '<button class="btn userbtn" id="userBtn" type="button" aria-haspopup="menu" aria-expanded="false"></button>' +
       '<div class="umenu" id="userMenu" role="menu" hidden>' +
       '<button type="button" role="menuitem" data-m="profile">Mein Profil und Passwort</button>' +
-      '<button type="button" role="menuitem" data-m="ticket">Idee oder Problem melden</button>' +
+      '<button type="button" role="menuitem" data-m="ticket">Tickets ansehen und einreichen</button>' +
       (me.role === 'admin' ? '<button type="button" role="menuitem" data-m="admin">Verwaltung</button>' : '') +
       '<button type="button" role="menuitem" data-m="logout">Abmelden</button></div>';
     anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
@@ -90,7 +103,7 @@
       const it = e.target.closest('[data-m]'); if (!it) return; close();
       const m = it.dataset.m;
       if (m === 'profile') profileDialog();
-      else if (m === 'ticket') ticketDialog();
+      else if (m === 'ticket') await openTickets();
       else if (m === 'admin') location.href = 'admin.html';
       else if (m === 'logout') { try { await post('logout'); } catch (x) { } location.reload(); }
     });
@@ -156,37 +169,6 @@
       $d('pOld').value = $d('pNew').value = $d('pNew2').value = ''; say('pwMsg', 'Passwort geändert.');
     });
   }
-  const KINDS = { idee: 'Idee', problem: 'Problem', frage: 'Frage' };
-  const STATES = { neu: 'Neu', arbeit: 'In Bearbeitung', erledigt: 'Erledigt', abgelehnt: 'Abgelehnt' };
-  async function ticketDialog() {
-    const cur = window.__cur ? window.__cur() : null, pname = (document.getElementById('pname') || {}).value || '';
-    const d = dialog('Idee oder Problem melden', '<div class="tk">' +
-      '<div class="seg" id="tKind" role="group" aria-label="Art">' + Object.entries(KINDS).map(([k, t], i) => '<button type="button" data-k="' + k + '" aria-pressed="' + (i === 0) + '">' + t + '</button>').join('') + '</div>' +
-      '<label class="pf">Titel<input id="tTitle" class="in" maxlength="200" placeholder="Kurz und klar, z. B. „PDF-Schrift zu klein“"></label>' +
-      '<label class="pf">Beschreibung<textarea id="tBody" class="in" rows="5" maxlength="8000" placeholder="Was ist passiert, was wünschst du dir?"></textarea></label>' +
-      (cur ? '<label class="chk"><input type="checkbox" id="tProj" checked> betrifft das Projekt „' + esc(pname || 'Ohne Namen') + '“</label>' : '') +
-      '<div class="btns"><button class="btn primary" type="button" id="tSend">An die Administratoren senden</button><span id="tMsg" class="msg"></span></div>' +
-      '<h3>Meine Tickets</h3><div id="tList" class="tlist">Wird geladen …</div></div>');
-    const $d = id => d.el.querySelector('#' + id);
-    let kind = 'idee';
-    $d('tKind').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; kind = b.dataset.k; $d('tKind').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
-    const list = async () => {
-      const r = await api('tickets'); if (!r.ok) { $d('tList').textContent = 'Konnte nicht geladen werden.'; return; }
-      const mine = (await r.json()).tickets.filter(t => t.own);
-      $d('tList').innerHTML = mine.length ? mine.map(t => '<article class="tcard"><div class="tmeta"><span class="tkind k-' + t.kind + '">' + KINDS[t.kind] + '</span><span class="tst s-' + t.status + '">' + STATES[t.status] + '</span><span>' + new Date(t.createdAt).toLocaleDateString('de-DE') + '</span></div>' +
-        '<b>' + esc(t.title) + '</b>' + (t.note ? '<div class="tnote"><span>Antwort:</span> ' + esc(t.note) + '</div>' : '') + '</article>').join('') : '<p class="hint">Du hast noch keine Tickets geschickt.</p>';
-    };
-    list();
-    $d('tSend').addEventListener('click', async () => {
-      const title = $d('tTitle').value.trim(), m = $d('tMsg');
-      if (title.length < 3) { m.textContent = 'Bitte einen Titel angeben.'; m.classList.add('bad'); $d('tTitle').focus(); return; }
-      const body = { kind, title, body: $d('tBody').value.trim(), projectId: cur && $d('tProj') && $d('tProj').checked ? cur : null };
-      const r = await post('ticket_new', body); const j = await r.json().catch(() => ({}));
-      if (!r.ok) { m.textContent = j.error || 'Senden fehlgeschlagen'; m.classList.add('bad'); return; }
-      m.classList.remove('bad'); m.textContent = 'Danke, ist angekommen.'; $d('tTitle').value = $d('tBody').value = ''; list();
-    });
-    $d('tTitle').focus();
-  }
   function chips(list) {
     const box = document.getElementById('online'); if (!box) return; box.innerHTML = '';
     const cur = window.__cur ? window.__cur() : null;
@@ -243,7 +225,12 @@
   window.SP = {
     async connect(cfg, status) {
       status('saving', 'Anmeldung …');
-      await ensureLogin(); await refreshMe(); chrome(); await loadTeam();
+      await ensureLogin();
+      if (new URLSearchParams(location.search).get('next') === 'tickets.html') {
+        location.replace('tickets.html' + location.hash);
+        return new Promise(() => {});
+      }
+      await refreshMe(); chrome(); await loadTeam();
       setInterval(() => { if (!document.hidden) { loadTeam(); if (me && me.role === 'admin') refreshMe(); } }, 60000);
       const col = makeCol(); col.uid = me.id; col.readOnly = me.role === 'viewer'; return col;
     }

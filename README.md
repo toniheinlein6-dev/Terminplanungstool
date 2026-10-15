@@ -11,7 +11,7 @@ Gantt-Terminplaner der Zimmerei Heinlein für die gemeinsame Projektplanung im T
 - PDF-Export als eine durchgehende Seite im Querformat, CSV- und JSON-Export
 - Mehrere Projekte, Teamarbeit mit Live-Abgleich, zeilenweises Zusammenführen gleichzeitiger Änderungen
 - Benutzer mit Rollen und Profilbild, eigenes Passwort und E-Mail-Adresse unter „Mein Profil“
-- Tickets: Ideen, Probleme und Fragen an die Administratoren, mit Antwort per E-Mail
+- Gemeinsames Ticketsystem: Fehler, Verbesserungswünsche und Fragen mit Status, Admin-Rückmeldung und vollständigem Verlauf
 - E-Mail-Erinnerung 2 Tage vor dem Ende eines Vorgangs an die verantwortliche Person
 - Zeitachse zoombar von 40 % bis 400 %
 - Versionsverlauf (40 Stände je Projekt), Sicherung und Wiederherstellung
@@ -22,6 +22,7 @@ Gantt-Terminplaner der Zimmerei Heinlein für die gemeinsame Projektplanung im T
 | --- | --- |
 | `src/` | Quellcode der Oberfläche (`head.html`, `body.html`, `logic.js`, `ui.js`, `views.js`, `pdf.js`), Verwaltungs- und Einrichtungsseite, Server-Anbindung `server-api.js` |
 | `api/tp.js` | Vercel-Funktion, alle Aktionen über `/api/tp?a=<aktion>` |
+| `src/tickets.html`, `src/tickets.js` | Ticketübersicht, Einreichen und Adminbearbeitung |
 | `api/cron-reminders.js` | täglicher Erinnerungs-Job (Vercel Cron, siehe `vercel.json`) |
 | `lib/` | Server: Datenbank (`db.js`), Anmeldung (`auth.js`), Aktionen (`handler.js`), E-Mail (`mail.js`), Erinnerungen (`reminders.js`), Terminberechnung (`logic.cjs`, erzeugt aus `src/logic.js`) |
 | `scripts/build.mjs` | baut `public/` (Website) und `claude/` (Claude-Version) |
@@ -74,9 +75,20 @@ DATABASE_URL="postgres://…" SESSION_SECRET="…" SETUP_KEY="…" npm run dev
 
 ## Sicherung
 
-- *Verwaltung → Alle Projekte sichern* lädt eine JSON-Datei mit allen Projekten, *Sicherung einspielen* stellt sie wieder her.
+- *Verwaltung → Projekte und Tickets sichern* lädt eine JSON-Datei mit allen Projekten und Tickets einschließlich Ticketverlauf. *Sicherung einspielen* stellt sie wieder her; ältere Projektsicherungen bleiben verwendbar.
 - Der Versionsverlauf hält die letzten 40 Speicherstände je Projekt.
+- Umfangreiche Sicherungen werden beim Transport automatisch komprimiert; die heruntergeladene Datei bleibt JSON. Unterstützt werden bis zu 64 MB JSON und 3 MB komprimierte Daten. Größere Bestände benötigen eine direkte Datenbanksicherung.
 - Zusätzlich sichert Neon die Datenbank selbst (Point-in-Time-Restore je nach Tarif).
+
+## Tickets
+
+Über **Tickets** in der Kopfleiste oder im Benutzermenü können alle angemeldeten Teammitglieder sämtliche Tickets sehen und neue Tickets einreichen. Das gilt auch für die Rolle **Nur lesen**. Die Übersicht bietet Suche und Filter nach Status, Kategorie und eigenen Tickets; erledigte und abgelehnte Tickets bleiben erhalten.
+
+Ein Ticket enthält Titel, Beschreibung und Kategorie. Ticketnummer, Ersteller und Datum werden automatisch gesetzt. Nur Administratoren dürfen Inhalt, Status und Rückmeldung ändern. Die Status sind **Neu**, **In Bearbeitung**, **Aufgenommen · erledigt** (bereits umgesetzt) und **Abgelehnt**. Bei Ablehnung ist eine Begründung erforderlich; ein Ticket kann später wieder geöffnet werden. Jede Änderung wird mit Bearbeiter und Zeitpunkt im Verlauf festgehalten.
+
+Gleichzeitige Änderungen werden über Versionsnummern erkannt. Bei einem Konflikt bleiben die eigenen Eingaben in der Oberfläche erhalten, bis der aktuelle Stand geprüft wurde. Tickets und Namensangaben im Verlauf bleiben auch nach dem Löschen eines Benutzerkontos erhalten.
+
+Vorhandene Tickets aus der bisherigen Ticketfunktion werden beim ersten API-Aufruf automatisch ergänzt und bleiben erhalten. Die Datenbankänderung fügt Tabellen und Spalten hinzu; vorhandene Projekte und Benutzer bleiben bestehen. Für die Veröffentlichung sind keine zusätzlichen Umgebungsvariablen erforderlich. Die bestehende E-Mail-Anbindung wird für Ticketbenachrichtigungen weiterverwendet.
 
 ## In Microsoft Teams einbinden
 
@@ -84,4 +96,4 @@ In einem Kanal *+ → Website* wählen und die Vercel-Adresse eintragen. Die nö
 
 ## Entwickeln
 
-Änderungen an der Oberfläche in `src/` vornehmen, dann `npm run build`. `npm test` prüft die Terminberechnung.
+Änderungen an der Oberfläche in `src/` vornehmen, dann `npm run build`. `npm test` baut die Website, prüft die Terminberechnung und führt HTTP-Integrationstests des Ticketsystems mit einer isolierten Datenbank im Arbeitsspeicher aus (Rollen, Migration, Verlauf, Konflikte, Sicherung und Wiederherstellung).
