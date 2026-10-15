@@ -555,6 +555,13 @@ html.m .tkwho { grid-column: 2; justify-content: flex-start; max-width: none; }
 html.m .dgrid3 { grid-template-columns: 1fr 1fr; }
 html.m .dgrid3 label:last-child { grid-column: 1 / -1; }
 html.m #vTasks { padding: 10px; }
+
+.ddates { display: grid; grid-template-columns: 1fr 1fr 150px; gap: 12px; }
+.ddsum { margin: 0; font-family: var(--font-num); }
+.linkb { all: unset; cursor: pointer; color: var(--accent); text-decoration: underline; }
+.linkb:focus-visible { outline: 2px solid var(--accent); }
+html.m .ddates { grid-template-columns: 1fr 1fr; }
+html.m .ddates label:nth-child(3) { grid-column: 1 / -1; }
 </style>
 
 <header class="top">
@@ -2134,6 +2141,13 @@ function openDetails(i) {
     '<label class="pf">Bezeichnung<input class="in" id="dName" maxlength="200"' + (ro ? ' disabled' : '') + '></label>' +
     (o.summary ? '' : '<label class="pf">Status<select class="in" id="dSt"' + (ro ? ' disabled' : '') + '>' + L.map(l => '<option value="' + esc(l.id) + '">' + esc(l.name) + '</option>').join('') + '</select></label>') +
     '</div>' +
+    // Termine: Start setzt den festen Start, Ende passt die Dauer an
+    (o.summary ? '<div class="pf"><span>Zeitraum</span><p class="ddsum" id="dSum"></p><p class="hint">Ergibt sich aus den Untervorgängen. Ändere die Termine dort.</p></div>'
+      : '<div class="ddates">' +
+        '<label class="pf">' + (r.type === 'meilenstein' ? 'Datum' : 'Start') + '<input class="in" type="date" id="dS"' + (ro ? ' disabled' : '') + '></label>' +
+        (r.type === 'meilenstein' ? '' : '<label class="pf">Ende<input class="in" type="date" id="dE"' + (ro ? ' disabled' : '') + '></label>' +
+          '<label class="pf">Dauer (' + (state.mode === 'work' ? 'Arbeitstage' : 'Tage') + ')<input class="in" type="number" min="1" step="1" id="dDur"' + (ro ? ' disabled' : '') + '></label>') +
+        '</div><p class="hint bad" id="dDateErr" role="alert" hidden></p><p class="hint" id="dDateHint"></p>') +
     '<div class="pf"><span>Verantwortlich</span><div class="people" id="dWho"></div>' +
     (ro ? '' : '<div class="addp">' + (hasUserDirectory() ? '<select class="in" id="dWhoAdd" aria-label="Person hinzufügen"></select>' : '<input class="in" id="dWhoAdd" list="peopleList" placeholder="Person hinzufügen …" autocomplete="off">') + '<button class="btn" type="button" id="dWhoBtn">Hinzufügen</button></div>') + '</div>' +
     '<div class="pf"><span>Fortschritt</span>' + (o.summary
@@ -2159,7 +2173,23 @@ function openDetails(i) {
     q('#detMeta').textContent = (oo.summary ? 'Sammelvorgang' : TYPES[rr.type]) + ' · ' + rangeTxt(k) + (rr.type === 'meilenstein' ? '' : ' · ' + durTxt(k)) + (isLate(k) ? ' · überfällig' : '');
     if (q('#dProgSum')) q('#dProgSum').innerHTML = progBar(progOf(k));
     if (q('#dTasks')) paintDetTasks(q('#dTasks'), id);
+    paintDates();
     paintPeople();
+  }
+  function paintDates(force) {
+    const k = cur(); if (k == null) return; const rr = state.rows[k], oo = sched.out[k], act = document.activeElement;
+    if (q('#dSum')) { q('#dSum').textContent = rangeTxt(k) + ' · ' + durTxt(k); return; }
+    if (!q('#dS')) return;
+    if (force || act !== q('#dS')) q('#dS').value = toISO(oo.S);
+    if (q('#dE') && (force || act !== q('#dE'))) q('#dE').value = toISO(oo.E);
+    if (q('#dDur') && (force || act !== q('#dDur'))) q('#dDur').value = String(oo.dur);
+    if (force && q('#dDateErr')) q('#dDateErr').hidden = true;
+    const fx = parseISO(rr.fixed), pi = oo.pred, h = [];
+    if (pi >= 0 && (fx == null || oo.S > fx)) h.push('Frühestens nach Vorgänger ' + state.rows[pi].id + ' „' + (state.rows[pi].name || 'ohne Namen') + '“. Ein früheres Datum greift erst, wenn du den Vorgänger entfernst.');
+    if (fx != null) h.push('Fester Start: ' + fmt(fx) + (oo.S > fx ? ' (wird durch den Vorgänger verschoben)' : '') + '.');
+    else if (pi < 0) h.push('Ohne Vorgänger und festen Start beginnt die Zeile am Projektstart.');
+    if (sched.work && fx != null && !sched.isWork(fx)) h.push('Der gewählte Tag ist kein Arbeitstag, Start ist der nächste Arbeitstag.');
+    q('#dDateHint').innerHTML = esc(h.join(' ')) + (fx != null && !ro ? ' <button type="button" class="linkb" id="dFixClr">Festen Start entfernen</button>' : '');
   }
   function paintPeople() {
     const k = cur(); if (k == null) return; const ents = assigneeEntries(state.rows[k]);
@@ -2176,6 +2206,19 @@ function openDetails(i) {
   if (q('#dPct')) { q('#dPct').value = String(rowDone(r) ? 100 : r.pct || 0); q('#dPctV').textContent = q('#dPct').value + ' %'; }
   paintHead();
   q('#dName').addEventListener('input', e => save(x => { x.name = e.target.value; }, true));
+  if (q('#dS')) q('#dS').addEventListener('change', e => { if (parseISO(e.target.value) == null) return; save(x => { x.fixed = e.target.value; }, true); paintDates(true); });
+  if (q('#dDur')) {
+    q('#dDur').addEventListener('input', e => { const v = parseInt(e.target.value, 10); if (!(v >= 1)) return; save(x => { x.dur = String(v); }, true); });
+    q('#dDur').addEventListener('change', () => paintDates(true));
+  }
+  if (q('#dE')) q('#dE').addEventListener('change', e => {
+    const k = cur(), en = parseISO(e.target.value); if (k == null || en == null) return;
+    const S = sched.out[k].S;
+    if (en < S) { q('#dDateErr').textContent = 'Das Ende liegt vor dem Start. Verschiebe zuerst den Start.'; q('#dDateErr').hidden = false; e.target.value = toISO(sched.out[k].E); return; }
+    let d = 0; for (let x = S; x <= en; x++) if (!sched.work || sched.isWork(x)) d++;
+    save(x => { x.dur = String(Math.max(1, d)); }, true); paintDates(true);
+  });
+  q('.panel').addEventListener('click', e => { if (e.target.id === 'dFixClr') save(x => { x.fixed = ''; }, true); });
   q('#dDesc').addEventListener('input', e => save(x => { x.desc = e.target.value.slice(0, 4000); }));
   if (q('#dSt')) q('#dSt').addEventListener('change', e => { const k = cur(); if (k != null) { setSt(k, e.target.value); const rr = state.rows[k]; if (q('#dPct')) { q('#dPct').value = String(rowDone(rr) ? 100 : rr.pct || 0); q('#dPctV').textContent = q('#dPct').value + ' %'; } paintHead(); } });
   if (q('#dPct')) q('#dPct').addEventListener('input', e => { q('#dPctV').textContent = e.target.value + ' %'; save(x => setPct(x, e.target.value)); const k = cur(); if (k != null && q('#dSt')) q('#dSt').value = laneOfRow(state.rows[k]).id; });

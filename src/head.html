@@ -555,4 +555,11 @@ html.m .tkwho { grid-column: 2; justify-content: flex-start; max-width: none; }
 html.m .dgrid3 { grid-template-columns: 1fr 1fr; }
 html.m .dgrid3 label:last-child { grid-column: 1 / -1; }
 html.m #vTasks { padding: 10px; }
+
+.ddates { display: grid; grid-template-columns: 1fr 1fr 150px; gap: 12px; }
+.ddsum { margin: 0; font-family: var(--font-num); }
+.linkb { all: unset; cursor: pointer; color: var(--accent); text-decoration: underline; }
+.linkb:focus-visible { outline: 2px solid var(--accent); }
+html.m .ddates { grid-template-columns: 1fr 1fr; }
+html.m .ddates label:nth-child(3) { grid-column: 1 / -1; }
 </style>
