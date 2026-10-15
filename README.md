@@ -1,6 +1,6 @@
 # Terminplaner
 
-Gantt-Terminplaner der Zimmerei Heinlein für die gemeinsame Projektplanung im Team.
+Gantt-Terminplaner für die gemeinsame Projektplanung im Team.
 
 **Funktionen**
 
@@ -52,8 +52,8 @@ Die Funktionen laufen in der Region Frankfurt (`fra1`, siehe `vercel.json`).
 
 Der Terminplaner verschickt Erinnerungen und Ticket-Benachrichtigungen. Dafür eine der beiden Varianten:
 
-- **Resend** (einfach, passt zu Vercel): Konto bei resend.com, dort die Domain (z. B. `zimmerei-heinlein.de`) über die angezeigten DNS-Einträge verifizieren, API-Schlüssel anlegen. In Vercel `RESEND_API_KEY` und `MAIL_FROM` (z. B. `Terminplaner <terminplaner@zimmerei-heinlein.de>`) setzen.
-- **Eigener SMTP-Server**: `SMTP_HOST`, `SMTP_PORT` (587 oder 465), `SMTP_USER`, `SMTP_PASS` und `MAIL_FROM` setzen.
+- **SMTP eines vorhandenen Postfachs** (am schnellsten, z. B. Gmail): `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER` = Gmail-Adresse, `SMTP_PASS` = ein *App-Passwort* (Google-Konto → Sicherheit → Bestätigung in zwei Schritten einschalten → App-Passwörter), `MAIL_FROM` = `Terminplaner <dieselbe Gmail-Adresse>`. Andere Anbieter (GMX, web.de, Outlook.com …) funktionieren genauso mit deren SMTP-Daten.
+- **Resend** mit eigener Domain: Konto bei resend.com, eigene Domain über die angezeigten DNS-Einträge verifizieren (Region Ireland), API-Schlüssel anlegen, in Vercel `RESEND_API_KEY` und `MAIL_FROM` (z. B. `Terminplaner <terminplaner@deine-domain.de>`) setzen. Liegt die Domain bei Vercel, richtet die Resend-Integration im Vercel Marketplace die DNS-Einträge automatisch ein.
 
 Unter *Verwaltung → E-Mail und Erinnerungen* zeigt der Terminplaner, ob der Versand eingerichtet ist, und kann eine Testmail schicken.
 
