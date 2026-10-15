@@ -56,6 +56,9 @@
     --on-task: #0d1f17; --on-sub: #e5eee9; --st-arbeit-bg: #4a3512; --st-arbeit: #f3c77e;
   color-scheme: dark;
 }
+/* Eigene Farbwahl (Auto / Hell / Dunkel) hat Vorrang vor System und Umgebung */
+:root[data-tp-theme="light"] { --bg: #f1f4f2; --surface: #ffffff; --ink: #16231d; --muted: #5a6a62; --line: #d3dbd6; --grid: #e4e9e6; --hdr: #e6ece8; --accent: #26664b; --accent-2: #7cc29c; --accent-ink: #ffffff; --accent-soft: #dcebe3; --sumrow: #e9f0ec; --sel: #e3efe8; --bar-sum: #1d3b2e; --bar-task: #3d7e5e; --bar-sub: #94c4aa; --bar-ms: #d4861b; --link: #b23a2b; --today: #1f6feb; --today-bg: #e2ecfb; --weekend: #eaeeec; --holiday: #f3dcd8; --warn: #b23a2b; --on-task: #ffffff; --on-sub: #16231d; --st-arbeit-bg: #fbe8c8; --st-arbeit: #7a4a06; color-scheme: light; }
+:root[data-tp-theme="dark"] { --bg: #111916; --surface: #18221d; --ink: #e5eee9; --muted: #92a39a; --line: #2c3a33; --grid: #232f29; --hdr: #1d2924; --accent: #5db58d; --accent-2: #1f5a40; --accent-ink: #0d1f17; --accent-soft: #23372d; --sumrow: #1c2923; --sel: #223329; --bar-sum: #a9d9c0; --bar-task: #55a57c; --bar-sub: #2f6a50; --bar-ms: #e3a23a; --link: #ea7968; --today: #6aa6ff; --today-bg: #1e2c44; --weekend: #1d2823; --holiday: #3b2724; --warn: #ea7968; --on-task: #0d1f17; --on-sub: #e5eee9; --st-arbeit-bg: #4a3512; --st-arbeit: #f3c77e; color-scheme: dark; }
 html, body { height: 100%; }
 body {
   background: var(--bg); color: var(--ink); font: 14px/1.4 var(--font-ui);
@@ -404,6 +407,8 @@ body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
 .pg.full .pgt { color: var(--accent); font-weight: 600; }
 .pcell { position: relative; }
 .foot .disp { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.foot .disp + .disp { margin-left: 0; }
+.foot:not([data-v="gantt"]) .lg, .foot:not([data-v="gantt"]) .rels { display: none; }
 .foot .disp .seg button { padding: 2px 8px; font-size: 11.5px; }
 .foot .disp + .rels { margin-left: 0; }
 .pcell::after { content: ""; position: absolute; left: 4px; right: 4px; bottom: 2px; height: 3px; border-radius: 2px; pointer-events: none;

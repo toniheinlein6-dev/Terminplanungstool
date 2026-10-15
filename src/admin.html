@@ -3,6 +3,8 @@
 <style>
 :root{--bg:#f1f4f2;--panel:#fff;--ink:#1c2a25;--muted:#5f6f68;--line:#d5ddd9;--accent:#2f5d50;--bad:#b3392b}
 @media (prefers-color-scheme:dark){:root{--bg:#141a18;--panel:#1d2522;--ink:#e6ece9;--muted:#9aa9a2;--line:#33403b;--accent:#6fb59f;--bad:#e8806f}}
+:root[data-tp-theme=light]{--bg:#f1f4f2;--panel:#fff;--ink:#1c2a25;--muted:#5f6f68;--line:#d5ddd9;--accent:#2f5d50;--bad:#b3392b;color-scheme:light}
+:root[data-tp-theme=dark]{--bg:#141a18;--panel:#1d2522;--ink:#e6ece9;--muted:#9aa9a2;--line:#33403b;--accent:#6fb59f;--bad:#e8806f;color-scheme:dark}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px system-ui,sans-serif}
 main{max-width:860px;margin:0 auto;padding:20px 16px 60px;display:flex;flex-direction:column;gap:18px}
 h1{font-size:20px;margin:0}h2{font-size:15px;margin:0 0 10px}
@@ -42,6 +44,7 @@ button{cursor:pointer}button.pri{background:var(--accent);color:#fff;border-colo
  <p class="hint">Pro Projekt werden die letzten Speicherstände aufbewahrt. „Wiederherstellen“ legt den alten Stand als neuen aktuellen Stand an; nichts geht verloren.</p></section>
 </main>
 <script>
+try { const t = JSON.parse(localStorage.getItem('gantt-ui-v1') || '{}').theme; if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-tp-theme', t); } catch (e) { }
 const $ = id => document.getElementById(id);
 const api = (a, o) => fetch('api/tp?a=' + a, Object.assign({ credentials: 'same-origin', cache: 'no-store' }, o));
 const post = (a, b) => api(a, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-TP': '1' }, body: JSON.stringify(b || {}) });

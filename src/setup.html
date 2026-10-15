@@ -3,6 +3,8 @@
 <style>
 :root{--bg:#f1f4f2;--panel:#fff;--ink:#16231d;--muted:#5a6a62;--line:#d3dbd6;--accent:#26664b;--bad:#b23a2b}
 @media (prefers-color-scheme:dark){:root{--bg:#111916;--panel:#18221d;--ink:#e5eee9;--muted:#92a39a;--line:#2c3a33;--accent:#5db58d;--bad:#ea7968;color-scheme:dark}}
+:root[data-tp-theme=light]{--bg:#f1f4f2;--panel:#fff;--ink:#16231d;--muted:#5a6a62;--line:#d3dbd6;--accent:#26664b;--bad:#b23a2b;color-scheme:light}
+:root[data-tp-theme=dark]{--bg:#111916;--panel:#18221d;--ink:#e5eee9;--muted:#92a39a;--line:#2c3a33;--accent:#5db58d;--bad:#ea7968;color-scheme:dark}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px system-ui,sans-serif;display:flex;justify-content:center;padding:40px 16px}
 form{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;width:min(420px,100%);display:flex;flex-direction:column;gap:12px;box-sizing:border-box}
 h1{font-size:20px;margin:0}p{margin:0;color:var(--muted);font-size:14px}
@@ -21,6 +23,7 @@ button{font:inherit;padding:10px;border:0;border-radius:6px;background:var(--acc
   <button>Einrichten</button>
 </form>
 <script>
+try { const t = JSON.parse(localStorage.getItem('gantt-ui-v1') || '{}').theme; if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-tp-theme', t); } catch (e) { }
 const $ = id => document.getElementById(id);
 fetch('api/tp?a=setup_state', { cache: 'no-store' }).then(r => r.json()).then(s => {
   if (!s.needsSetup) location.href = 'index.html';

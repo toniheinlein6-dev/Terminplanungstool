@@ -119,7 +119,7 @@ function setView(v) {
   view = v; saveUi({ view: v });
   $('segView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
   $('board').hidden = v !== 'gantt'; $('tabs').hidden = v !== 'gantt';
-  document.querySelector('.foot').hidden = v !== 'gantt';
+  document.querySelector('.foot').dataset.v = v;   // Legende nur im Gantt, Umschalter immer
   $('vList').hidden = v !== 'list'; $('vKanban').hidden = v !== 'kanban'; $('vCal').hidden = v !== 'cal';
   if ($('vTasks')) $('vTasks').hidden = v !== 'tasks';
   // Aufgaben haben eigene Filter

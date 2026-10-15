@@ -706,6 +706,12 @@ function link(a, b) {
 /* ---------- Darstellung: automatisch, Desktop oder Mobil (je Gerät gespeichert) ---------- */
 let vpDefault = null;
 function dispMode() { try { const d = JSON.parse(localStorage.getItem(LS_UI) || '{}').disp; return ['desktop', 'mobile'].includes(d) ? d : 'auto'; } catch (e) { return 'auto'; } }
+function applyTheme() {
+  let t = 'auto'; try { t = JSON.parse(localStorage.getItem(LS_UI) || '{}').theme || 'auto'; } catch (e) { }
+  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-tp-theme', t); else { t = 'auto'; document.documentElement.removeAttribute('data-tp-theme'); }
+  const seg = document.getElementById('segTheme');
+  if (seg) seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === t)));
+}
 function isMobile() { return document.documentElement.classList.contains('m'); }
 function applyDisplay() {
   const mode = dispMode(), html = document.documentElement, meta = document.querySelector('meta[name="viewport"]');
@@ -729,7 +735,7 @@ function saveUi(extra) { try { const u = JSON.parse(localStorage.getItem(LS_UI) 
 function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Math.min(px, bw - 240)); document.documentElement.style.setProperty('--leftw', px + 'px'); saveUi({ leftw: px }); }
 
 function boot() {
-  applyDisplay();
+  applyTheme(); applyDisplay();
   initViews();
   initTasks();
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (typeof u.zoom2 === 'number') zoom = Math.max(0, Math.min(ZMAX, u.zoom2)); if (u.leftw) document.documentElement.style.setProperty('--leftw', u.leftw + 'px'); } catch (e) { }
@@ -763,6 +769,7 @@ function boot() {
   $('addU').addEventListener('click', () => addRow('untervorgang'));
   $('addM').addEventListener('click', () => addRow('meilenstein'));
   $('undo').addEventListener('click', undo);
+  $('segTheme').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; saveUi({ theme: b.dataset.v }); applyTheme(); });
   $('segDisp').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; saveUi({ disp: b.dataset.v }); applyDisplay(); renderAll(); });
   window.addEventListener('resize', () => { const m = isMobile(); applyDisplay(); if (m !== isMobile()) renderAll(); });
   const blank = () => loadState(blankPlan(state), 'Plan geleert');
