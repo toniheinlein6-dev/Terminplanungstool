@@ -12,14 +12,27 @@ input,select,button{font:inherit;padding:7px 9px;border:1px solid var(--line);bo
 button{cursor:pointer}button.pri{background:var(--accent);color:#fff;border-color:transparent}button.del{color:var(--bad)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.hint{color:var(--muted);font-size:12px;margin:8px 0 0}#msg{min-height:20px}.err{color:var(--bad)}
 .tw{overflow-x:auto}
+.av{width:30px;height:30px;border-radius:50%;object-fit:cover;display:inline-grid;place-items:center;color:#fff;font-size:11px;font-weight:600;vertical-align:middle}
+.tk{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.tk .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}
+.pill{font-size:11.5px;padding:1px 8px;border-radius:10px;border:1px solid var(--line);color:var(--ink)}
+.tk p{margin:0;white-space:pre-wrap}.tk textarea{width:100%;min-height:60px;font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);box-sizing:border-box}
+.ok{color:var(--accent)}ul.up{margin:6px 0 0;padding-left:18px}
 </style></head><body><main>
 <div class="row"><h1>Verwaltung</h1><span style="flex:1"></span><a href="index.html">← Zum Terminplaner</a></div>
-<div id="msg"></div>
+<div id="msg" role="status"></div>
+<section><h2>Tickets <span id="tcount" class="pill"></span></h2>
+ <div class="row"><select id="tf"><option value="offen">Offen (Neu und In Bearbeitung)</option><option value="alle">Alle</option><option value="erledigt">Erledigt</option><option value="abgelehnt">Abgelehnt</option></select></div>
+ <div id="tickets" style="margin-top:10px"></div></section>
 <section><h2>Benutzer</h2>
- <div class="tw"><table><thead><tr><th>Name</th><th>Rolle</th><th>Neues Passwort</th><th></th></tr></thead><tbody id="users"></tbody></table></div>
+ <div class="tw"><table><thead><tr><th></th><th>Name</th><th>E-Mail</th><th>Rolle</th><th>Neues Passwort</th><th></th></tr></thead><tbody id="users"></tbody></table></div>
  <h2 style="margin-top:16px">Neuer Benutzer</h2>
- <div class="row"><input id="nn" placeholder="Name" autocomplete="off"><select id="nr"><option value="editor">Bearbeiten</option><option value="viewer">Nur lesen</option><option value="admin">Administrator</option></select><input id="np" type="password" placeholder="Passwort (min. 8 Zeichen)" autocomplete="new-password"><button class="pri" id="add">Anlegen</button></div>
+ <div class="row"><input id="nn" placeholder="Name" autocomplete="off"><input id="ne" type="email" placeholder="E-Mail (optional)" autocomplete="off"><select id="nr"><option value="editor">Bearbeiten</option><option value="viewer">Nur lesen</option><option value="admin">Administrator</option></select><input id="np" type="password" placeholder="Passwort (min. 8 Zeichen)" autocomplete="new-password"><button class="pri" id="add">Anlegen</button></div>
  <p class="hint">Bearbeiten: Pläne ansehen und ändern. Nur lesen: Pläne ansehen. Administrator: zusätzlich Benutzer und Sicherungen verwalten.</p></section>
+<section><h2>E-Mail und Erinnerungen</h2>
+ <div id="mailInfo">Wird geladen …</div>
+ <div class="row" style="margin-top:10px"><button id="mtest">Testmail an mich senden</button><button id="mrun">Erinnerungen jetzt prüfen und senden</button></div>
+ <p class="hint">Täglich um 7 Uhr verschickt der Terminplaner Erinnerungen für Vorgänge, die in den nächsten 2 Tagen enden und noch nicht erledigt sind. Zugeordnet wird über die Spalte „Verantwortlich“: Dort muss genau der Benutzername stehen (mehrere Namen durch Komma trennen). Die Person braucht eine E-Mail-Adresse und eingeschaltete Erinnerungen (Mein Profil).</p></section>
 <section><h2>Sicherung</h2>
  <div class="row"><button class="pri" id="exp">Alle Projekte sichern (Download)</button><label>Sicherung einspielen: <input type="file" id="imp" accept=".json,application/json"></label></div>
  <p class="hint">Die Sicherung ist eine JSON-Datei mit allen Projekten. Beim Einspielen werden Projekte mit gleicher Kennung durch den Stand der Datei ersetzt (der bisherige Stand bleibt im Versionsverlauf). Zusätzlich sollte die Datenbank selbst regelmäßig vom Server gesichert werden.</p></section>
@@ -36,14 +49,15 @@ const say = (t, bad) => { const m = $('msg'); m.textContent = t || ''; m.classNa
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 async function users() {
   const r = await api('users'); if (r.status === 401) { location.href = 'index.html'; return; } if (r.status === 403) { say('Nur für Administratoren.', true); return; }
-  const j = await r.json(); $('users').innerHTML = j.users.map(u => '<tr data-id="' + u.id + '"><td><input value="' + esc(u.name) + '" data-f="name"></td><td><select data-f="role">' +
+  const j = await r.json(); $('users').innerHTML = j.users.map(u => '<tr data-id="' + u.id + '"><td>' + av(u) + '</td><td><input value="' + esc(u.name) + '" data-f="name"></td>' +
+    '<td><input type="email" value="' + esc(u.email) + '" data-f="email" placeholder="keine"></td><td><select data-f="role">' +
     [['editor', 'Bearbeiten'], ['viewer', 'Nur lesen'], ['admin', 'Administrator']].map(([v, t]) => '<option value="' + v + '"' + (u.role === v ? ' selected' : '') + '>' + t + '</option>').join('') +
     '</select></td><td><input type="password" placeholder="unverändert" data-f="password" autocomplete="new-password"></td><td style="white-space:nowrap"><button data-act="save">Speichern</button><button class="del" data-act="del">Löschen</button></td></tr>').join('');
 }
 $('users').addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return; const tr = b.closest('tr'), id = +tr.dataset.id;
   if (b.dataset.act === 'save') {
-    const r = await post('user_save', { id, name: tr.querySelector('[data-f=name]').value, role: tr.querySelector('[data-f=role]').value, password: tr.querySelector('[data-f=password]').value });
+    const r = await post('user_save', { id, name: tr.querySelector('[data-f=name]').value, email: tr.querySelector('[data-f=email]').value, role: tr.querySelector('[data-f=role]').value, password: tr.querySelector('[data-f=password]').value });
     const j = await r.json(); say(r.ok ? 'Gespeichert.' : j.error, !r.ok); if (r.ok) users();
   } else if (b.dataset.act === 'del') {
     if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Wirklich löschen?'; return; }
@@ -51,8 +65,8 @@ $('users').addEventListener('click', async e => {
   }
 });
 $('add').onclick = async () => {
-  const r = await post('user_save', { name: $('nn').value, role: $('nr').value, password: $('np').value }); const j = await r.json();
-  say(r.ok ? 'Benutzer angelegt.' : j.error, !r.ok); if (r.ok) { $('nn').value = $('np').value = ''; users(); }
+  const r = await post('user_save', { name: $('nn').value, email: $('ne').value, role: $('nr').value, password: $('np').value }); const j = await r.json();
+  say(r.ok ? 'Benutzer angelegt.' : j.error, !r.ok); if (r.ok) { $('nn').value = $('ne').value = $('np').value = ''; users(); }
 };
 $('exp').onclick = () => { location.href = 'api/tp?a=export'; };
 $('imp').onchange = async e => {
@@ -73,5 +87,55 @@ $('hist').addEventListener('click', async e => {
   const b = e.target.closest('button[data-v]'); if (!b) return;
   const r = await post('restore', { id: $('hp').value, version: +b.dataset.v }); say(r.ok ? 'Wiederhergestellt. Im Terminplaner erscheint der Stand innerhalb weniger Sekunden.' : 'Wiederherstellen nicht möglich.', !r.ok); hist();
 });
-users(); projects();
-</script></body></html>
+const COLORS = ['#3d7e5e', '#2f6fb2', '#8a5cb8', '#b0612a', '#2a8c8c', '#a33f6d', '#5f6f2a'];
+const colorOf = n => { let h = 0; for (const ch of String(n)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return COLORS[h % COLORS.length]; };
+function av(u) { return u.avatar ? '<img class="av" src="' + esc(u.avatar) + '" alt="">' : '<span class="av" style="background:' + colorOf(u.name) + '">' + esc(String(u.name).trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()) + '</span>'; }
+
+/* Tickets */
+const KINDS = { idee: 'Idee', problem: 'Problem', frage: 'Frage' };
+const STATES = { neu: 'Neu', arbeit: 'In Bearbeitung', erledigt: 'Erledigt', abgelehnt: 'Abgelehnt' };
+let allTickets = [];
+async function tickets() {
+  const r = await api('tickets'); if (!r.ok) return;
+  allTickets = (await r.json()).tickets; paintTickets();
+}
+function paintTickets() {
+  const f = $('tf').value, open = allTickets.filter(t => t.status === 'neu' || t.status === 'arbeit');
+  $('tcount').textContent = open.length + ' offen';
+  const list = allTickets.filter(t => f === 'alle' ? true : f === 'offen' ? (t.status === 'neu' || t.status === 'arbeit') : t.status === f);
+  $('tickets').innerHTML = list.length ? list.map(t => '<article class="tk" data-id="' + t.id + '"><div class="meta"><span class="pill">' + KINDS[t.kind] + '</span><span>von ' + esc(t.user) + '</span><span>' + new Date(t.createdAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) + '</span>' +
+    (t.projectName ? '<span>Projekt: ' + esc(t.projectName) + '</span>' : '') + '</div><b>' + esc(t.title) + '</b>' + (t.body ? '<p>' + esc(t.body) + '</p>' : '') +
+    '<textarea data-f="note" placeholder="Antwort an ' + esc(t.user) + ' (optional, wird per E-Mail geschickt, wenn hinterlegt)">' + esc(t.note) + '</textarea>' +
+    '<div class="row"><select data-f="status">' + Object.entries(STATES).map(([k, v]) => '<option value="' + k + '"' + (k === t.status ? ' selected' : '') + '>' + v + '</option>').join('') + '</select>' +
+    '<button class="pri" data-act="tsave">Speichern</button><button class="del" data-act="tdel">Löschen</button></div></article>').join('')
+    : '<p class="hint">Keine Tickets in dieser Auswahl.</p>';
+}
+$('tf').onchange = paintTickets;
+$('tickets').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return; const card = b.closest('[data-id]'), id = +card.dataset.id;
+  if (b.dataset.act === 'tsave') {
+    const r = await post('ticket_update', { id, status: card.querySelector('[data-f=status]').value, note: card.querySelector('[data-f=note]').value });
+    say(r.ok ? 'Ticket gespeichert.' : 'Speichern fehlgeschlagen.', !r.ok); tickets();
+  } else {
+    if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Wirklich löschen?'; return; }
+    const r = await post('ticket_del', { id }); say(r.ok ? 'Ticket gelöscht.' : 'Löschen fehlgeschlagen.', !r.ok); tickets();
+  }
+});
+
+/* E-Mail */
+async function mail() {
+  const r = await api('mail_status'); if (!r.ok) { $('mailInfo').textContent = 'Konnte nicht geladen werden.'; return; }
+  const m = await r.json();
+  $('mailInfo').innerHTML = (m.configured ? '<span class="ok">E-Mail-Versand eingerichtet</span> über ' + esc(m.provider) + ', Absender ' + esc(m.from) : '<span class="err">E-Mail-Versand noch nicht eingerichtet.</span> In Vercel RESEND_API_KEY und MAIL_FROM (oder SMTP_HOST …) setzen.') +
+    '<br>Tägliche Erinnerung: ' + (m.cron ? '<span class="ok">aktiv</span>' : '<span class="err">CRON_SECRET fehlt</span>') + (m.appUrl ? ' · Link in Mails: ' + esc(m.appUrl) : '') +
+    (m.upcoming.length ? '<br>Fällig in den nächsten 2 Tagen:<ul class="up">' + m.upcoming.map(u => '<li>' + esc(u.user) + ': ' + esc(u.project) + ' – ' + esc(u.name) + ' (' + new Date(u.end + 'T12:00:00Z').toLocaleDateString('de-DE') + ')</li>').join('') + '</ul>' : '<br>Derzeit endet in den nächsten 2 Tagen kein zugeordneter Vorgang.');
+  $('mtest').disabled = $('mrun').disabled = !m.configured;
+}
+$('mtest').onclick = async () => { const r = await post('mail_test'); const j = await r.json(); say(r.ok ? 'Testmail an ' + j.to + ' gesendet.' : j.error, !r.ok); };
+$('mrun').onclick = async () => {
+  const r = await post('reminders_run'); const j = await r.json();
+  say(r.ok ? (j.sent ? j.sent + ' Erinnerungsmail(s) mit ' + j.items + ' Vorgang/Vorgängen verschickt.' : 'Keine neuen Erinnerungen fällig (bereits verschickte werden nicht wiederholt).') + (j.errors && j.errors.length ? ' Fehler: ' + j.errors.join('; ') : '') : (j.error || 'Fehlgeschlagen'), !r.ok || (j.errors && j.errors.length));
+};
+users(); projects(); tickets(); mail();
+</script>
+</body></html>

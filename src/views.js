@@ -115,7 +115,7 @@ function renderList() {
     h += '<tr class="' + (o.summary ? 'sum' : '') + (isDone(i) ? ' done' : '') + '">' +
       '<td class="n">' + r.id + '</td><td class="n">' + sched.psp[i] + '</td>' +
       '<td class="nm' + (tree && sub ? ' ind' : '') + '"><button type="button" class="go" data-go="' + i + '" title="Im Gantt-Diagramm öffnen">' + (r.type === 'meilenstein' ? '<i class="msd"></i>' : '') + esc(r.name || 'ohne Namen') + '</button></td>' +
-      '<td>' + (o.summary ? 'Sammelvorgang' : TYPES[r.type]) + '</td><td>' + esc(r.who || '') + '</td>' +
+      '<td>' + (o.summary ? 'Sammelvorgang' : TYPES[r.type]) + '</td><td class="whoc">' + avs(r.who) + esc(r.who || '') + '</td>' +
       '<td class="d">' + fmt(o.S) + '</td><td class="d' + (late ? ' late' : '') + '">' + fmt(o.E) + (late ? ' <span class="lt">überfällig</span>' : '') + '</td>' +
       '<td class="n">' + durTxt(i) + '</td><td>' + (o.summary ? stBadge(s) : stSelect(i, s.id)) + '</td><td class="n">' + esc(pred) + '</td></tr>';
   });
@@ -156,7 +156,7 @@ function renderKanban() {
         '<button type="button" class="cname" data-go="' + i + '" title="Im Gantt-Diagramm öffnen">' + esc(r.name || 'ohne Namen') + '</button>' +
         (par >= 0 ? '<div class="cpar">' + esc(state.rows[par].name || '') + '</div>' : '') +
         '<div class="cmeta"><span>' + rangeTxt(i) + '</span>' + (r.type === 'meilenstein' ? '' : '<span>' + durTxt(i) + '</span>') + '</div>' +
-        '<div class="cfoot">' + (r.who ? '<span class="who">' + esc(r.who) + '</span>' : '<span class="who none">ohne Verantwortlichen</span>') +
+        '<div class="cfoot">' + (r.who ? '<span class="who">' + avs(r.who) + esc(r.who) + '</span>' : '<span class="who none">ohne Verantwortlichen</span>') +
         '<span class="mv"><button type="button" class="ib" data-mv="-1" data-i="' + i + '" aria-label="In die linke Bahn"' + (ci === 0 ? ' disabled' : '') + '>‹</button><button type="button" class="ib" data-mv="1" data-i="' + i + '" aria-label="In die rechte Bahn"' + (ci === L.length - 1 ? ' disabled' : '') + '>›</button></span></div></article>';
     });
     if (!list.length) h += '<div class="kempty">Keine Einträge</div>';
@@ -332,3 +332,7 @@ function lockReadOnly(afterFailedSave) {
   }
   setStatus('local', 'Nur Ansicht');
 }
+
+/* ---------- Profilbilder der Teammitglieder (nur Webversion mit Benutzerkonten) ---------- */
+const avs = who => (typeof window.tpAvatars === 'function' && who) ? window.tpAvatars(who) : '';
+window.__teamChanged = () => { if (!sched) return; refreshPeopleList(); renderView(); };

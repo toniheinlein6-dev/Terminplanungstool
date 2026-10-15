@@ -312,6 +312,51 @@ body.ro .settings, body.ro #pname, body.ro .stsel, body.ro .kcol .dot, body.ro .
 body.ro .card { cursor: default; }
 body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
 
+/* Zoom-Anzeige */
+.seg .zl { min-width: 58px; font-family: var(--font-num); font-size: 12px; color: var(--ink); }
+.seg button:disabled { opacity: .35; cursor: default; }
+/* Profilbilder */
+.av { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex: none; display: inline-grid; place-items: center; vertical-align: middle; }
+.av.ini { color: #fff; font-size: 9.5px; font-weight: 600; letter-spacing: .02em; }
+.av.big { width: 72px; height: 72px; font-size: 24px; }
+.av + .av { margin-left: -6px; box-shadow: 0 0 0 2px var(--surface); }
+.who { display: inline-flex; align-items: center; gap: 6px; }
+.who .av { width: 18px; height: 18px; font-size: 8px; margin-left: -4px; }
+.whoc .av { width: 20px; height: 20px; font-size: 8.5px; margin-right: 6px; }
+.chip.pic { padding: 0; overflow: hidden; background: transparent; }
+.chip img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+/* Benutzermenü */
+.umenu-wrap { position: relative; }
+.userbtn { padding: 4px 10px 4px 5px; gap: 8px; }
+.userbtn .un { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+.userbtn .caret { color: var(--muted); font-size: 11px; }
+.badge { background: var(--warn); color: #fff; border-radius: 10px; font-size: 11px; font-weight: 600; padding: 0 6px; line-height: 18px; }
+.umenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 25; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .14); min-width: 230px; padding: 6px; display: flex; flex-direction: column; }
+.umenu button { all: unset; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+.umenu button:hover, .umenu button:focus-visible { background: var(--sel); }
+/* Profil- und Ticket-Dialog */
+.prof, .tk { display: flex; flex-direction: column; gap: 18px; }
+.tk { gap: 12px; }
+.prof > div { display: flex; flex-direction: column; gap: 8px; }
+.prof h3, .tk h3 { margin: 6px 0 0; }
+.avrow { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.pf { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.pf .in { color: var(--ink); font-size: 14px; }
+.tk textarea { resize: vertical; min-height: 100px; font-family: var(--font-ui); }
+.msg { font-size: 13px; color: var(--accent); align-self: center; }
+.msg.bad { color: var(--warn); }
+.tlist { display: flex; flex-direction: column; gap: 8px; }
+.tcard { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+.tmeta { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.tkind, .tst { font-size: 11.5px; padding: 1px 8px; border-radius: 10px; background: var(--grid); color: var(--ink); }
+.tkind.k-problem { background: var(--holiday); }
+.tkind.k-idee { background: var(--accent-soft); }
+.tst.s-neu { background: var(--today-bg); }
+.tst.s-arbeit { background: var(--st-arbeit-bg); color: var(--st-arbeit); }
+.tst.s-erledigt { background: var(--accent-soft); color: var(--accent); }
+.tnote { font-size: 13px; background: var(--hdr); border-radius: 6px; padding: 6px 8px; white-space: pre-wrap; }
+.tnote span { font-weight: 600; }
+
 @media (max-width: 860px) {
   .kb { scroll-snap-type: x mandatory; }
   .kcol { scroll-snap-align: start; }

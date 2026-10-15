@@ -10,7 +10,11 @@ Gantt-Terminplaner der Zimmerei Heinlein für die gemeinsame Projektplanung im T
 - Ansichten: Gantt, Liste, Kanban (eigene Bahnen), Kalender
 - PDF-Export als eine durchgehende Seite im Querformat, CSV- und JSON-Export
 - Mehrere Projekte, Teamarbeit mit Live-Abgleich, zeilenweises Zusammenführen gleichzeitiger Änderungen
-- Benutzer mit Rollen, Versionsverlauf (40 Stände je Projekt), Sicherung und Wiederherstellung
+- Benutzer mit Rollen und Profilbild, eigenes Passwort und E-Mail-Adresse unter „Mein Profil“
+- Tickets: Ideen, Probleme und Fragen an die Administratoren, mit Antwort per E-Mail
+- E-Mail-Erinnerung 2 Tage vor dem Ende eines Vorgangs an die verantwortliche Person
+- Zeitachse zoombar von 40 % bis 400 %
+- Versionsverlauf (40 Stände je Projekt), Sicherung und Wiederherstellung
 
 ## Aufbau
 
@@ -18,7 +22,8 @@ Gantt-Terminplaner der Zimmerei Heinlein für die gemeinsame Projektplanung im T
 | --- | --- |
 | `src/` | Quellcode der Oberfläche (`head.html`, `body.html`, `logic.js`, `ui.js`, `views.js`, `pdf.js`), Verwaltungs- und Einrichtungsseite, Server-Anbindung `server-api.js` |
 | `api/tp.js` | Vercel-Funktion, alle Aktionen über `/api/tp?a=<aktion>` |
-| `lib/` | Server: Datenbank (`db.js`), Anmeldung (`auth.js`), Aktionen (`handler.js`) |
+| `api/cron-reminders.js` | täglicher Erinnerungs-Job (Vercel Cron, siehe `vercel.json`) |
+| `lib/` | Server: Datenbank (`db.js`), Anmeldung (`auth.js`), Aktionen (`handler.js`), E-Mail (`mail.js`), Erinnerungen (`reminders.js`), Terminberechnung (`logic.cjs`, erzeugt aus `src/logic.js`) |
 | `scripts/build.mjs` | baut `public/` (Website) und `claude/` (Claude-Version) |
 | `scripts/dev-server.mjs` | lokaler Testserver, ohne Datenbank-URL mit Datenbank im Arbeitsspeicher |
 | `claude/terminplaner-claude.html` | dieselbe Oberfläche als Claude-Artifact (Speicherung über Claude) |
@@ -32,6 +37,8 @@ Die Website lädt nichts von fremden Servern: keine Google Fonts, der PDF-Bauste
 3. **Umgebungsvariablen** unter *Settings → Environment Variables*:
    - `SESSION_SECRET`: mindestens 32 zufällige Zeichen, z. B. aus `openssl rand -base64 48`
    - `SETUP_KEY`: ein selbst gewählter Einrichtungsschlüssel (mind. 8 Zeichen)
+   - `CRON_SECRET`: mindestens 16 zufällige Zeichen, schützt den täglichen Erinnerungs-Job
+   - E-Mail (für Erinnerungen und Tickets), siehe nächster Abschnitt
 4. **Deploy** auslösen (oder erneut deployen, nachdem die Variablen gesetzt sind).
 5. Die Seite öffnen. Beim ersten Aufruf erscheint die **Einrichtung**: `SETUP_KEY` eingeben und den ersten Administrator anlegen.
 6. Unter **Verwaltung** die Kollegen anlegen:
@@ -41,6 +48,17 @@ Die Website lädt nichts von fremden Servern: keine Google Fonts, der PDF-Bauste
 
 Die Funktionen laufen in der Region Frankfurt (`fra1`, siehe `vercel.json`).
 
+## E-Mail einrichten
+
+Der Terminplaner verschickt Erinnerungen und Ticket-Benachrichtigungen. Dafür eine der beiden Varianten:
+
+- **Resend** (einfach, passt zu Vercel): Konto bei resend.com, dort die Domain (z. B. `zimmerei-heinlein.de`) über die angezeigten DNS-Einträge verifizieren, API-Schlüssel anlegen. In Vercel `RESEND_API_KEY` und `MAIL_FROM` (z. B. `Terminplaner <terminplaner@zimmerei-heinlein.de>`) setzen.
+- **Eigener SMTP-Server**: `SMTP_HOST`, `SMTP_PORT` (587 oder 465), `SMTP_USER`, `SMTP_PASS` und `MAIL_FROM` setzen.
+
+Unter *Verwaltung → E-Mail und Erinnerungen* zeigt der Terminplaner, ob der Versand eingerichtet ist, und kann eine Testmail schicken.
+
+**Erinnerungen:** Täglich gegen 7 Uhr (Winterzeit 6 Uhr) prüft der Job alle Projekte. Wer bei einem noch nicht erledigten Vorgang unter „Verantwortlich“ mit seinem Benutzernamen eingetragen ist (mehrere Namen durch Komma trennen), eine E-Mail-Adresse hinterlegt und Erinnerungen eingeschaltet hat, bekommt 2 Tage vor dem Ende eine Mail. Jede Erinnerung geht nur einmal raus; verschiebt sich das Ende, wird neu erinnert.
+
 ## Lokal ausprobieren
 
 ```bash
@@ -48,7 +66,7 @@ npm install
 npm run dev          # http://localhost:3000, Einrichtungsschlüssel: lokal1234
 ```
 
-Ohne `DATABASE_URL` läuft eine Datenbank im Arbeitsspeicher, die beim Beenden verloren geht. Mit einer echten Datenbank:
+Ohne `DATABASE_URL` läuft eine Datenbank im Arbeitsspeicher, die beim Beenden verloren geht. E-Mails werden lokal nur in der Konsole ausgegeben und sind unter `http://localhost:3000/__outbox` einsehbar. Mit einer echten Datenbank:
 
 ```bash
 DATABASE_URL="postgres://…" SESSION_SECRET="…" SETUP_KEY="…" npm run dev

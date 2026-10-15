@@ -1,4 +1,5 @@
-// Baut aus src/ die Webseiten für Vercel (public/) und die Claude-Version (claude/)
+// Baut aus src/ die Webseiten für Vercel (public/), die Claude-Version (claude/) und die Server-Logik (lib/logic.cjs)
+import './gen-logic.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

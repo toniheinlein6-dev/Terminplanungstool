@@ -5,7 +5,8 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const TYPES = { vorgang: 'Vorgang', untervorgang: 'Untervorgang', meilenstein: 'Meilenstein' };
 const RELS = ['EA', 'AA', 'EE', 'AE'];
 const RH = 34, HH = 72;
-const ZOOMS = [0.6, 0.8, 1, 1.3, 1.7];
+const ZOOMS = [0.4, 0.6, 0.8, 1, 1.3, 1.7, 2.2, 3, 4];   // Zeitachse: 40 % bis 400 %
+const ZMAX = ZOOMS.length - 1;
 
 function demoPlan() {
   const r = (id, type, name, who, pred, rel, lag, dur) => ({ id, type, name, who: who || '', pred: pred || '', rel: rel || 'EA', lag: lag == null ? '' : String(lag), fixed: '', dur: dur == null ? '' : String(dur), st: '' });
@@ -64,7 +65,7 @@ function sanitize(p) {
 }
 
 let state = demoPlan();
-let sched = null, sel = -1, zoom = 2, readOnly = false;
+let sched = null, sel = -1, zoom = 3, readOnly = false;
 let hist = [], lastJson = JSON.stringify(state), lastPushT = 0;
 let saving = false, pending = false, saveTimer = 0, edited = false;
 let dl = null, uid = null, userNs = null, roomNs = null;
@@ -244,13 +245,22 @@ function renderChart() {
 
 /* ---------- Zusammenspiel ---------- */
 function refresh() { sched = schedule(state); updateComputed(); renderChart(); syncHeaderScroll(); renderView(); }
+function paintZoom() {
+  const l = $('zoomLbl'); if (l) l.textContent = Math.round(ZOOMS[zoom] * 100) + ' %';
+  $('zoomIn').disabled = zoom >= ZMAX; $('zoomOut').disabled = zoom <= 0;
+}
+// Vorschläge für „Verantwortlich“: Liste des Projekts plus die Namen der Teammitglieder (Webversion)
+function refreshPeopleList() {
+  const extra = typeof window.TP_TEAM_NAMES === 'function' ? window.TP_TEAM_NAMES() : [];
+  $('peopleList').innerHTML = [...new Set(state.people.concat(extra))].map(p => '<option value="' + esc(p) + '">').join('');
+}
 function renderAll() {
   $('pname').value = state.name; $('pstart').value = state.start; refreshSelect();
   $('segRaster').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === state.raster)));
   $('segMode').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === state.mode)));
   $('lines').checked = !!state.lines;
   $('banner').hidden = !state.example;
-  $('peopleList').innerHTML = state.people.map(p => '<option value="' + esc(p) + '">').join('');
+  refreshPeopleList();
   renderLeft(); sched = schedule(state); updateComputed(); renderChart(); syncHeaderScroll(); renderView();
 }
 function changed(force) {
@@ -600,7 +610,7 @@ function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Ma
 
 function boot() {
   initViews();
-  try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (typeof u.zoom === 'number') zoom = Math.max(0, Math.min(4, u.zoom)); if (u.leftw) document.documentElement.style.setProperty('--leftw', u.leftw + 'px'); } catch (e) { }
+  try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (typeof u.zoom2 === 'number') zoom = Math.max(0, Math.min(ZMAX, u.zoom2)); if (u.leftw) document.documentElement.style.setProperty('--leftw', u.leftw + 'px'); } catch (e) { }
   link($('bodyL'), $('bodyR')); link($('bodyR'), $('bodyL'));
   const rl = $('rowsL');
   rl.addEventListener('input', onInput); rl.addEventListener('click', onClick);
@@ -616,8 +626,11 @@ function boot() {
   $('segRaster').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.raster = b.dataset.v; renderAll(); changed(true); });
   $('segMode').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.mode = b.dataset.v; renderAll(); changed(true); });
   $('lines').addEventListener('change', e => { state.lines = e.target.checked; refresh(); changed(true); });
-  $('zoomIn').addEventListener('click', () => { zoom = Math.min(4, zoom + 1); saveUi({ zoom }); renderChart(); });
-  $('zoomOut').addEventListener('click', () => { zoom = Math.max(0, zoom - 1); saveUi({ zoom }); renderChart(); });
+  const setZoom = z => { zoom = Math.max(0, Math.min(ZMAX, z)); saveUi({ zoom2: zoom }); paintZoom(); renderChart(); syncHeaderScroll(); };
+  $('zoomIn').addEventListener('click', () => setZoom(zoom + 1));
+  $('zoomOut').addEventListener('click', () => setZoom(zoom - 1));
+  $('zoomLbl').addEventListener('click', () => setZoom(3));
+  paintZoom();
   $('addV').addEventListener('click', () => addRow('vorgang'));
   $('addU').addEventListener('click', () => addRow('untervorgang'));
   $('addM').addEventListener('click', () => addRow('meilenstein'));
@@ -632,7 +645,7 @@ function boot() {
     if (e.key === 'Escape' && !$('scrim').hidden) closePanel();
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) { e.preventDefault(); undo(); }
   });
-  $('people').addEventListener('input', e => { state.people = e.target.value.split('\n').map(s => s.trim()).filter(Boolean); $('peopleList').innerHTML = state.people.map(p => '<option value="' + esc(p) + '">').join(''); changed(false); });
+  $('people').addEventListener('input', e => { state.people = e.target.value.split('\n').map(s => s.trim()).filter(Boolean); refreshPeopleList(); changed(false); });
   $('hols').addEventListener('input', e => {
     const list = [], bad = []; e.target.value.split('\n').forEach((l, k) => { const p = parseHolidayLine(l); if (!p) return; if (p.bad) bad.push(k + 1); else list.push(p); });
     state.holidays = list; const hint = $('holsHint');
