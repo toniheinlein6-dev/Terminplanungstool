@@ -61,7 +61,7 @@ test('Treffende Kinder behalten Elternkontext, Originalindizes und passende List
   const a = app(); a.load(plan()); a.filter('Alice', 'all', 'Alpha');
   assert.deepEqual(a.indices(), [0, 1]); assert.equal(a.data('matches(0)'), false);
   a.run("setView('list')");
-  assert.deepEqual([...a.el('vList').innerHTML.matchAll(/data-go="(\d+)"/g)].map(match => +match[1]), [0, 1]);
+  assert.deepEqual([...a.el('vList').innerHTML.matchAll(/data-(?:go|det)="(\d+)"/g)].map(match => +match[1]), [0, 1]);
   assert.match(a.el('vList').innerHTML, /1 Vorgänge und Meilensteine/);
   assert.equal(a.el('filterSummary').textContent, '1 von 5 Vorgängen');
   assert.equal(a.el('filterCount').textContent, '2');
@@ -75,7 +75,7 @@ test('Statusfilter berücksichtigt eigene Projektbahnen, erledigte und überfäl
   a.run("setView('kanban')");
   assert.deepEqual([...a.el('vKanban').innerHTML.matchAll(/<article[^>]*data-i="(\d+)"/g)].map(match => +match[1]), [2, 5]);
   a.run("calM = dn(2026, 10, 1); setView('cal')");
-  assert.deepEqual([...new Set([...a.el('vCal').innerHTML.matchAll(/data-go="(\d+)"/g)].map(match => +match[1]))], [2, 5]);
+  assert.deepEqual([...new Set([...a.el('vCal').innerHTML.matchAll(/data-(?:go|det)="(\d+)"/g)].map(match => +match[1]))], [2, 5]);
 });
 
 test('Gefilterte Gantt-Zeilen rücken zusammen; versteckte Vorgänger bleiben berechnet und erzeugen keine Links', () => {

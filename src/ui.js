@@ -5,11 +5,12 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const TYPES = { vorgang: 'Vorgang', untervorgang: 'Untervorgang', meilenstein: 'Meilenstein' };
 const RELS = ['EA', 'AA', 'EE', 'AE'];
 const RH = 34, HH = 72;
+const PCTS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 const ZOOMS = [0.4, 0.6, 0.8, 1, 1.3, 1.7, 2.2, 3, 4];   // Zeitachse: 40 % bis 400 %
 const ZMAX = ZOOMS.length - 1;
 
 function demoPlan() {
-  const r = (id, type, name, who, pred, rel, lag, dur) => ({ id, type, name, who: who || '', pred: pred || '', rel: rel || 'EA', lag: lag == null ? '' : String(lag), fixed: '', dur: dur == null ? '' : String(dur), st: '' });
+  const r = (id, type, name, who, pred, rel, lag, dur) => ({ id, type, name, who: who || '', pred: pred || '', rel: rel || 'EA', lag: lag == null ? '' : String(lag), fixed: '', dur: dur == null ? '' : String(dur), st: '', pct: 0, desc: '' });
   return {
     v: 1, example: true, name: 'Beispielprojekt', start: '2026-10-12', raster: 'weeks', mode: 'work', lines: true,
     people: ['Person A', 'Person B', 'Person C'], lanes: defaultLanes(),
@@ -59,6 +60,7 @@ function sanitize(p) {
       pred: (r.pred === '' || r.pred == null || !Number.isFinite(Number(r.pred))) ? '' : Number(r.pred), rel: RELS.includes(r.rel) ? r.rel : 'EA',
       lag: r.lag === '' || r.lag == null ? '' : String(parseInt(r.lag, 10) || 0), fixed: parseISO(r.fixed) != null ? r.fixed : '',
       dur: r.dur === '' || r.dur == null ? '' : String(Math.max(0, parseInt(r.dur, 10) || 0)), st: typeof r.st === 'string' && /^[A-Za-z0-9_-]{0,40}$/.test(r.st) ? r.st : '',
+      pct: Math.max(0, Math.min(100, Math.round((parseInt(r.pct, 10) || 0) / 10) * 10)), desc: String(r.desc || '').slice(0, 4000),
       ...(Array.isArray(r.assignees) ? { assignees: sanitizeAssignees(r.assignees) } : {}) });
   });
   s.nextId = max + 1; if (p.example) s.example = true;
@@ -73,7 +75,7 @@ let dl = null, uid = null, userNs = null, roomNs = null;
 const base = new Map(), srv = new Map();
 
 function icon(n) {
-  const p = { up: 'M4 10l4-4 4 4', down: 'M4 6l4 4 4-4', sub: 'M4 3v6a2 2 0 0 0 2 2h6M9 8l3 3-3 3', del: 'M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8' }[n];
+  const p = { up: 'M4 10l4-4 4 4', down: 'M4 6l4 4 4-4', sub: 'M4 3v6a2 2 0 0 0 2 2h6M9 8l3 3-3 3', del: 'M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8', det: 'M3 3.5h10v7H7.5L4.5 13v-2.5H3z' }[n];
   return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + p + '"/></svg>';
 }
 
@@ -85,13 +87,14 @@ function rowHTML(r, i) {
     '<button class="ib" data-a="sub" title="Untervorgang darunter einfügen" aria-label="Untervorgang einfügen">' + icon('sub') + '</button><button class="ib del" data-a="del" title="Zeile löschen" aria-label="Zeile löschen">' + icon('del') + '</button></div>' +
     '<div class="num">' + r.id + '</div><div class="num" data-c="psp"></div>' +
     '<div><select data-f="type" aria-label="Typ">' + Object.keys(TYPES).map(k => opt(k, TYPES[k], r.type)).join('') + '</select></div>' +
-    '<div class="nm"><input data-f="name" type="text" value="' + esc(r.name) + '" aria-label="Bezeichnung" autocomplete="off"></div>' +
+    '<div class="nm"><input data-f="name" type="text" value="' + esc(r.name) + '" aria-label="Bezeichnung" autocomplete="off"><button class="ib det" data-a="det" type="button" title="Details, Beschreibung und Kommentare" aria-label="Details öffnen">' + icon('det') + '<span class="cnt" data-c="cnt"></span></button></div>' +
     '<div class="who-cell">' + assigneeCell(r, i) + '</div>' +
     '<div><select data-f="pred" aria-label="Vorgänger"></select></div>' +
     '<div><select data-f="rel" aria-label="Beziehung">' + RELS.map(k => opt(k, k, r.rel)).join('') + '</select></div>' +
     '<div><input data-f="lag" type="number" step="1" value="' + esc(r.lag) + '" aria-label="Versatz in Tagen"></div>' +
     '<div><input data-f="fixed" type="date" value="' + esc(r.fixed) + '" aria-label="Fester Start"></div>' +
     '<div><input data-f="dur" type="number" min="0" step="1" value="' + esc(r.dur) + '" aria-label="Dauer" placeholder="1"></div>' +
+    '<div><select data-f="pct" aria-label="Fortschritt in Prozent">' + PCTS.map(p => '<option value="' + p + '"' + (p === (r.pct || 0) ? ' selected' : '') + '>' + p + ' %</option>').join('') + '</select></div>' +
     '<div class="calc" data-c="start"></div><div class="calc" data-c="end"></div></div>';
 }
 function predOptions(i) {
@@ -150,7 +153,14 @@ function updateComputed() {
     st.title = en.title = o.err ? 'Zirkelbezug: der Vorgänger hängt selbst von dieser Zeile ab' : '';
     ['pred', 'rel', 'lag', 'fixed', 'dur'].forEach(f => { const c = el.querySelector('[data-f="' + f + '"]'); c.disabled = readOnly || o.summary || (f === 'dur' && r.type === 'meilenstein'); });
     el.querySelector('[data-a="sub"]').style.visibility = r.type === 'meilenstein' ? 'hidden' : '';
+    const ps = el.querySelector('[data-f="pct"]');
+    if (o.summary) { ps.innerHTML = '<option>' + progOf(i) + ' %</option>'; ps.disabled = true; }
+    else if (ps.disabled || ps.options.length !== PCTS.length) { ps.innerHTML = PCTS.map(p => '<option value="' + p + '">' + p + ' %</option>').join(''); ps.disabled = false; ps.value = String(r.pct || 0); }
+    else if (document.activeElement !== ps) ps.value = String(r.pct || 0);
+    const n = commentCount(r.id), cn = el.querySelector('[data-c="cnt"]'), db = el.querySelector('[data-a="det"]');
+    cn.textContent = n ? String(n) : ''; db.classList.toggle('has', !!(n || (r.desc || '').trim()));
   });
+  paintProjectProgress();
 }
 
 /* ---------- Zeitachse rechts ---------- */
@@ -256,12 +266,14 @@ function renderChart(indices = ganttRowIndices()) {
       s += '<g data-i="' + i + '">' + tip + '<rect class="bar-sum" x="' + x + '" y="' + (y - 7) + '" width="' + w + '" height="8" rx="1.5"/>' +
         '<polygon class="bar-sum" points="' + x + ',' + (y + 1) + ' ' + (x + 8) + ',' + (y + 1) + ' ' + x + ',' + (y + 8) + '"/>' +
         '<polygon class="bar-sum" points="' + (x + w) + ',' + (y + 1) + ' ' + (x + w - 8) + ',' + (y + 1) + ' ' + (x + w) + ',' + (y + 8) + '"/>' +
-        '<text class="lbl" x="' + (x + w + 14) + '" y="' + (y + 4) + '">' + esc(r.name) + '</text></g>';
+        '<text class="lbl" x="' + (x + w + 14) + '" y="' + (y + 4) + '">' + esc(r.name) + (progOf(i) ? ' · ' + progOf(i) + ' %' : '') + '</text></g>';
     } else {
       const sub = r.type === 'untervorgang' && sched.parent[i] >= 0;
+      const pg = progOf(i), lab = [assigneeShortText(r), pg ? pg + ' %' : ''].filter(Boolean).join(' · ');
       s += '<g data-i="' + i + '"' + (rowDone(r) ? ' class="done"' : '') + '>' + tip + '<rect class="' + (sub ? 'bar-sub' : 'bar-task') + '" x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' +
+        (pg > 0 && pg < 100 ? '<rect class="bar-prog" x="' + x + '" y="' + (y - 8) + '" width="' + (w * pg / 100).toFixed(1) + '" height="16" rx="3"/>' : pg >= 100 ? '<rect class="bar-prog" x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' : '') +
         (o.err ? '<rect class="bar-err" x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' : '') +
-        (who ? '<text class="lbl" x="' + (x + w + 14) + '" y="' + (y + 4) + '">' + esc(assigneeShortText(r)) + '</text>' : '') + '</g>';
+        (lab ? '<text class="lbl" x="' + (x + w + 14) + '" y="' + (y + 4) + '">' + esc(lab) + '</text>' : '') + '</g>';
     }
   });
   s += '</g>';
@@ -328,6 +340,7 @@ function onInput(e) {
   if (f === 'pred') r.pred = t.value === '' ? '' : Number(t.value);
   else if (f === 'lag') r.lag = t.value === '' ? '' : String(parseInt(t.value, 10) || 0);
   else if (f === 'dur') r.dur = t.value === '' ? '' : String(Math.max(0, parseInt(t.value, 10) || 0));
+  else if (f === 'pct') r.pct = parseInt(t.value, 10) || 0;
   else { r[f] = t.value; if (f === 'who') delete r.assignees; }
   refresh(); changed(false);
 }
@@ -335,7 +348,7 @@ function changedFirst() { lastPushT = 0; }
 function addRow(type, at) {
   if (readOnly) return;
   resetViewFilters();
-  const r = { id: state.nextId++, type, name: '', who: '', pred: '', rel: 'EA', lag: '', fixed: '', dur: '', st: '' };
+  const r = { id: state.nextId++, type, name: '', who: '', pred: '', rel: 'EA', lag: '', fixed: '', dur: '', st: '', pct: 0, desc: '' };
   let idx = at;
   if (idx == null) {
     idx = state.rows.length;
@@ -370,6 +383,7 @@ function onClick(e) {
   const i = rowIdx(b), a = b.dataset.a;
   if (a === 'up') moveRow(i, -1); else if (a === 'down') moveRow(i, 1); else if (a === 'del') deleteRow(i);
   else if (a === 'sub') addRow('untervorgang', state.rows[i].type === 'vorgang' ? groupEnd(i) + 1 : i + 1);
+  else if (a === 'det') openDetails(i);
 }
 
 /* ---------- Meldungen ---------- */
@@ -585,6 +599,7 @@ async function showLast(remote) {
   else if (s.by && s.by === uid) who = 'dir';
   const t = new Date(s.savedAt); const hh = isNaN(t) ? '' : t.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   el.textContent = 'Zuletzt geändert' + (who ? ' von ' + who : '') + (hh ? ', ' + hh : '');
+  el.title = el.textContent;
   if (remote && who && who !== 'dir') toast('Änderungen von ' + who + ' übernommen');
 }
 async function startRoom(cl) {
@@ -674,6 +689,7 @@ function boot() {
   });
   initAssigneePicker();
   $('chart').addEventListener('click', e => { const g = e.target.closest('[data-i]'); if (g) select(+g.dataset.i); });
+  $('chart').addEventListener('dblclick', e => { const g = e.target.closest('[data-i]'); if (g) openDetails(+g.dataset.i); });
   $('pname').addEventListener('input', e => { state.name = e.target.value; refreshSelect(); changed(false); });
   $('projSel').addEventListener('change', e => switchTo(e.target.value));
   $('newProj').addEventListener('click', newProject);

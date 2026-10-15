@@ -127,7 +127,8 @@ async function mail() {
   const r = await api('mail_status'); if (!r.ok) { $('mailInfo').textContent = 'Konnte nicht geladen werden.'; return; }
   const m = await r.json();
   $('mailInfo').innerHTML = (m.configured ? '<span class="ok">E-Mail-Versand eingerichtet</span> über ' + esc(m.provider) + ', Absender ' + esc(m.from) : '<span class="err">E-Mail-Versand noch nicht eingerichtet.</span> In Vercel RESEND_API_KEY und MAIL_FROM (oder SMTP_HOST …) setzen.') +
-    '<br>Tägliche Erinnerung: ' + (m.cron ? '<span class="ok">aktiv</span>' : '<span class="err">CRON_SECRET fehlt</span>') + (m.appUrl ? ' · Link in Mails: ' + esc(m.appUrl) : '') +
+    '<br>Tägliche Erinnerung: ' + (m.cron ? '<span class="ok">aktiv</span>' : '<span class="err">CRON_SECRET fehlt</span>') +
+    '<br>Teams-Nachricht bei @-Erwähnungen: ' + (m.teams ? '<span class="ok">aktiv</span>' : 'nicht eingerichtet (optional, TEAMS_WEBHOOK_URL)') + (m.appUrl ? ' · Link in Mails: ' + esc(m.appUrl) : '') +
     (m.upcoming.length ? '<br>Fällig in den nächsten 2 Tagen:<ul class="up">' + m.upcoming.map(u => '<li>' + esc(u.user) + ': ' + esc(u.project) + ' – ' + esc(u.name) + ' (' + new Date(u.end + 'T12:00:00Z').toLocaleDateString('de-DE') + ')</li>').join('') + '</ul>' : '<br>Derzeit endet in den nächsten 2 Tagen kein zugeordneter Vorgang.');
   $('mtest').disabled = $('mrun').disabled = !m.configured;
 }

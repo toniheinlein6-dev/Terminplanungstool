@@ -57,6 +57,7 @@ function buildPdf(JsPDF) {
     anyLag && { k: 'lag', t: 'Versatz', w: 38, a: 'center', mono: true },
     anyFixed && { k: 'fixed', t: 'Fester Start', w: 52, mono: true },
     { k: 'dur', t: 'Dauer', w: 32, a: 'center', mono: true },
+    rows.some((r, i) => progOf(i) > 0) && { k: 'pct', t: 'Fortschr.', w: 50, a: 'center', mono: true },
     { k: 'S', t: 'Start', w: 56, mono: true },
     { k: 'E', t: 'Ende', w: 56, mono: true }
   ].filter(Boolean);
@@ -170,6 +171,7 @@ function buildPdf(JsPDF) {
         case 'lag': v = x2.summary ? '' : r.lag; break;
         case 'fixed': v = r.fixed ? fmt(parseISO(r.fixed)) : ''; break;
         case 'dur': v = r.type === 'meilenstein' ? '' : x2.summary ? (x2.E - x2.S + 1) : x2.dur; break;
+        case 'pct': v = r.type === 'meilenstein' ? '' : progOf(i) + ' %'; bold = x2.summary; break;
         case 'S': v = fmt(x2.S); bold = x2.summary; colr = x2.err ? PC.warn : PC.ink; break;
         case 'E': v = fmt(x2.E); bold = x2.summary; colr = x2.err ? PC.warn : PC.ink; break;
       }
@@ -223,8 +225,10 @@ function buildPdf(JsPDF) {
       const sub = r.type === 'untervorgang' && sched.parent[i] >= 0;
       doc.setFillColor(rowDone(r) ? (sub ? '#c9e1d4' : '#9ebfae') : (sub ? PC.sub : PC.task));
       doc.roundedRect(x, y - 4.5, w, 9, 1.6, 1.6, 'F');
+      const pg = progOf(i);
+      if (pg > 0) { doc.setFillColor(sub ? '#5f9a7c' : '#2a5a42'); doc.roundedRect(x, y - 4.5, Math.max(2, w * Math.min(pg, 100) / 100), 9, 1.6, 1.6, 'F'); }
       if (x2.err) { doc.setDrawColor(PC.warn); doc.setLineWidth(0.8); doc.setLineDashPattern([2, 1.4], 0); doc.roundedRect(x, y - 4.5, w, 9, 1.6, 1.6, 'S'); doc.setLineDashPattern([], 0); }
-      const lab = (r.who || '') + (rowDone(r) ? (r.who ? '  ·  ' : '') + 'erledigt' : '');
+      const lab = [r.who, rowDone(r) ? 'erledigt' : (progOf(i) ? progOf(i) + ' %' : '')].filter(Boolean).join('  ·  ');
       if (lab) { font('helvetica', 'normal', 6.4, PC.muted); txt(lab, x + w + 6, y); }
     }
   });

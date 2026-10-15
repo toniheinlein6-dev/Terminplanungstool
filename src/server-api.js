@@ -66,6 +66,30 @@
     try { const r = await api('me'); if (r.ok) { const j = await r.json(); me = j.user; openTickets = j.openTickets || 0; paintMenuButton(); } } catch (e) { }
   }
 
+  /* ---------- Kommentare ---------- */
+  let counts = {}, countsKey = '';
+  const curProj = () => (window.__cur ? window.__cur() : '') || '';
+  window.TP_COMMENTS = {
+    available: true,
+    count: rowId => counts[rowId] || 0,
+    async list(rowId) {
+      const r = await call(() => api('comments&p=' + encodeURIComponent(curProj()) + '&r=' + rowId));
+      if (!r.ok) throw new Error('Laden fehlgeschlagen');
+      const cs = (await r.json()).comments; counts[rowId] = cs.length; return cs;
+    },
+    async add(rowId, body) {
+      const r = await call(() => post('comment_new', { projectId: curProj(), rowId, body })); const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || 'Senden fehlgeschlagen');
+      counts[rowId] = (counts[rowId] || 0) + 1; countsKey = ''; return j;
+    },
+    async del(id) { const r = await call(() => post('comment_del', { id })); if (!r.ok) throw new Error('Löschen fehlgeschlagen'); }
+  };
+  function setCounts(c) {
+    const k = curProj() + JSON.stringify(c || {});
+    if (k === countsKey) return; countsKey = k; counts = c || {};
+    if (window.__countsChanged) window.__countsChanged();
+  }
+
   /* ---------- Benutzermenü ---------- */
   function paintMenuButton() {
     const b = document.getElementById('userBtn'); if (!b || !me) return;
@@ -225,8 +249,8 @@
           changes.push({ type: had ? 'modified' : 'added', doc: docOf(row) });
         }
         for (const id of [...ver.keys()]) if (!seen.has(id)) { ver.delete(id); changes.push({ type: 'removed', doc: { id, exists: true, data: () => ({}) } }); }
-        chips(l.online || []);
-        if (!firstDone) { firstDone = true; cb({ docs: changes.map(c => c.doc), docChanges: () => changes }); }
+        chips(l.online || []); setCounts(l.comments);
+        if (!firstDone) { firstDone = true; cb({ docs: changes.map(c => c.doc), docChanges: () => changes }); setTimeout(() => { if (window.__deepLink) window.__deepLink(); }, 50); }
         else if (changes.length) cb({ docs: [], docChanges: () => changes });
       } catch (e) { fails++; if (errCb && (!firstDone || fails === 3)) errCb(e); }
       timer = setTimeout(poll, document.hidden ? 20000 : 3000);

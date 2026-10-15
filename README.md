@@ -4,8 +4,10 @@ Gantt-Terminplaner für die gemeinsame Projektplanung im Team.
 
 **Funktionen**
 
-- Vorgänge, Untervorgänge (Sammelvorgänge) und Meilensteine mit Verantwortlichen
+- Vorgänge, Untervorgänge (Sammelvorgänge) und Meilensteine mit einer oder mehreren verantwortlichen Personen
 - Verantwortliche aus den Benutzerkonten suchen und per Häkchen zuordnen; mehrere Personen als Initialen mit vollständigen Namen beim Darüberfahren anzeigen
+- Fortschritt je Vorgang in 10-%-Schritten, Sammelvorgänge und Projekt gewichtet nach Dauer
+- Detailfenster je Vorgang mit Beschreibung und Kommentaren; @-Erwähnungen benachrichtigen per E-Mail (optional zusätzlich in einem Teams-Kanal)
 - Abhängigkeiten Ende-Anfang, Anfang-Anfang, Ende-Ende, Anfang-Ende mit Versatz, grafisch als Pfeile
 - Dauer in Arbeitstagen (mit Feiertagen) oder Kalendertagen, Raster Tage oder Wochen
 - Ansichten: Gantt, Liste, Kanban (eigene Bahnen), Kalender
@@ -56,6 +58,8 @@ Der Terminplaner verschickt Erinnerungen und Ticket-Benachrichtigungen. Dafür e
 
 - **SMTP eines vorhandenen Postfachs** (am schnellsten, z. B. Gmail): `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER` = Gmail-Adresse, `SMTP_PASS` = ein *App-Passwort* (Google-Konto → Sicherheit → Bestätigung in zwei Schritten einschalten → App-Passwörter), `MAIL_FROM` = `Terminplaner <dieselbe Gmail-Adresse>`. Andere Anbieter (GMX, web.de, Outlook.com …) funktionieren genauso mit deren SMTP-Daten.
 - **Resend** mit eigener Domain: Konto bei resend.com, eigene Domain über die angezeigten DNS-Einträge verifizieren (Region Ireland), API-Schlüssel anlegen, in Vercel `RESEND_API_KEY` und `MAIL_FROM` (z. B. `Terminplaner <terminplaner@deine-domain.de>`) setzen. Liegt die Domain bei Vercel, richtet die Resend-Integration im Vercel Marketplace die DNS-Einträge automatisch ein.
+
+**Teams (optional):** In einem Teams-Kanal über *Workflows* die Vorlage „Bei Empfang einer Webhookanforderung in einem Kanal posten“ einrichten und die erzeugte Adresse als `TEAMS_WEBHOOK_URL` in Vercel eintragen. Dann erscheint bei jedem Kommentar mit @-Erwähnung eine Nachricht in diesem Kanal.
 
 Unter *Verwaltung → E-Mail und Erinnerungen* zeigt der Terminplaner, ob der Versand eingerichtet ist, und kann eine Testmail schicken.
 
