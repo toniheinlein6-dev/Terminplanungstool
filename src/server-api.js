@@ -17,19 +17,7 @@
     return r;
   }
 
-  // Auge neben Passwortfeldern: Eingabe sichtbar machen und wieder verbergen
-  const EYE = 'M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z';
-  const eyeSvg = off => '<svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + EYE + (off ? 'M2.5 2.5l11 11' : '') + '"/></svg>';
-  function pwEyes(root) {
-    root.querySelectorAll('input[type="password"]:not([data-eye])').forEach(inp => {
-      inp.dataset.eye = '1';
-      const w = document.createElement('span'); w.className = 'pwwrap'; inp.parentNode.insertBefore(w, inp); w.appendChild(inp);
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'pweye';
-      const set = show => { inp.type = show ? 'text' : 'password'; b.innerHTML = eyeSvg(show); b.setAttribute('aria-pressed', String(show)); b.setAttribute('aria-label', show ? 'Passwort verbergen' : 'Passwort anzeigen'); b.title = b.getAttribute('aria-label'); };
-      b.addEventListener('click', () => { set(inp.type === 'password'); inp.focus(); });
-      inp.__hide = () => set(false); set(false); w.appendChild(b);
-    });
-  }
+  const pwEyes = window.tpPasswordEyes;
   const FORM = 'background:var(--panel,#fff);color:var(--ink,#1c2a25);border:1px solid var(--line,#d5ddd9);border-radius:12px;padding:24px;width:min(360px,100%);display:flex;flex-direction:column;gap:10px;box-sizing:border-box';
   const INP = 'width:100%;box-sizing:border-box;margin-top:4px';
   const BTN = 'background:var(--accent,#2f5d50);color:#fff;border-color:transparent';

@@ -766,12 +766,6 @@ html.m #segView .tkbadge { position: absolute; top: -26px; right: -2px; margin: 
 html.m body { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
 html.m .foot { padding-bottom: 6px; }
 
-/* Passwort anzeigen */
-.pwwrap { position: relative; display: block; }
-.pwwrap > input { width: 100%; box-sizing: border-box; padding-right: 38px !important; }
-.pweye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--muted, #5a6a62); cursor: pointer; padding: 0; }
-.pweye:hover, .pweye[aria-pressed="true"] { color: var(--ink, #16231d); background: var(--grid, #e4e9e6); }
-.pweye:focus-visible { outline: 2px solid var(--accent, #26664b); }
 /* Ziehen per Finger */
 #vKanban [draggable="true"], #vOrg [draggable="true"] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .tghost { position: fixed; z-index: 9999; pointer-events: none; opacity: .92; transform: rotate(1.5deg) scale(1.03); box-shadow: 0 10px 28px rgba(0,0,0,.28); margin: 0; }

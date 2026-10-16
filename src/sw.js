@@ -1,7 +1,7 @@
 // Service Worker: App-Hülle zwischenspeichern, damit die installierte App schnell startet.
 // Daten (/api/) laufen immer über das Netz; Seiten zuerst aus dem Netz, ohne Netz aus dem Speicher.
 const CACHE = 'terminplaner-__VERSION__';
-const SHELL = ['./', 'app-api.js', 'app.js', 'favicon.svg', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'vendor/jspdf.umd.min.js'];
+const SHELL = ['./', 'app-api.js', 'app.js', 'password-eye.js', 'password-eye.css', 'favicon.svg', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'vendor/jspdf.umd.min.js'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

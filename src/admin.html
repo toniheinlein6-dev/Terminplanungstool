@@ -22,7 +22,7 @@ button{cursor:pointer}button.pri{background:var(--accent);color:#fff;border-colo
 .ok{color:var(--accent)}ul.up{margin:6px 0 0;padding-left:18px}
 .lasted{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}.lasted div{border:1px solid var(--line);border-radius:8px;padding:8px 10px}.lasted b{display:block}.lasted span{font-size:12px;color:var(--muted)}
 table.clog td{vertical-align:top}table.clog td:last-child{min-width:260px;white-space:normal}.act{font-size:11px;padding:0 6px;border-radius:9px;border:1px solid var(--line);margin-right:4px}.act.neu{color:var(--accent)}.act.gelöscht{color:var(--bad)}
-</style></head><body><main>
+</style><link rel="stylesheet" href="password-eye.css"></head><body><main>
 <div class="row"><h1>Verwaltung</h1><span style="flex:1"></span><a href="index.html">← Zum Terminplaner</a></div>
 <div id="msg" role="status"></div>
 <section><h2>Tickets <span id="tcount" class="pill"></span></h2>
@@ -60,7 +60,9 @@ table.clog td{vertical-align:top}table.clog td:last-child{min-width:260px;white-
  <div class="tw"><table><tbody id="hist"></tbody></table></div>
  <p class="hint">Pro Projekt werden die letzten Speicherstände aufbewahrt. „Wiederherstellen“ legt den alten Stand als neuen aktuellen Stand an; nichts geht verloren.</p></section>
 </main>
+<script src="password-eye.js"></script>
 <script>
+window.tpPasswordEyes(document);
 try { const t = JSON.parse(localStorage.getItem('gantt-ui-v1') || '{}').theme; if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-tp-theme', t); } catch (e) { }
 const $ = id => document.getElementById(id);
 const api = (a, o) => fetch('api/tp?a=' + a, Object.assign({ credentials: 'same-origin', cache: 'no-store' }, o));
@@ -81,9 +83,10 @@ async function users() {
     '<td><input type="email" value="' + esc(u.email) + '" data-f="email" placeholder="keine"></td><td><select data-f="role">' +
     [['editor', 'Bearbeiten'], ['viewer', 'Nur lesen'], ['gantt', 'Nur Gantt ansehen'], ['admin', 'Administrator']].map(([v, t]) => '<option value="' + v + '"' + (u.role === v ? ' selected' : '') + '>' + t + '</option>').join('') +
     '</select></td><td><input type="password" placeholder="unverändert" data-f="password" autocomplete="new-password" minlength="12"></td><td style="white-space:nowrap"><button data-act="save">Speichern</button><button class="del" data-act="del">Löschen</button></td></tr>').join('');
+  window.tpPasswordEyes($('users'));
 }
 $('users').addEventListener('click', async e => {
-  const b = e.target.closest('button'); if (!b) return; const tr = b.closest('tr'), id = +tr.dataset.id;
+  const b = e.target.closest('button[data-act]'); if (!b) return; const tr = b.closest('tr'), id = +tr.dataset.id;
   if (b.dataset.act === 'save') {
     const r = await post('user_save', { id, name: tr.querySelector('[data-f=name]').value, email: tr.querySelector('[data-f=email]').value, role: tr.querySelector('[data-f=role]').value, password: tr.querySelector('[data-f=password]').value });
     const j = await r.json(); if (j.csrf) csrf = j.csrf; say(r.ok ? 'Gespeichert.' : j.error, !r.ok); if (r.ok) users();
@@ -94,7 +97,7 @@ $('users').addEventListener('click', async e => {
 });
 $('add').onclick = async () => {
   const r = await post('user_save', { name: $('nn').value, email: $('ne').value, role: $('nr').value, password: $('np').value }); const j = await r.json();
-  say(r.ok ? 'Benutzer angelegt.' : j.error, !r.ok); if (r.ok) { $('nn').value = $('ne').value = $('np').value = ''; users(); }
+  say(r.ok ? 'Benutzer angelegt.' : j.error, !r.ok); if (r.ok) { $('nn').value = $('ne').value = $('np').value = ''; $('np').__hide(); users(); }
 };
 $('exp').onclick = () => { location.href = 'api/tp?a=export'; };
 $('imp').onchange = async e => {

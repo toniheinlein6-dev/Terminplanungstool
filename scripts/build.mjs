@@ -13,7 +13,7 @@ const app = "(function(){\n'use strict';\n" + js + "\nboot();\n})();\n";
 fs.mkdirSync(path.join(root, 'public', 'vendor'), { recursive: true });
 const webHead = head
   .replace(/<link[^>]*fonts\.g[^>]*>\n?/g, '')
-  .replace('<title>Gantt Terminplaner</title>', '<title>Terminplaner</title>\n<link rel="icon" href="favicon.svg">\n' +
+  .replace('<title>Gantt Terminplaner</title>', '<title>Terminplaner</title>\n<link rel="stylesheet" href="password-eye.css">\n<link rel="icon" href="favicon.svg">\n' +
     '<link rel="manifest" href="manifest.webmanifest">\n<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">\n' +
     '<meta name="theme-color" content="#26664b">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n' +
     '<meta name="apple-mobile-web-app-title" content="Terminplaner">\n<meta name="apple-mobile-web-app-status-bar-style" content="default">\n' +
@@ -21,7 +21,8 @@ const webHead = head
 // Keine Inline-Skripte: die Content-Security-Policy erlaubt nur Skripte aus eigenen Dateien (script-src 'self')
 fs.writeFileSync(path.join(root, 'public', 'index.html'),
   '<!doctype html>\n<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' + webHead +
-  '\n</head><body>\n' + body + '\n<script src="app-api.js"></script>\n<script src="app.js"></script>\n</body></html>\n');
+  '\n</head><body>\n' + body + '\n<script src="password-eye.js"></script>\n<script src="app-api.js"></script>\n<script src="app.js"></script>\n</body></html>\n');
+for (const f of ['password-eye.js', 'password-eye.css']) fs.copyFileSync(path.join(root, 'src', f), path.join(root, 'public', f));
 fs.writeFileSync(path.join(root, 'public', 'app.js'), 'window.JSPDF_SRC = "vendor/jspdf.umd.min.js";\n' + app);
 fs.copyFileSync(path.join(root, 'src', 'server-api.js'), path.join(root, 'public', 'app-api.js'));
 // Verwaltung und Einrichtung: Skript in eigene Datei auslagern
@@ -38,7 +39,7 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'icons'))) fs.copyFileSync
 fs.copyFileSync(path.join(root, 'src', 'manifest.webmanifest'), path.join(root, 'public', 'manifest.webmanifest'));
 {
   const { createHash } = await import('node:crypto');
-  const h = createHash('sha256').update(fs.readFileSync(path.join(root, 'public', 'index.html'))).update(fs.readFileSync(path.join(root, 'public', 'app.js'))).update(fs.readFileSync(path.join(root, 'src', 'server-api.js'))).digest('hex').slice(0, 10);
+  const h = createHash('sha256').update(fs.readFileSync(path.join(root, 'public', 'index.html'))).update(fs.readFileSync(path.join(root, 'public', 'app.js'))).update(fs.readFileSync(path.join(root, 'src', 'server-api.js'))).update(rd('password-eye.js')).update(rd('password-eye.css')).digest('hex').slice(0, 10);
   fs.writeFileSync(path.join(root, 'public', 'sw.js'), rd('sw.js').replace('__VERSION__', h));
 }
 fs.copyFileSync(path.join(root, 'node_modules', 'jspdf', 'dist', 'jspdf.umd.min.js'), path.join(root, 'public', 'vendor', 'jspdf.umd.min.js'));
