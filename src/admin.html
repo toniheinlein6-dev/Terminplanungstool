@@ -20,6 +20,8 @@ button{cursor:pointer}button.pri{background:var(--accent);color:#fff;border-colo
 .pill{font-size:11.5px;padding:1px 8px;border-radius:10px;border:1px solid var(--line);color:var(--ink)}
 .tk p{margin:0;white-space:pre-wrap}.tk textarea{width:100%;min-height:60px;font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);box-sizing:border-box}
 .ok{color:var(--accent)}ul.up{margin:6px 0 0;padding-left:18px}
+.lasted{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}.lasted div{border:1px solid var(--line);border-radius:8px;padding:8px 10px}.lasted b{display:block}.lasted span{font-size:12px;color:var(--muted)}
+table.clog td{vertical-align:top}table.clog td:last-child{min-width:260px;white-space:normal}.act{font-size:11px;padding:0 6px;border-radius:9px;border:1px solid var(--line);margin-right:4px}.act.neu{color:var(--accent)}.act.gelöscht{color:var(--bad)}
 </style></head><body><main>
 <div class="row"><h1>Verwaltung</h1><span style="flex:1"></span><a href="index.html">← Zum Terminplaner</a></div>
 <div id="msg" role="status"></div>
@@ -36,10 +38,16 @@ button{cursor:pointer}button.pri{background:var(--accent);color:#fff;border-colo
  <div class="row" style="margin-top:10px"><button id="mtest">Testmail an mich senden</button><button id="mrun">Erinnerungen jetzt prüfen und senden</button></div>
  <div class="row" style="margin-top:6px"><button id="wprev">Wochenübersicht als Vorschau an mich</button><button id="wrun">Wochenübersicht jetzt an alle senden</button></div>
  <p class="hint">Die Wochenübersicht geht automatisch jeden Montag früh an alle, die eine E-Mail-Adresse hinterlegt und sie im Profil nicht abgeschaltet haben. Jede Person bekommt sie pro Woche nur einmal.</p>
- <p class="hint">Täglich um 7 Uhr verschickt der Terminplaner Erinnerungen für Vorgänge, die in den nächsten 2 Tagen enden und noch nicht erledigt sind. Zugeordnet wird über die Spalte „Verantwortlich“: Dort muss genau der Benutzername stehen (mehrere Namen durch Komma trennen). Die Person braucht eine E-Mail-Adresse und eingeschaltete Erinnerungen (Mein Profil).</p></section>
+ <p class="hint">Täglich um 7 Uhr verschickt der Terminplaner Erinnerungen für Vorgänge und Aufgaben, die in den nächsten 2 Tagen enden und noch nicht erledigt sind. Zugeordnet wird über die Verantwortlichen eines Vorgangs bzw. die Zuständigen einer Aufgabe. Die Person braucht eine E-Mail-Adresse und eingeschaltete Erinnerungen (Mein Profil).</p></section>
 <section><h2>Sicherung</h2>
  <div class="row"><button class="pri" id="exp">Alle Projekte sichern (Download)</button><label>Sicherung einspielen: <input type="file" id="imp" accept=".json,application/json"></label></div>
  <p class="hint">Die Sicherung ist eine JSON-Datei mit allen Projekten. Beim Einspielen werden Projekte mit gleicher Kennung durch den Stand der Datei ersetzt (der bisherige Stand bleibt im Versionsverlauf). Zusätzlich sollte die Datenbank selbst regelmäßig vom Server gesichert werden.</p></section>
+<section><h2>Änderungsprotokoll</h2>
+ <div id="lastEd" class="lasted">Wird geladen …</div>
+ <div class="row" style="margin-top:10px"><select id="cp" aria-label="Projekt"><option value="">Alle Projekte</option></select><select id="cu" aria-label="Person"><option value="">Alle Personen</option></select><button id="cl">Aktualisieren</button></div>
+ <div class="tw" style="margin-top:8px"><table class="clog"><thead><tr><th>Wann</th><th>Wer</th><th>Projekt</th><th>Vorgang</th><th>Änderung</th></tr></thead><tbody id="clog"></tbody></table></div>
+ <div class="row" style="margin-top:8px"><button id="cmore" hidden>Ältere Einträge laden</button></div>
+ <p class="hint">Jede Änderung an Vorgängen, Untervorgängen und Meilensteinen wird mit Person und Zeit festgehalten. Änderungen derselben Person am selben Vorgang innerhalb von 15 Minuten werden zu einem Eintrag zusammengefasst. Im Terminplaner erscheinen die Einträge zusätzlich im Verlauf des Vorgangs, und geänderte Vorgänge werden für die anderen Teammitglieder markiert.</p></section>
 <section><h2>Versionsverlauf</h2>
  <div class="row"><select id="hp"></select><button id="hl">Anzeigen</button></div>
  <div class="tw"><table><tbody id="hist"></tbody></table></div>
@@ -149,6 +157,26 @@ $('wrun').onclick = async () => {
   const r = await post('weekly_run', {}); const j = await r.json();
   say(r.ok ? (j.sent ? j.sent + ' Wochenübersicht(en) verschickt.' : 'Keine neuen Übersichten (wer diese Woche schon eine bekommen hat oder nichts zu tun hat, bekommt keine).') + (j.errors && j.errors.length ? ' Fehler: ' + j.errors.join('; ') : '') : (j.error || j.reason || 'Fehlgeschlagen'), !r.ok);
 };
-users(); projects(); tickets(); mail();
+let clogBefore = null;
+async function clog(more) {
+  if (!more) clogBefore = null;
+  const qs = 'changes_log&n=100' + ($('cp').value ? '&p=' + encodeURIComponent($('cp').value) : '') + ($('cu').value ? '&u=' + $('cu').value : '') + (more && clogBefore ? '&before=' + clogBefore : '');
+  const r = await api(qs); if (!r.ok) { $('clog').innerHTML = '<tr><td colspan="5">Konnte nicht geladen werden.</td></tr>'; return; }
+  const j = await r.json(), dt = s => new Date(s).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+  if (!more) {
+    $('lastEd').innerHTML = j.projects.length ? j.projects.map(p => '<div><b>' + esc(p.name) + '</b><span>zuletzt bearbeitet von ' + esc(p.byName || '–') + '<br>' + dt(p.savedAt) + '</span></div>').join('') : 'Noch keine Projekte.';
+    const cur = $('cp').value; $('cp').innerHTML = '<option value="">Alle Projekte</option>' + j.projects.map(p => '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>').join(''); $('cp').value = cur;
+  }
+  const rows = j.entries.map(e => '<tr><td>' + dt(e.at) + '</td><td>' + esc(e.user) + '</td><td>' + esc(e.projectName) + '</td><td>Nr. ' + e.rowId + ' ' + esc(e.rowName || '') + '</td><td><span class="act ' + esc(e.action) + '">' + esc(e.action) + '</span>' + esc(e.text) + '</td></tr>').join('');
+  $('clog').innerHTML = (more ? $('clog').innerHTML : '') + (rows || (more ? '' : '<tr><td colspan="5">Keine Einträge.</td></tr>'));
+  if (j.entries.length) clogBefore = j.entries[j.entries.length - 1].atN;
+  $('cmore').hidden = !j.more;
+}
+async function clogUsers() {
+  const r = await api('users'); if (!r.ok) return; const j = await r.json();
+  $('cu').innerHTML = '<option value="">Alle Personen</option>' + j.users.map(u => '<option value="' + esc(u.id) + '">' + esc(u.name) + '</option>').join('');
+}
+$('cl').onclick = () => clog(false); $('cp').onchange = () => clog(false); $('cu').onchange = () => clog(false); $('cmore').onclick = () => clog(true);
+users(); projects(); tickets(); mail(); clogUsers(); clog(false);
 </script>
 </body></html>

@@ -68,7 +68,8 @@
   }
 
   /* ---------- Kommentare ---------- */
-  let counts = {}, countsKey = '';
+  let counts = {}, countsKey = '', changed = {};
+  window.TP_CHANGES = { get: rowId => changed[rowId] || null };
   const curProj = () => (window.__cur ? window.__cur() : '') || '';
   window.TP_COMMENTS = {
     available: true,
@@ -76,7 +77,10 @@
     async list(rowId) {
       const r = await call(() => api('comments&p=' + encodeURIComponent(curProj()) + '&r=' + rowId));
       if (!r.ok) throw new Error('Laden fehlgeschlagen');
-      const cs = (await r.json()).comments; counts[rowId] = cs.length; return cs;
+      const j = await r.json(), cs = j.comments; counts[rowId] = cs.length;
+      // Änderungen erscheinen als automatische Einträge im Verlauf
+      const ch = (j.changes || []).map(x => ({ kind: 'change', id: 'x' + x.id, user: x.user, createdAt: x.at, firstAt: x.firstAt, action: x.action, body: x.text }));
+      return cs.concat(ch).sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
     },
     async add(rowId, body) {
       const r = await call(() => post('comment_new', { projectId: curProj(), rowId, body })); const j = await r.json().catch(() => ({}));
@@ -85,9 +89,9 @@
     },
     async del(id) { const r = await call(() => post('comment_del', { id })); if (!r.ok) throw new Error('Löschen fehlgeschlagen'); }
   };
-  function setCounts(c) {
-    const k = curProj() + JSON.stringify(c || {});
-    if (k === countsKey) return; countsKey = k; counts = c || {};
+  function setCounts(c, ch) {
+    const k = curProj() + JSON.stringify(c || {}) + JSON.stringify(ch || {});
+    if (k === countsKey) return; countsKey = k; counts = c || {}; changed = ch || {};
     if (window.__countsChanged) window.__countsChanged();
   }
 
@@ -251,7 +255,7 @@
           changes.push({ type: had ? 'modified' : 'added', doc: docOf(row) });
         }
         for (const id of [...ver.keys()]) if (!seen.has(id)) { ver.delete(id); changes.push({ type: 'removed', doc: { id, exists: true, data: () => ({}) } }); }
-        chips(l.online || []); setCounts(l.comments);
+        chips(l.online || []); setCounts(l.comments, l.changed);
         if (!firstDone) { firstDone = true; cb({ docs: changes.map(c => c.doc), docChanges: () => changes }); setTimeout(() => { if (window.__deepLink) window.__deepLink(); }, 50); }
         else if (changes.length) cb({ docs: [], docChanges: () => changes });
       } catch (e) { fails++; if (errCb && (!firstDone || fails === 3)) errCb(e); }

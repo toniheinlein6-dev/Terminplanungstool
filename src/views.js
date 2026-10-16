@@ -133,6 +133,7 @@ function renderView() {
   updateFilterUi();
   if (view === 'list') renderList(); else if (view === 'kanban') renderKanban(); else if (view === 'cal') renderCal(); else if (view === 'tasks' && typeof renderTasks === 'function') renderTasks();
   if (typeof tasksAfterRender === 'function') tasksAfterRender();
+  paintChangeChip();
 }
 function gotoRow(i) {
   setView('gantt'); select(i);
@@ -213,7 +214,7 @@ function renderKanban() {
     list.forEach(i => {
       const r = state.rows[i], par = sched.parent[i], late = isLate(i);
       h += '<article class="card' + (r.type === 'meilenstein' ? ' ms' : '') + (late ? ' late' : '') + '" draggable="true" data-i="' + i + '">' +
-        '<div class="ctop"><span class="psp">' + sched.psp[i] + '</span>' + (r.type === 'meilenstein' ? '<span class="tag"><i class="msd"></i>Meilenstein</span>' : '') + (late ? '<span class="tag lt">überfällig</span>' : '') + '</div>' +
+        '<div class="ctop"><span class="psp">' + sched.psp[i] + '</span>' + (isUnseen(r) ? '<span class="chgtag" title="' + esc(changeTitle(r)) + '">geändert</span>' : '') + (r.type === 'meilenstein' ? '<span class="tag"><i class="msd"></i>Meilenstein</span>' : '') + (late ? '<span class="tag lt">überfällig</span>' : '') + '</div>' +
         '<button type="button" class="cname" data-det="' + i + '" title="Details, Beschreibung und Kommentare">' + esc(r.name || 'ohne Namen') + '</button>' +
         ((r.desc || '').trim() ? '<div class="cdesc">' + esc(r.desc.trim().slice(0, 140)) + (r.desc.trim().length > 140 ? ' …' : '') + '</div>' : '') +
         (par >= 0 ? '<div class="cpar">' + esc(state.rows[par].name || '') + '</div>' : '') +
@@ -309,6 +310,7 @@ function renderCal() {
 
 /* ---------- Ereignisse ---------- */
 function initViews() {
+  if ($('chgAll')) $('chgAll').addEventListener('click', () => { markSeen(state.rows.filter(isUnseen)); updateComputed(); renderView(); });
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (u.view) view = u.view; } catch (e) { }
   $('segView').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); });
   const applyFilters = () => { filterEditId = null; renderFilteredViews(); };
@@ -449,7 +451,30 @@ function paintProjectProgress() {
 }
 const progBar = p => '<span class="pg' + (p >= 100 ? ' full' : '') + '" title="' + p + ' % fertig"><span class="pgb"><i style="width:' + p + '%"></i></span><span class="pgt">' + (p >= 100 ? '✓ 100 %' : p + ' %') + '</span></span>';
 const commentCount = id => (window.TP_COMMENTS && typeof window.TP_COMMENTS.count === 'function') ? window.TP_COMMENTS.count(id) : 0;
-const marks = r => ((r.desc || '').trim() ? '<span class="mk" title="Hat eine Beschreibung">≡</span>' : '') + (commentCount(r.id) ? '<span class="mk" title="Kommentare">' + icon('det') + commentCount(r.id) + '</span>' : '');
+/* ---------- Änderungen anderer markieren (bis zum Öffnen des Vorgangs) ---------- */
+const SEEN_KEY = 'tp-seen-v1';
+function seenMap() { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function changeInfo(r) { return window.TP_CHANGES && r ? window.TP_CHANGES.get(r.id) : null; }
+function isUnseen(r) {
+  const c = changeInfo(r); if (!c) return false;
+  const me = typeof window.TP_ME === 'function' ? window.TP_ME() : null;
+  if (me && c.by != null && String(c.by) === String(me.id)) return false;
+  return Date.parse(c.at) > (seenMap()[curId + ':' + r.id] || 0);
+}
+const whenTxt = iso => new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+const changeTitle = r => { const c = changeInfo(r); return c ? 'Geändert von ' + (c.byName || 'jemandem') + ' am ' + whenTxt(c.at) : ''; };
+function markSeen(rows) {
+  const m = seenMap(), cut = Date.now() - 30 * 86400000;
+  rows.forEach(r => { const c = changeInfo(r); if (c) m[curId + ':' + r.id] = Date.parse(c.at); });
+  Object.keys(m).forEach(k => { if (m[k] < cut) delete m[k]; });
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify(m)); } catch (e) { }
+}
+function paintChangeChip() {
+  const b = $('chgAll'); if (!b) return;
+  const n = state.rows.filter(isUnseen).length;
+  b.hidden = !n; b.textContent = n + (n === 1 ? ' geänderter Vorgang' : ' geänderte Vorgänge') + ' · als gesehen markieren';
+}
+const marks = r => (isUnseen(r) ? '<span class="chgtag" title="' + esc(changeTitle(r)) + '">geändert</span>' : '') + ((r.desc || '').trim() ? '<span class="mk" title="Hat eine Beschreibung">≡</span>' : '') + (commentCount(r.id) ? '<span class="mk" title="Kommentare">' + icon('det') + commentCount(r.id) + '</span>' : '');
 
 /* ---------- Detailfenster: Beschreibung, Fortschritt, Personen, Kommentare ---------- */
 let det = null;   // { id, el }
@@ -486,15 +511,18 @@ function openDetails(i) {
       ? '<div id="dProgSum"></div><p class="hint">Mittelwert der Untervorgänge, 100 % sobald alle Untervorgänge erledigt sind.</p>'
       : '<div class="prog"><input type="range" id="dPct" min="0" max="100" step="10"' + (ro ? ' disabled' : '') + '><b id="dPctV"></b></div>') + '</div>' +
     '<label class="pf">Beschreibung<textarea class="in" id="dDesc" rows="5" maxlength="4000" placeholder="Was ist zu tun? Besonderheiten, Ansprechpartner, Unterlagen …"' + (ro ? ' disabled' : '') + '></textarea></label>' +
-    '<div class="btns"><button class="btn" type="button" id="dGo">Im Gantt zeigen</button></div>' +
+    '<div class="btns"><button class="btn" type="button" id="dGo">Im Gantt zeigen</button><span class="spacer"></span>' +
+    (ro ? '' : '<button class="btn danger" type="button" id="dDel">' + (r.type === 'meilenstein' ? 'Meilenstein' : o.summary ? 'Vorgang' : TYPES[r.type]) + ' löschen</button>') + '</div>' +
     (typeof paintDetTasks === 'function' ? '<div class="dtasks" id="dTasks"></div>' : '') +
-    (comments ? '<div class="cmts"><h3>Kommentare</h3><div id="cList" class="clist">Wird geladen …</div>' +
+    (comments ? '<div class="cmts"><h3>Kommentare und Änderungen</h3><div id="cList" class="clist">Wird geladen …</div>' +
       '<div class="ccompose"><textarea class="in" id="cText" rows="3" maxlength="4000" placeholder="Kommentar schreiben … mit @ erwähnst du Teammitglieder"></textarea><div class="mlist" id="cMention" hidden></div>' +
       '<div class="btns"><button class="btn primary" type="button" id="cSend">Kommentar senden</button><span class="msg" id="cMsg"></span></div>' +
       '<p class="hint">Erwähnte Personen bekommen eine E-Mail, sofern sie eine Adresse hinterlegt haben.</p></div></div>' : '') +
     '</div>';
   document.body.appendChild(s);
   det = { id, el: s, n: -1 };
+  // Geöffnet = gesehen: Markierung entfernen
+  if (isUnseen(r)) { markSeen([r]); updateComputed(); renderView(); }
   document.addEventListener('keydown', detKey);
   const q = sel => s.querySelector(sel);
   const cur = () => { const k = rowById(id); return k >= 0 ? k : null; };
@@ -502,7 +530,9 @@ function openDetails(i) {
   function paintHead() {
     const k = cur(); if (k == null) return; const rr = state.rows[k], oo = sched.out[k];
     q('#detPsp').textContent = sched.psp[k]; q('#detTitle').textContent = rr.name || 'ohne Namen';
-    q('#detMeta').textContent = (oo.summary ? 'Sammelvorgang' : TYPES[rr.type]) + ' · ' + rangeTxt(k) + (rr.type === 'meilenstein' ? '' : ' · ' + durTxt(k)) + (isLate(k) ? ' · überfällig' : '');
+    const ci = changeInfo(rr);
+    q('#detMeta').textContent = (oo.summary ? 'Sammelvorgang' : TYPES[rr.type]) + ' · ' + rangeTxt(k) + (rr.type === 'meilenstein' ? '' : ' · ' + durTxt(k)) + (isLate(k) ? ' · überfällig' : '') +
+      (ci ? ' · zuletzt geändert von ' + (ci.byName || 'jemandem') + ', ' + whenTxt(ci.at) : '');
     if (q('#dProgSum')) q('#dProgSum').innerHTML = progBar(progOf(k));
     if (q('#dTasks')) paintDetTasks(q('#dTasks'), id);
     paintDates();
@@ -599,6 +629,14 @@ function openDetails(i) {
     if (hasUserDirectory()) setRowAssignees(k, ents);
     else save(x => { x.who = ents.map(en => en.name).join(', '); delete x.assignees; }, true);
     paintHead(); });
+  if (q('#dDel')) q('#dDel').addEventListener('click', e => {
+    const b = e.currentTarget, k = cur(); if (k == null || readOnly) return;
+    if (b.dataset.sure !== '1') {
+      const kids = state.rows[k].type === 'vorgang' ? groupEnd(k) - k : 0;
+      b.dataset.sure = '1'; b.textContent = kids ? 'Wirklich löschen? ' + kids + ' Untervorgänge werden zu Vorgängen' : 'Wirklich löschen?'; return;
+    }
+    closeDetails(); deleteRow(k);
+  });
   q('#dGo').addEventListener('click', () => { const k = cur(); closeDetails(); if (k != null) gotoRow(k); });
   s.addEventListener('click', e => { if (e.target === s || e.target.closest('[data-x]')) closeDetails(); });
   if (comments) initComments(q, id);
@@ -620,7 +658,12 @@ function startFor(E, d) {
 function closeDetails() { if (det) { det.el.remove(); det = null; document.removeEventListener('keydown', detKey); } }
 
 /* ---------- Kommentare (nur Webversion mit Server) ---------- */
+const ACT = { neu: 'angelegt', 'geändert': 'geändert', 'gelöscht': 'gelöscht' };
 function commentHtml(c) {
+  if (c.kind === 'change') {
+    const span = c.firstAt && c.firstAt !== c.createdAt && Date.parse(c.createdAt) - Date.parse(c.firstAt) > 60000 ? whenTxt(c.firstAt) + ' – ' + new Date(c.createdAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : whenTxt(c.createdAt);
+    return '<article class="cm chg-e"><div class="cmh"><span class="chgi" aria-hidden="true">✎</span><b>' + esc(c.user) + '</b><span>' + esc(span) + '</span><span class="chga">' + esc(ACT[c.action] || c.action) + '</span></div><div class="cmb">' + esc(c.body) + '</div></article>';
+  }
   const names = teamNames().sort((a, b) => b.length - a.length);
   let body = esc(c.body);
   names.forEach(n => { const en = esc(n); body = body.split('@' + en).join('\u0001' + en + '\u0002'); });
@@ -633,7 +676,7 @@ function initComments(q, id) {
   const load = async () => {
     try {
       const cs = await api.list(id); if (!det || det.id !== id) return;
-      det.n = cs.length;
+      det.n = cs.filter(c => c.kind !== 'change').length;
       list.innerHTML = cs.length ? cs.map(commentHtml).join('') : '<p class="hint">Noch keine Kommentare.</p>';
       list.scrollTop = list.scrollHeight;
     } catch (e) { list.textContent = 'Kommentare konnten nicht geladen werden.'; }
@@ -686,7 +729,7 @@ function initComments(q, id) {
 }
 // vom Server-Modul: Kommentarzähler haben sich geändert
 window.__countsChanged = () => {
-  if (!sched) return; updateComputed(); renderView();
+  if (!sched) return; updateComputed(); renderView(); paintChangeChip();
   if (det && det.reload && window.TP_COMMENTS && window.TP_COMMENTS.count(det.id) !== det.n) det.reload();
 };
 // Direktlink aus E-Mails: #c=<Projekt>:<Nr>

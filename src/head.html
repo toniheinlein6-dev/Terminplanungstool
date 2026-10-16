@@ -124,7 +124,7 @@ h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; whit
 .split { flex: none; width: 7px; background: var(--hdr); border-inline: 1px solid var(--line); cursor: col-resize; touch-action: none; }
 .split:hover, .split:focus-visible { background: var(--accent-soft); }
 
-.grid { display: grid; grid-template-columns: 84px 34px 42px 134px 220px 112px 80px 150px 62px 58px 130px 56px 98px 98px; width: 1358px; align-items: center; }
+.grid { display: grid; grid-template-columns: 52px 34px 42px 134px 220px 112px 80px 150px 62px 58px 130px 56px 98px 98px; width: 1326px; align-items: center; }
 .hrow { height: var(--headh); font-size: 11px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
 .hrow > div { padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row { height: var(--rowh); border-bottom: 1px solid var(--grid); position: relative; }
@@ -573,4 +573,23 @@ html.m .ddates label:nth-child(3) { grid-column: 1 / -1; }
 .dmode .seg button { padding: 4px 10px; font-size: 12.5px; }
 .calc-l { font-style: normal; font-size: 11px; color: var(--accent); margin-left: 4px; text-transform: none; letter-spacing: 0; }
 .ddates .in.calcf { background: var(--accent-soft); color: var(--ink); opacity: 1; border-style: dashed; }
+
+/* Ziehen und Ablegen */
+.ib.grip { cursor: grab; touch-action: none; }
+.ib.grip:active, body.dragmode, body.dragmode * { cursor: grabbing !important; }
+body.dragmode { user-select: none; -webkit-user-select: none; }
+#rowsL { position: relative; }
+.row.dragging { opacity: .45; }
+.dropline { position: absolute; left: 0; right: 0; height: 3px; background: var(--accent); border-radius: 2px; pointer-events: none; z-index: 3; box-shadow: 0 0 0 2px var(--surface); }
+.dropline.sub { left: 330px; }
+
+/* Änderungen anderer */
+.row.chg .ib.det::after { content: ""; position: absolute; top: 3px; right: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--today); box-shadow: 0 0 0 2px var(--surface); }
+.row.chg .nm { box-shadow: inset 3px 0 0 var(--today); }
+.chgtag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 9px; font-size: 10.5px; line-height: 16px; font-weight: 600; background: var(--today-bg); color: var(--today); vertical-align: middle; }
+.btn.chgall { border-color: var(--today); color: var(--today); font-size: 12.5px; padding: 4px 10px; }
+.cm.chg-e { opacity: .92; }
+.cm.chg-e .cmb { background: transparent; border: 1px dashed var(--line); color: var(--muted); font-size: 12.5px; }
+.cm .chgi { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--today-bg); color: var(--today); font-size: 12px; }
+.cm .chga { font-size: 11px; color: var(--today); }
 </style>

@@ -92,16 +92,17 @@ let dl = null, uid = null, userNs = null, roomNs = null;
 const base = new Map(), srv = new Map();
 
 function icon(n) {
-  const p = { up: 'M4 10l4-4 4 4', down: 'M4 6l4 4 4-4', sub: 'M4 3v6a2 2 0 0 0 2 2h6M9 8l3 3-3 3', del: 'M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8', det: 'M3 3.5h10v7H7.5L4.5 13v-2.5H3z' }[n];
-  return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + p + '"/></svg>';
+  const p = { up: 'M4 10l4-4 4 4', down: 'M4 6l4 4 4-4', sub: 'M4 3v6a2 2 0 0 0 2 2h6M9 8l3 3-3 3', del: 'M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8', det: 'M3 3.5h10v7H7.5L4.5 13v-2.5H3z', drag: 'M6 3.5h.01M10 3.5h.01M6 8h.01M10 8h.01M6 12.5h.01M10 12.5h.01' }[n];
+  const sw = n === 'drag' ? '2.6' : '1.6';
+  return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + p + '"/></svg>';
 }
 
 /* ---------- Tabelle links ---------- */
 function rowHTML(r, i) {
   const opt = (v, t, cur) => '<option value="' + esc(v) + '"' + (String(cur) === String(v) ? ' selected' : '') + '>' + esc(t) + '</option>';
   return '<div class="grid row" data-i="' + i + '">' +
-    '<div class="acts"><button class="ib" data-a="up" title="Nach oben" aria-label="Nach oben">' + icon('up') + '</button><button class="ib" data-a="down" title="Nach unten" aria-label="Nach unten">' + icon('down') + '</button>' +
-    '<button class="ib" data-a="sub" title="Untervorgang darunter einfügen" aria-label="Untervorgang einfügen">' + icon('sub') + '</button><button class="ib del" data-a="del" title="Zeile löschen" aria-label="Zeile löschen">' + icon('del') + '</button></div>' +
+    '<div class="acts"><button class="ib grip" data-a="drag" type="button" title="Ziehen zum Verschieben (Tastatur: Pfeil hoch/runter)" aria-label="' + esc((r.name || 'Zeile') + ' verschieben') + '">' + icon('drag') + '</button>' +
+    '<button class="ib" data-a="sub" title="Untervorgang darunter einfügen" aria-label="Untervorgang einfügen">' + icon('sub') + '</button></div>' +
     '<div class="num">' + r.id + '</div><div class="num" data-c="psp"></div>' +
     '<div><select data-f="type" aria-label="Typ">' + Object.keys(TYPES).map(k => opt(k, TYPES[k], r.type)).join('') + '</select></div>' +
     '<div class="nm"><input data-f="name" type="text" value="' + esc(r.name) + '" aria-label="Bezeichnung" autocomplete="off"><button class="ib det" data-a="det" type="button" title="Details, Beschreibung und Kommentare" aria-label="Details öffnen">' + icon('det') + '<span class="cnt" data-c="cnt"></span></button></div>' +
@@ -177,6 +178,7 @@ function updateComputed() {
     const pv = progOf(i), pc = ps.parentNode; pc.className = 'pcell' + (pv >= 100 ? ' full' : ''); pc.style.setProperty('--p', pv + '%');
     const n = commentCount(r.id), cn = el.querySelector('[data-c="cnt"]'), db = el.querySelector('[data-a="det"]');
     cn.textContent = n ? String(n) : ''; db.classList.toggle('has', !!(n || (r.desc || '').trim()));
+    const un = isUnseen(r); el.classList.toggle('chg', un); db.title = un ? changeTitle(r) + ' – Details öffnen' : 'Details, Beschreibung und Kommentare';
   });
   paintProjectProgress();
 }
@@ -387,7 +389,86 @@ function moveRow(i, dirn) {
   if (dirn < 0) { if (a === 0) return; ns = rows[a - 1].type === 'untervorgang' && rows[i].type !== 'untervorgang' ? groupStart(a - 1) : a - 1; }
   else { if (b + 1 >= rows.length) return; const nb = rows[i].type === 'untervorgang' ? b + 1 : groupEnd(b + 1); ns = a + (nb - b); }
   const blk = rows.splice(a, b - a + 1); rows.splice(ns, 0, ...blk);
-  sel = ns; structural('.row[data-i="' + ns + '"] [data-a="' + (dirn < 0 ? 'up' : 'down') + '"]');
+  sel = ns; structural('.row[data-i="' + ns + '"] [data-a="drag"]');
+}
+/* ---------- Ziehen und Ablegen: Vorgänge samt Untervorgängen, Untervorgänge, Meilensteine ---------- */
+// Ein Vorgang wandert mit seinen Untervorgängen; Vorgänge und Meilensteine landen nie mitten in einer Gruppe.
+// Ein Untervorgang gehört nach dem Ablegen zum Vorgang darüber.
+function dropTarget(a, b, gap) {
+  const rows = state.rows, isSub = rows[a].type === 'untervorgang';
+  if (gap > a && gap <= b + 1) return null;                         // innerhalb des eigenen Blocks
+  if (!isSub) {
+    // Lücke vor einem Untervorgang einer Gruppe: hinter das Gruppenende schieben
+    while (gap < rows.length && rows[gap].type === 'untervorgang' && gap > 0 && (rows[gap - 1].type === 'vorgang' || rows[gap - 1].type === 'untervorgang')) gap++;
+    if (gap > a && gap <= b + 1) return null;
+  }
+  const to = gap > b ? gap - (b - a + 1) : gap;
+  return to === a ? null : { gap, to };
+}
+function moveBlockTo(a, b, to) {
+  const blk = state.rows.splice(a, b - a + 1); state.rows.splice(to, 0, ...blk);
+  sel = to; structural('.row[data-i="' + to + '"] [data-a="drag"]');
+}
+function initDrag() {
+  const box = $('rowsL'), scroller = $('bodyL'); let d = null, raf = 0;
+  const line = document.createElement('div'); line.className = 'dropline'; line.hidden = true;
+  const cleanup = () => {
+    if (!d) return; cancelAnimationFrame(raf);
+    box.querySelectorAll('.row.dragging').forEach(el => el.classList.remove('dragging'));
+    document.body.classList.remove('dragmode'); line.hidden = true; d = null;
+  };
+  const gapAt = y => {
+    const els = [...box.querySelectorAll('.row')];
+    for (const el of els) { const rc = el.getBoundingClientRect(); if (y < rc.top + rc.height / 2) return { gap: +el.dataset.i, el, before: true }; }
+    const last = els[els.length - 1]; return last ? { gap: +last.dataset.i + 1, el: last, before: false } : null;
+  };
+  const paint = () => {
+    if (!d) return;
+    const g = gapAt(d.y), t = g && dropTarget(d.a, d.b, g.gap); d.t = t;
+    if (!t) { line.hidden = true; }
+    else {
+      const ref = box.querySelector('.row[data-i="' + t.gap + '"]') || box.querySelector('.row[data-i="' + (t.gap - 1) + '"]');
+      const top = ref.offsetTop + (ref.dataset.i == t.gap ? 0 : ref.offsetHeight);
+      if (!line.parentNode) box.appendChild(line);
+      line.style.top = (top - 1) + 'px'; line.hidden = false;
+      line.classList.toggle('sub', state.rows[d.a].type === 'untervorgang');
+    }
+    // Am Rand automatisch scrollen
+    const rc = scroller.getBoundingClientRect(), edge = 40;
+    if (d.y < rc.top + edge) scroller.scrollTop -= Math.ceil((rc.top + edge - d.y) / 4);
+    else if (d.y > rc.bottom - edge) scroller.scrollTop += Math.ceil((d.y - rc.bottom + edge) / 4);
+    raf = requestAnimationFrame(paint);
+  };
+  box.addEventListener('pointerdown', e => {
+    const h = e.target.closest('[data-a="drag"]'); if (!h || readOnly || e.button > 0) return;
+    const i = rowIdx(h); if (i < 0) return;
+    if (visibleRowIndices().length !== state.rows.length) { toast('Zum Verschieben zuerst die Filter zurücksetzen.'); return; }
+    e.preventDefault();
+    d = { a: i, b: state.rows[i].type === 'vorgang' ? groupEnd(i) : i, y: e.clientY, y0: e.clientY, pid: e.pointerId, t: null, started: false };
+    try { h.setPointerCapture(e.pointerId); } catch (x) { }
+  });
+  box.addEventListener('pointermove', e => {
+    if (!d || e.pointerId !== d.pid) return;
+    d.y = e.clientY;
+    if (!d.started && Math.abs(d.y - d.y0) > 4) {
+      d.started = true; document.body.classList.add('dragmode'); select(d.a);
+      for (let k = d.a; k <= d.b; k++) { const el = box.querySelector('.row[data-i="' + k + '"]'); if (el) el.classList.add('dragging'); }
+      raf = requestAnimationFrame(paint);
+    }
+  });
+  const end = e => {
+    if (!d || e.pointerId !== d.pid) return;
+    const go = d.started && d.t && e.type === 'pointerup' ? { a: d.a, b: d.b, to: d.t.to } : null;
+    cleanup();
+    if (go) moveBlockTo(go.a, go.b, go.to);
+  };
+  box.addEventListener('pointerup', end); box.addEventListener('pointercancel', end);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && d) cleanup(); });
+  // Tastatur: Griff fokussieren, Pfeil hoch/runter
+  box.addEventListener('keydown', e => {
+    const h = e.target.closest && e.target.closest('[data-a="drag"]'); if (!h || readOnly) return;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); moveRow(rowIdx(h), e.key === 'ArrowUp' ? -1 : 1); }
+  });
 }
 function deleteRow(i) {
   const r = state.rows[i]; let promoted = 0;
@@ -400,8 +481,7 @@ function deleteRow(i) {
 function onClick(e) {
   const b = e.target.closest('[data-a]'); if (!b) return;
   const i = rowIdx(b), a = b.dataset.a;
-  if (a === 'up') moveRow(i, -1); else if (a === 'down') moveRow(i, 1); else if (a === 'del') deleteRow(i);
-  else if (a === 'sub') addRow('untervorgang', state.rows[i].type === 'vorgang' ? groupEnd(i) + 1 : i + 1);
+  if (a === 'sub') addRow('untervorgang', state.rows[i].type === 'vorgang' ? groupEnd(i) + 1 : i + 1);
   else if (a === 'det') openDetails(i);
 }
 
@@ -737,6 +817,7 @@ function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Ma
 function boot() {
   applyTheme(); applyDisplay();
   initViews();
+  initDrag();
   initTasks();
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (typeof u.zoom2 === 'number') zoom = Math.max(0, Math.min(ZMAX, u.zoom2)); if (u.leftw) document.documentElement.style.setProperty('--leftw', u.leftw + 'px'); } catch (e) { }
   link($('bodyL'), $('bodyR')); link($('bodyR'), $('bodyL'));
