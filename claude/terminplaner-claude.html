@@ -353,9 +353,10 @@ h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; whit
 .team p { margin: 0 0 6px; font-size: 13.5px; }
 .team ol { margin: 0 0 6px; padding-left: 20px; font-size: 13.5px; display: flex; flex-direction: column; gap: 2px; }
 .ro-banner { background: var(--today-bg); }
-body.ro #addV, body.ro #addU, body.ro #addM, body.ro #newProj, body.ro #undo, body.ro #banner, body.ro .acts, body.ro .kadd, body.ro .lmb, body.ro .mv, body.ro .editonly { display: none !important; }
+body.ro #addV, body.ro #addU, body.ro #addM, body.ro #newProj, body.ro #undo, body.ro #banner, body.ro .kadd, body.ro .lmb, body.ro .mv, body.ro .editonly { display: none !important; }
 body.ro .settings, body.ro #pname, body.ro .stsel, body.ro .kcol .dot, body.ro .lname { pointer-events: none; }
 body.ro .card { cursor: default; }
+body.ro .row .acts { visibility: hidden; }   /* Platz behalten, sonst verrutschen die Spalten */
 body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
 
 /* Zoom-Anzeige */
@@ -617,6 +618,11 @@ body.colresize, body.colresize * { cursor: col-resize !important; user-select: n
 /* PDF-Auswahl */
 .panel.pdfdlg { width: min(620px, 100%); }
 .pdfdlg h3 { margin: 0 0 6px; }
+/* Zugang „Nur Gantt“ */
+html.gonly #segView, html.gonly #openPanel, html.gonly #chgAll { display: none !important; }
+html.gonly .row [data-a="det"] { visibility: hidden; }
+html.gonly .row .predm { pointer-events: none; border-style: solid; border-color: transparent; }
+html.m.gonly body { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 /* Feiertage: Vorschau je Jahr */
 details.holprev { margin: 6px 0 2px; font-size: 13px; }
 details.holprev summary { cursor: pointer; color: var(--accent); }
@@ -1398,7 +1404,7 @@ function updateComputed() {
     el.querySelector('[data-a="sub"]').style.visibility = r.type === 'meilenstein' ? 'hidden' : '';
     const ps = el.querySelector('[data-f="pct"]');
     if (o.summary) { ps.innerHTML = '<option>' + progOf(i) + ' %</option>'; ps.disabled = true; }
-    else if (ps.disabled || ps.options.length !== PCTS.length) { ps.innerHTML = PCTS.map(p => '<option value="' + p + '">' + p + ' %</option>').join(''); ps.disabled = false; ps.value = String(r.pct || 0); }
+    else if (ps.disabled || ps.options.length !== PCTS.length) { ps.innerHTML = PCTS.map(p => '<option value="' + p + '">' + p + ' %</option>').join(''); ps.disabled = readOnly; ps.value = String(r.pct || 0); }
     else if (document.activeElement !== ps) ps.value = String(r.pct || 0);
     const pv = progOf(i), pc = ps.parentNode; pc.className = 'pcell' + (pv >= 100 ? ' full' : ''); pc.style.setProperty('--p', pv + '%');
     const n = commentCount(r.id), cn = el.querySelector('[data-c="cnt"]'), db = el.querySelector('[data-a="det"]');
@@ -1816,7 +1822,7 @@ async function initStore() {
   renderAll(); setStatus('local', 'Nur in diesem Browser gespeichert');
   if (window.SP && window.SP.connect) {
     let col = null; try { col = await window.SP.connect(window.TEAMS_CFG || {}, (k, t) => setStatus(k, t)); } catch (e) { setStatus('error', 'Anmeldung fehlgeschlagen: ' + ((e && e.message) || e)); showLogin(); return; }
-    uid = col.uid; prefsForUser(); if (col.readOnly) lockReadOnly(false); attach(col, pick, null); return;
+    uid = col.uid; prefsForUser(); if (col.ganttOnly) ganttOnlyMode(); if (col.readOnly) lockReadOnly(false); attach(col, pick, null); return;
   }
   let cl = null; try { cl = window.claude && window.claude.use ? window.claude : null; } catch (e) { }
   if (!cl) return;
@@ -2274,6 +2280,7 @@ function resetViewFilters() {
 }
 
 function setView(v) {
+  if (ganttOnly) v = 'gantt';
   if (!['gantt', 'list', 'kanban', 'cal', 'tasks', 'org'].includes(v) || (v === 'tasks' && !$('vTasks')) || (v === 'org' && !$('vOrg'))) v = 'gantt';
   view = v; saveUi({ view: v });
   $('segView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
@@ -2552,6 +2559,13 @@ async function teamInit() {
   $('teamBox').hidden = false;
 }
 
+// Zugang „Nur Gantt“: nur Terminplan (Tabelle und Diagramm) ansehen; keine anderen Ansichten, Details, Kommentare und Listen
+let ganttOnly = false;
+function ganttOnlyMode() {
+  ganttOnly = true; document.documentElement.classList.add('gonly');
+  setView('gantt');
+  const b = $('roBanner'); if (b) b.querySelector('span').innerHTML = '<b>Nur Ansicht.</b> Dein Zugang zeigt den Terminplan als Gantt-Diagramm. Als PDF kannst du ihn exportieren.';
+}
 // Schreibrechte fehlen: Bearbeitung sperren, Hinweis zeigen und, falls schon lokal getippt wurde, den gespeicherten Stand wiederherstellen
 function lockReadOnly(afterFailedSave) {
   readOnly = true; document.body.classList.add('ro'); $('rowsL').inert = false;
@@ -2646,6 +2660,7 @@ function teamNames() {
   return [...new Set(t.concat(state.people))].filter(Boolean);
 }
 function openDetails(i) {
+  if (ganttOnly) return;
   const r = state.rows[i]; if (!r || !sched) return;
   closeDetails();
   const id = r.id, o = sched.out[i], L = lanes(), ro = readOnly;

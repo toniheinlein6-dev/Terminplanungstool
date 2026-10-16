@@ -232,7 +232,7 @@ function updateComputed() {
     el.querySelector('[data-a="sub"]').style.visibility = r.type === 'meilenstein' ? 'hidden' : '';
     const ps = el.querySelector('[data-f="pct"]');
     if (o.summary) { ps.innerHTML = '<option>' + progOf(i) + ' %</option>'; ps.disabled = true; }
-    else if (ps.disabled || ps.options.length !== PCTS.length) { ps.innerHTML = PCTS.map(p => '<option value="' + p + '">' + p + ' %</option>').join(''); ps.disabled = false; ps.value = String(r.pct || 0); }
+    else if (ps.disabled || ps.options.length !== PCTS.length) { ps.innerHTML = PCTS.map(p => '<option value="' + p + '">' + p + ' %</option>').join(''); ps.disabled = readOnly; ps.value = String(r.pct || 0); }
     else if (document.activeElement !== ps) ps.value = String(r.pct || 0);
     const pv = progOf(i), pc = ps.parentNode; pc.className = 'pcell' + (pv >= 100 ? ' full' : ''); pc.style.setProperty('--p', pv + '%');
     const n = commentCount(r.id), cn = el.querySelector('[data-c="cnt"]'), db = el.querySelector('[data-a="det"]');
@@ -650,7 +650,7 @@ async function initStore() {
   renderAll(); setStatus('local', 'Nur in diesem Browser gespeichert');
   if (window.SP && window.SP.connect) {
     let col = null; try { col = await window.SP.connect(window.TEAMS_CFG || {}, (k, t) => setStatus(k, t)); } catch (e) { setStatus('error', 'Anmeldung fehlgeschlagen: ' + ((e && e.message) || e)); showLogin(); return; }
-    uid = col.uid; prefsForUser(); if (col.readOnly) lockReadOnly(false); attach(col, pick, null); return;
+    uid = col.uid; prefsForUser(); if (col.ganttOnly) ganttOnlyMode(); if (col.readOnly) lockReadOnly(false); attach(col, pick, null); return;
   }
   let cl = null; try { cl = window.claude && window.claude.use ? window.claude : null; } catch (e) { }
   if (!cl) return;

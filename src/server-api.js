@@ -120,7 +120,7 @@
     wrap.innerHTML = '<button class="btn userbtn" id="userBtn" type="button" aria-haspopup="menu" aria-expanded="false"></button>' +
       '<div class="umenu" id="userMenu" role="menu" hidden>' +
       '<button type="button" role="menuitem" data-m="profile">Mein Profil und Passwort</button>' +
-      '<button type="button" role="menuitem" data-m="ticket">Idee oder Problem melden</button>' +
+      (me.role === 'gantt' ? '' : '<button type="button" role="menuitem" data-m="ticket">Idee oder Problem melden</button>') +
       (me.role === 'admin' ? '<button type="button" role="menuitem" data-m="admin">Verwaltung</button>' : '') +
       (isStandalone() ? '' : '<button type="button" role="menuitem" data-m="install">Als App installieren</button>') +
       '<button type="button" role="menuitem" data-m="logout">Abmelden</button></div>';
@@ -321,7 +321,9 @@
       status('saving', 'Anmeldung …');
       await ensureLogin(); await refreshMe(); chrome(); await loadTeam();
       setInterval(() => { if (!document.hidden) { loadTeam(); if (me && me.role === 'admin') refreshMe(); } }, 60000);
-      const col = makeCol(); col.uid = me.id; col.readOnly = me.role === 'viewer'; return col;
+      const col = makeCol(); col.uid = me.id; col.readOnly = me.role === 'viewer' || me.role === 'gantt'; col.ganttOnly = me.role === 'gantt';
+      if (col.ganttOnly) window.TP_COMMENTS.available = false;
+      return col;
     }
   };
 })();

@@ -353,9 +353,10 @@ h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; whit
 .team p { margin: 0 0 6px; font-size: 13.5px; }
 .team ol { margin: 0 0 6px; padding-left: 20px; font-size: 13.5px; display: flex; flex-direction: column; gap: 2px; }
 .ro-banner { background: var(--today-bg); }
-body.ro #addV, body.ro #addU, body.ro #addM, body.ro #newProj, body.ro #undo, body.ro #banner, body.ro .acts, body.ro .kadd, body.ro .lmb, body.ro .mv, body.ro .editonly { display: none !important; }
+body.ro #addV, body.ro #addU, body.ro #addM, body.ro #newProj, body.ro #undo, body.ro #banner, body.ro .kadd, body.ro .lmb, body.ro .mv, body.ro .editonly { display: none !important; }
 body.ro .settings, body.ro #pname, body.ro .stsel, body.ro .kcol .dot, body.ro .lname { pointer-events: none; }
 body.ro .card { cursor: default; }
+body.ro .row .acts { visibility: hidden; }   /* Platz behalten, sonst verrutschen die Spalten */
 body.ro #zoomIn, body.ro #zoomOut { pointer-events: auto; }
 
 /* Zoom-Anzeige */
@@ -617,6 +618,11 @@ body.colresize, body.colresize * { cursor: col-resize !important; user-select: n
 /* PDF-Auswahl */
 .panel.pdfdlg { width: min(620px, 100%); }
 .pdfdlg h3 { margin: 0 0 6px; }
+/* Zugang „Nur Gantt“ */
+html.gonly #segView, html.gonly #openPanel, html.gonly #chgAll { display: none !important; }
+html.gonly .row [data-a="det"] { visibility: hidden; }
+html.gonly .row .predm { pointer-events: none; border-style: solid; border-color: transparent; }
+html.m.gonly body { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 /* Feiertage: Vorschau je Jahr */
 details.holprev { margin: 6px 0 2px; font-size: 13px; }
 details.holprev summary { cursor: pointer; color: var(--accent); }

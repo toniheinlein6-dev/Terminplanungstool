@@ -115,6 +115,7 @@ function resetViewFilters() {
 }
 
 function setView(v) {
+  if (ganttOnly) v = 'gantt';
   if (!['gantt', 'list', 'kanban', 'cal', 'tasks', 'org'].includes(v) || (v === 'tasks' && !$('vTasks')) || (v === 'org' && !$('vOrg'))) v = 'gantt';
   view = v; saveUi({ view: v });
   $('segView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
@@ -393,6 +394,13 @@ async function teamInit() {
   $('teamBox').hidden = false;
 }
 
+// Zugang „Nur Gantt“: nur Terminplan (Tabelle und Diagramm) ansehen; keine anderen Ansichten, Details, Kommentare und Listen
+let ganttOnly = false;
+function ganttOnlyMode() {
+  ganttOnly = true; document.documentElement.classList.add('gonly');
+  setView('gantt');
+  const b = $('roBanner'); if (b) b.querySelector('span').innerHTML = '<b>Nur Ansicht.</b> Dein Zugang zeigt den Terminplan als Gantt-Diagramm. Als PDF kannst du ihn exportieren.';
+}
 // Schreibrechte fehlen: Bearbeitung sperren, Hinweis zeigen und, falls schon lokal getippt wurde, den gespeicherten Stand wiederherstellen
 function lockReadOnly(afterFailedSave) {
   readOnly = true; document.body.classList.add('ro'); $('rowsL').inert = false;
@@ -487,6 +495,7 @@ function teamNames() {
   return [...new Set(t.concat(state.people))].filter(Boolean);
 }
 function openDetails(i) {
+  if (ganttOnly) return;
   const r = state.rows[i]; if (!r || !sched) return;
   closeDetails();
   const id = r.id, o = sched.out[i], L = lanes(), ro = readOnly;
