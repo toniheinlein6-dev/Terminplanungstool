@@ -204,6 +204,7 @@ function renderChart(indices = ganttRowIndices()) {
   const nCols = Math.max(minCols, Math.ceil((maxE - first + 1) / step) + (step === 7 ? 4 : 12));
   const W = Math.ceil(nCols * colW), H = Math.max(N, 1) * RH;
   const X = d => (d - first) / step * colW;
+  window.__chartDayW = colW / step;   // für das Ziehen der Balken
   const today = todayDn();
   const todayCol = Math.floor((today - first) / step);
   // Kopf
@@ -287,7 +288,7 @@ function renderChart(indices = ganttRowIndices()) {
     const tip = '<title>' + esc((r.name || 'ohne Namen') + ': ' + fmt(o.S) + (o.E !== o.S ? ' bis ' + fmt(o.E) : '') + (r.type === 'meilenstein' ? '' : ' (' + (o.summary ? (o.E - o.S + 1) + ' Kalendertage' : o.dur + (sched.work ? ' Arbeitstage' : ' Tage')) + ')') + (who ? ' · ' + who : '') + (o.err ? ' · Zirkelbezug' : '') + (o.pred >= 0 && !positions.has(o.pred) ? ' · Vorgänger ausgeblendet' : '')) + '</title>';
     if (r.type === 'meilenstein') {
       const cx = msX(i);
-      s += '<g data-i="' + i + '">' + tip + '<polygon class="bar-ms"' + fillOf(r) + ' points="' + cx + ',' + (y - 8) + ' ' + (cx + 8) + ',' + y + ' ' + cx + ',' + (y + 8) + ' ' + (cx - 8) + ',' + y + '"/>' +
+      s += '<g data-i="' + i + '"' + (readOnly ? '' : ' class="mv"') + '>' + tip + '<polygon class="bar-ms"' + fillOf(r) + ' points="' + cx + ',' + (y - 8) + ' ' + (cx + 8) + ',' + y + ' ' + cx + ',' + (y + 8) + ' ' + (cx - 8) + ',' + y + '"/>' +
         '<text class="lbl ms" x="' + (cx + 14) + '" y="' + (y + 4) + '">' + esc(r.name) + '</text></g>';
       return;
     }
@@ -301,7 +302,7 @@ function renderChart(indices = ganttRowIndices()) {
     } else {
       const sub = r.type === 'untervorgang' && sched.parent[i] >= 0;
       const pg = progOf(i), lab = [assigneeShortText(r), pg ? pg + ' %' : ''].filter(Boolean).join(' · ');
-      s += '<g data-i="' + i + '"' + (rowDone(r) ? ' class="done"' : '') + '>' + tip + '<rect class="' + (sub ? 'bar-sub' : 'bar-task') + '"' + fillOf(r) + ' x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' +
+      s += '<g data-i="' + i + '" class="' + (rowDone(r) ? 'done' : '') + (readOnly ? '' : ' mv') + '">' + tip + '<rect class="' + (sub ? 'bar-sub' : 'bar-task') + '"' + fillOf(r) + ' x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' +
         (pg > 0 && pg < 100 ? '<rect class="bar-prog" x="' + x + '" y="' + (y - 8) + '" width="' + (w * pg / 100).toFixed(1) + '" height="16" rx="3"/>' : pg >= 100 ? '<rect class="bar-prog" x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' : '') +
         (o.err ? '<rect class="bar-err" x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' : '') +
         (lab ? '<text class="lbl" x="' + (x + w + 14) + '" y="' + (y + 4) + '">' + esc(lab) + '</text>' : '') + '</g>';
@@ -834,7 +835,7 @@ function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Ma
 function boot() {
   applyTheme(); applyDisplay();
   initViews();
-  initCols();
+  initCols(); initBarDrag();
   initDrag();
   initTasks();
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (typeof u.zoom2 === 'number') zoom = Math.max(0, Math.min(ZMAX, u.zoom2)); if (u.leftw) document.documentElement.style.setProperty('--leftw', u.leftw + 'px'); } catch (e) { }

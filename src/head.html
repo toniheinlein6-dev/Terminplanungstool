@@ -630,4 +630,9 @@ body.colresize, body.colresize * { cursor: col-resize !important; user-select: n
 .sw:disabled { cursor: default; opacity: .6; }
 .cdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
 .cb.ms .msd { background: var(--msc, var(--bar-ms)); }
+
+/* Balken ziehen */
+.bars g.mv { touch-action: none; }
+body.bardrag, body.bardrag * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+.bartip { position: fixed; z-index: 40; pointer-events: none; background: var(--ink); color: var(--surface); font: 500 12px/1.3 var(--font-num); padding: 4px 8px; border-radius: 6px; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
 </style>
