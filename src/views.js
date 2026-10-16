@@ -473,10 +473,12 @@ function openDetails(i) {
     '</div>' +
     // Termine: Start setzt den festen Start, Ende passt die Dauer an
     (o.summary ? '<div class="pf"><span>Zeitraum</span><p class="ddsum" id="dSum"></p><p class="hint">Ergibt sich aus den Untervorgängen. Ändere die Termine dort.</p></div>'
-      : '<div class="ddates">' +
-        '<label class="pf">' + (r.type === 'meilenstein' ? 'Datum' : 'Start') + '<input class="in" type="date" id="dS"' + (ro ? ' disabled' : '') + '></label>' +
-        (r.type === 'meilenstein' ? '' : '<label class="pf">Ende<input class="in" type="date" id="dE"' + (ro ? ' disabled' : '') + '></label>' +
-          '<label class="pf">Dauer (' + (state.mode === 'work' ? 'Arbeitstage' : 'Tage') + ')<input class="in" type="number" min="1" step="1" id="dDur"' + (ro ? ' disabled' : '') + '></label>') +
+      : (r.type === 'meilenstein' || ro ? '' : '<div class="dmode"><span id="dModeL">Termin eingeben über</span><div class="seg sm" id="dMode" role="group" aria-labelledby="dModeL">' +
+          DMODES.map(([k, t]) => '<button type="button" data-v="' + k + '">' + t + '</button>').join('') + '</div></div>') +
+        '<div class="ddates">' +
+        '<label class="pf"><span>' + (r.type === 'meilenstein' ? 'Datum' : 'Start') + ' <em class="calc-l" data-l="S">berechnet</em></span><input class="in" type="date" id="dS"' + (ro ? ' disabled' : '') + '></label>' +
+        (r.type === 'meilenstein' ? '' : '<label class="pf"><span>Ende <em class="calc-l" data-l="E">berechnet</em></span><input class="in" type="date" id="dE"' + (ro ? ' disabled' : '') + '></label>' +
+          '<label class="pf"><span>Dauer (' + (state.mode === 'work' ? 'Arbeitstage' : 'Tage') + ') <em class="calc-l" data-l="D">berechnet</em></span><input class="in" type="number" min="1" step="1" id="dDur"' + (ro ? ' disabled' : '') + '></label>') +
         '</div><p class="hint bad" id="dDateErr" role="alert" hidden></p><p class="hint" id="dDateHint"></p>') +
     '<div class="pf"><span>Verantwortlich</span><div class="people" id="dWho"></div>' +
     (ro ? '' : '<div class="addp">' + (hasUserDirectory() ? '<select class="in" id="dWhoAdd" aria-label="Person hinzufügen"></select>' : '<input class="in" id="dWhoAdd" list="peopleList" placeholder="Person hinzufügen …" autocomplete="off">') + '<button class="btn" type="button" id="dWhoBtn">Hinzufügen</button></div>') + '</div>' +
@@ -513,7 +515,6 @@ function openDetails(i) {
     if (force || act !== q('#dS')) q('#dS').value = toISO(oo.S);
     if (q('#dE') && (force || act !== q('#dE'))) q('#dE').value = toISO(oo.E);
     if (q('#dDur') && (force || act !== q('#dDur'))) q('#dDur').value = String(oo.dur);
-    if (force && q('#dDateErr')) q('#dDateErr').hidden = true;
     const fx = parseISO(rr.fixed), pi = oo.pred, h = [];
     if (pi >= 0 && (fx == null || oo.S > fx)) h.push('Frühestens nach Vorgänger ' + state.rows[pi].id + ' „' + (state.rows[pi].name || 'ohne Namen') + '“. Ein früheres Datum greift erst, wenn du den Vorgänger entfernst.');
     if (fx != null) h.push('Fester Start: ' + fmt(fx) + (oo.S > fx ? ' (wird durch den Vorgänger verschoben)' : '') + '.');
@@ -536,17 +537,48 @@ function openDetails(i) {
   if (q('#dPct')) { q('#dPct').value = String(rowDone(r) ? 100 : r.pct || 0); q('#dPctV').textContent = q('#dPct').value + ' %'; }
   paintHead();
   q('#dName').addEventListener('input', e => save(x => { x.name = e.target.value; }, true));
-  if (q('#dS')) q('#dS').addEventListener('change', e => { if (parseISO(e.target.value) == null) return; save(x => { x.fixed = e.target.value; }, true); paintDates(true); });
+  // Drei Eingabearten: Start + Ende (Dauer berechnet), Start + Dauer (Ende berechnet), Ende + Dauer (Start berechnet)
+  const ms = r.type === 'meilenstein';
+  let mode = ms ? 'sd' : dateMode();
+  const dateErr = t => { q('#dDateErr').textContent = t; q('#dDateErr').hidden = false; paintDates(true); };
+  const okDate = () => { if (q('#dDateErr')) q('#dDateErr').hidden = true; };
+  function paintMode() {
+    if (q('#dMode')) q('#dMode').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === mode)));
+    const calc = ms ? '' : { se: 'D', sd: 'E', ed: 'S' }[mode];
+    [['S', '#dS'], ['E', '#dE'], ['D', '#dDur']].forEach(([l, sel]) => {
+      const f = q(sel); if (!f) return;
+      f.disabled = ro || l === calc; f.classList.toggle('calcf', l === calc);
+      const lab = s.querySelector('.calc-l[data-l="' + l + '"]'); if (lab) lab.hidden = l !== calc;
+    });
+  }
+  if (q('#dMode')) q('#dMode').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; mode = b.dataset.v; saveUi({ dmode: mode }); paintMode(); });
+  paintMode();
+  if (q('#dS')) q('#dS').addEventListener('change', e => {
+    const k = cur(), v = parseISO(e.target.value); if (k == null || v == null) return;
+    okDate();
+    if (mode === 'se' && !ms) {
+      const E = sched.out[k].E;
+      if (v > E) { dateErr('Der Start liegt nach dem Ende. Verschiebe zuerst das Ende.'); return; }
+      save(x => { x.fixed = e.target.value; x.dur = String(Math.max(1, spanDays(v, E))); }, true);
+    } else save(x => { x.fixed = e.target.value; }, true);
+    paintDates(true);
+  });
   if (q('#dDur')) {
-    q('#dDur').addEventListener('input', e => { const v = parseInt(e.target.value, 10); if (!(v >= 1)) return; save(x => { x.dur = String(v); }, true); });
+    q('#dDur').addEventListener('input', e => {
+      const v = parseInt(e.target.value, 10), k = cur(); if (!(v >= 1) || k == null) return;
+      okDate();
+      if (mode === 'ed') { const E = sched.out[k].E; save(x => { x.dur = String(v); x.fixed = toISO(startFor(E, v)); }, true); }
+      else save(x => { x.dur = String(v); }, true);
+    });
     q('#dDur').addEventListener('change', () => paintDates(true));
   }
   if (q('#dE')) q('#dE').addEventListener('change', e => {
     const k = cur(), en = parseISO(e.target.value); if (k == null || en == null) return;
+    okDate();
+    if (mode === 'ed') { const d = sched.out[k].dur; save(x => { x.fixed = toISO(startFor(en, d)); }, true); paintDates(true); return; }
     const S = sched.out[k].S;
-    if (en < S) { q('#dDateErr').textContent = 'Das Ende liegt vor dem Start. Verschiebe zuerst den Start.'; q('#dDateErr').hidden = false; e.target.value = toISO(sched.out[k].E); return; }
-    let d = 0; for (let x = S; x <= en; x++) if (!sched.work || sched.isWork(x)) d++;
-    save(x => { x.dur = String(Math.max(1, d)); }, true); paintDates(true);
+    if (en < S) { dateErr('Das Ende liegt vor dem Start. Verschiebe zuerst den Start.'); return; }
+    save(x => { x.dur = String(Math.max(1, spanDays(S, en))); }, true); paintDates(true);
   });
   q('.panel').addEventListener('click', e => { if (e.target.id === 'dFixClr') save(x => { x.fixed = ''; }, true); });
   q('#dDesc').addEventListener('input', e => save(x => { x.desc = e.target.value.slice(0, 4000); }));
@@ -573,6 +605,18 @@ function openDetails(i) {
   (q('#dDesc').disabled ? q('[data-x]') : q('#dName')).focus();
 }
 function detKey(e) { if (e.key === 'Escape' && det) { const m = det.el.querySelector('#cMention'); if (m && !m.hidden) { m.hidden = true; return; } closeDetails(); } }
+// Termin-Eingabeart im Detailfenster (je Gerät gemerkt)
+const DMODES = [['se', 'Start + Ende'], ['sd', 'Start + Dauer'], ['ed', 'Ende + Dauer']];
+function dateMode() { try { const m = JSON.parse(localStorage.getItem(LS_UI) || '{}').dmode; return ['se', 'sd', 'ed'].includes(m) ? m : 'sd'; } catch (e) { return 'sd'; } }
+// Tage von S bis E (einschließlich), bei Arbeitstagen ohne Wochenenden und Feiertage
+function spanDays(S, E) { let d = 0; for (let x = S; x <= E; x++) if (!sched.work || sched.isWork(x)) d++; return d; }
+// Start, damit ein Vorgang mit d Tagen am Tag E endet (bei Arbeitstagen: am letzten Arbeitstag bis E)
+function startFor(E, d) {
+  if (!sched.work) return E - Math.max(1, d) + 1;
+  let x = E, g = 0; while (!sched.isWork(x) && g++ < 400) x--;
+  for (let c = Math.max(1, d) - 1; c > 0 && g++ < 40000; x--) { if (sched.isWork(x - 1)) c--; }
+  return x;
+}
 function closeDetails() { if (det) { det.el.remove(); det = null; document.removeEventListener('keydown', detKey); } }
 
 /* ---------- Kommentare (nur Webversion mit Server) ---------- */
