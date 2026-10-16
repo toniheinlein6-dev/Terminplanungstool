@@ -18,9 +18,7 @@ function demoPlan() {
   return {
     v: 1, example: true, name: 'Beispielprojekt', start: '2026-10-12', raster: 'weeks', mode: 'work', lines: true,
     people: ['Person A', 'Person B', 'Person C'], lanes: defaultLanes(),
-    holidays: [['2026-12-25', '1. Weihnachtstag'], ['2026-12-26', '2. Weihnachtstag'], ['2027-01-01', 'Neujahr'], ['2027-01-06', 'Heilige Drei Könige (BW/BY)'],
-      ['2027-03-26', 'Karfreitag'], ['2027-03-29', 'Ostermontag'], ['2027-05-06', 'Christi Himmelfahrt'], ['2027-05-17', 'Pfingstmontag'],
-      ['2027-05-27', 'Fronleichnam (BW/BY)'], ['2027-11-01', 'Allerheiligen (BW/BY)']].map(([d, n]) => ({ d, n })),
+    region: 'BW', holidays: [{ d: '2026-12-28', to: '2026-12-31', n: 'Betriebsurlaub' }],
     nextId: 14,
     rows: [
       r(1, 'vorgang', 'Planung'), r(2, 'untervorgang', 'Bestandsaufnahme', 'Person A', '', 'EA', '', 3),
@@ -58,7 +56,7 @@ function cleanLanes(L) {
 }
 function blankPlan(keep) {
   return { v: 1, name: keep ? keep.name : '', start: keep ? keep.start : toISO(mondayOf(todayDn())), raster: keep ? keep.raster : 'weeks', mode: keep ? keep.mode : 'work',
-    lines: true, people: keep ? keep.people : [], holidays: keep ? keep.holidays : [], lanes: keep && keep.lanes ? JSON.parse(JSON.stringify(keep.lanes)) : defaultLanes(), nextId: 1, rows: [], nextTaskId: 1, tasks: [], org: keep && Array.isArray(keep.org) ? JSON.parse(JSON.stringify(keep.org)) : [] };
+    lines: true, people: keep ? keep.people : [], holidays: keep ? keep.holidays : [], region: keep ? keep.region || '' : 'BW', lanes: keep && keep.lanes ? JSON.parse(JSON.stringify(keep.lanes)) : defaultLanes(), nextId: 1, rows: [], nextTaskId: 1, tasks: [], org: keep && Array.isArray(keep.org) ? JSON.parse(JSON.stringify(keep.org)) : [] };
 }
 function sanitize(p) {
   if (!p || typeof p !== 'object' || !Array.isArray(p.rows)) return null;
@@ -66,7 +64,11 @@ function sanitize(p) {
   s.name = String(p.name || ''); s.start = parseISO(p.start) != null ? p.start : s.start;
   s.raster = p.raster === 'days' ? 'days' : 'weeks'; s.mode = p.mode === 'cal' ? 'cal' : 'work'; s.lines = p.lines !== false;
   s.people = Array.isArray(p.people) ? p.people.map(String).filter(Boolean).slice(0, 200) : [];
-  s.holidays = Array.isArray(p.holidays) ? p.holidays.filter(h => h && parseISO(h.d) != null).map(h => ({ d: h.d, n: String(h.n || '') })).slice(0, 400) : [];
+  s.holidays = Array.isArray(p.holidays) ? p.holidays.filter(h => h && parseISO(h.d) != null).map(h => {
+    const a = parseISO(h.d), b = parseISO(h.to);
+    return Object.assign({ d: h.d, n: String(h.n || '') }, b != null && b > a && b - a <= 366 ? { to: h.to } : {});
+  }).slice(0, 400) : [];
+  s.region = regionName(p.region) ? p.region : '';
   s.lanes = cleanLanes(p.lanes);
   let max = 0; const seen = new Set();
   p.rows.slice(0, 500).forEach(r => {
@@ -287,7 +289,7 @@ function renderChart(indices = ganttRowIndices()) {
     for (let k2 = 0; k2 < nCols; k2++) {
       const d = first + k2, x = k2 * colW, wd = isoWd(d);
       if (k2 === todayCol) h += '<rect class="g-todaybg" x="' + x + '" y="41" width="' + colW + '" height="' + (HH - 41) + '"/>';
-      else if (wd > 5 || sched.hol.has(d)) h += '<rect class="' + (sched.hol.has(d) && wd <= 5 ? 'g-holiday' : 'g-weekend') + '" x="' + x + '" y="41" width="' + colW + '" height="' + (HH - 41) + '"/>';
+      else if (wd > 5 || sched.hol.has(d)) h += '<rect class="' + (sched.hol.has(d) && wd <= 5 ? 'g-holiday' : 'g-weekend') + '" x="' + x + '" y="41" width="' + colW + '" height="' + (HH - 41) + '">' + (sched.hol.has(d) ? '<title>' + esc(fmt(d) + ': ' + sched.holName.get(d)) + '</title>' : '') + '</rect>';
       const cl = 'hd' + (k2 === todayCol ? ' today' : '');
       h += '<text class="' + cl + '" x="' + (x + colW / 2) + '" y="55" text-anchor="middle">' + ymd(d).d + '</text>' +
         '<text class="' + cl + '" x="' + (x + colW / 2) + '" y="67" text-anchor="middle">' + 'MDMDFSS'[wd - 1] + '</text>';
@@ -691,7 +693,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 // Dreiwege-Zusammenführung: base = zuletzt gemeinsamer Stand, mine = meine Änderungen, theirs = Stand der Kollegen
 function mergePlans(b, m, t) {
   const out = JSON.parse(JSON.stringify(t));
-  ['name', 'start', 'raster', 'mode', 'lines', 'people', 'holidays', 'lanes'].forEach(k => { if (!same(m[k], b[k])) out[k] = JSON.parse(JSON.stringify(m[k])); });
+  ['name', 'start', 'raster', 'mode', 'lines', 'people', 'holidays', 'region', 'lanes'].forEach(k => { if (!same(m[k], b[k])) out[k] = JSON.parse(JSON.stringify(m[k])); });
   const B = rowsById(b.rows), M = rowsById(m.rows), T = rowsById(t.rows);
   const ids = new Set([...M.keys(), ...T.keys()]); const res = new Map();
   ids.forEach(id => {
@@ -813,10 +815,26 @@ async function startRoom(cl) {
 function openPanel() {
   $('peopleEditor').hidden = hasUserDirectory();
   $('people').value = state.people.join('\n');
-  $('hols').value = state.holidays.map(h => fmtLong(parseISO(h.d)) + (h.n ? ' ' + h.n : '')).join('\n');
+  $('hols').value = state.holidays.map(holLine).join('\n');
+  $('region').value = state.region || ''; paintHolPreview();
   $('holsHint').classList.remove('bad'); $('outWrap').hidden = true;
   $('scrim').hidden = false; $('closePanel').focus();
 }
+const holLine = h => fmtLong(parseISO(h.d)) + (h.to ? ' - ' + fmtLong(parseISO(h.to)) : '') + (h.n ? ' ' + h.n : '');
+// Vorschau der gesetzlichen Feiertage für die Jahre des Projekts
+function paintHolPreview() {
+  const box = $('holPrev'); if (!box) return;
+  if (!state.region) { box.innerHTML = '<p class="hint">Ohne Bundesland werden keine Feiertage automatisch berücksichtigt.</p>'; return; }
+  let maxE = sched.P; sched.out.forEach(o => { if (o.E > maxE) maxE = o.E; });
+  const y0 = ymd(sched.P).y, y1 = Math.min(y0 + 4, Math.max(y0 + 1, ymd(maxE).y));
+  const yrs = []; for (let y = y0; y <= y1; y++) yrs.push(y);
+  const note = { BY: 'Mariä Himmelfahrt gilt in Gemeinden mit überwiegend katholischer Bevölkerung, das Augsburger Friedensfest nur in Augsburg (nicht enthalten).',
+    SN: 'Fronleichnam gilt nur in einzelnen Gemeinden und ist nicht enthalten.', TH: 'Fronleichnam gilt nur in einzelnen Gemeinden und ist nicht enthalten.' }[state.region];
+  box.innerHTML = '<details class="holprev"><summary>Gesetzliche Feiertage in ' + esc(regionName(state.region)) + ' ' + (y0 === y1 ? y0 : y0 + '–' + y1) + '</summary>' +
+    yrs.map(y => '<div class="holyr"><b>' + y + '</b><ul>' + legalHolidays(state.region, y).map(h => '<li' + (isoWd(h.d) > 5 ? ' class="we"' : '') + '><span>' + fmt(h.d) + '</span>' + esc(h.n) + '</li>').join('') + '</ul></div>').join('') +
+    '</details>' + (note ? '<p class="hint">' + esc(note) + '</p>' : '');
+}
+const HOLS_HINT = 'Ein Eintrag pro Zeile: ein Tag (15.05.2027 Brückentag) oder ein Zeitraum (24.12.2026 - 06.01.2027 Betriebsurlaub). Diese Tage zählen nicht als Arbeitstage.';
 function closePanel() { $('scrim').hidden = true; $('openPanel').focus(); }
 function slug() { return (state.name || 'terminplan').toLowerCase().replace(/[^a-z0-9äöüß]+/g, '-').replace(/^-|-$/g, '') || 'terminplan'; }
 async function offer(name, data) {
@@ -937,8 +955,21 @@ function boot() {
     const list = [], bad = []; e.target.value.split('\n').forEach((l, k) => { const p = parseHolidayLine(l); if (!p) return; if (p.bad) bad.push(k + 1); else list.push(p); });
     state.holidays = list; const hint = $('holsHint');
     hint.classList.toggle('bad', !!bad.length);
-    hint.textContent = bad.length ? 'Zeile ' + bad.join(', ') + ' nicht lesbar. Erwartet wird zum Beispiel 26.03.2027 Karfreitag.' : 'Ein Eintrag pro Zeile, zum Beispiel 26.03.2027 Karfreitag. Sie zählen nicht als Arbeitstage.';
+    hint.textContent = bad.length ? 'Zeile ' + bad.join(', ') + ' nicht lesbar. Erwartet wird zum Beispiel 15.05.2027 Brückentag oder 24.12.2026 - 06.01.2027 Betriebsurlaub.' : HOLS_HINT;
     refresh(); changed(false);
+  });
+  $('region').insertAdjacentHTML('beforeend', REGIONS.map(([c, n]) => '<option value="' + c + '">' + n + '</option>').join(''));
+  $('region').addEventListener('change', e => {
+    state.region = regionName(e.target.value) ? e.target.value : '';
+    // Eigene Einträge, die jetzt ohnehin gesetzliche Feiertage sind, entfallen
+    let gone = 0;
+    if (state.region) {
+      const legal = new Set(); const y0 = ymd(sched.P).y; for (let y = y0 - 1; y <= y0 + 15; y++) legalHolidays(state.region, y).forEach(h => legal.add(h.d));
+      const keep = state.holidays.filter(h => h.to || !legal.has(parseISO(h.d))); gone = state.holidays.length - keep.length; state.holidays = keep;
+      if (gone) $('hols').value = state.holidays.map(holLine).join('\n');
+    }
+    refresh(); changed(false); paintHolPreview();
+    toast(state.region ? 'Feiertage für ' + regionName(state.region) + ' übernommen' + (gone ? ', ' + (gone === 1 ? 'ein doppelter eigener Eintrag' : gone + ' doppelte eigene Einträge') + ' entfernt' : '') : 'Keine automatischen Feiertage mehr');
   });
   $('expJson').addEventListener('click', () => { const o = planWithAssignees(state); delete o.example; offer('terminplan-' + slug() + '.json', JSON.stringify(o, null, 2)); });
   $('expCsv').addEventListener('click', () => offer('terminplan-' + slug() + '.csv', csvText()));

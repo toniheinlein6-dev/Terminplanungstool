@@ -617,6 +617,17 @@ body.colresize, body.colresize * { cursor: col-resize !important; user-select: n
 /* PDF-Auswahl */
 .panel.pdfdlg { width: min(620px, 100%); }
 .pdfdlg h3 { margin: 0 0 6px; }
+/* Feiertage: Vorschau je Jahr */
+details.holprev { margin: 6px 0 2px; font-size: 13px; }
+details.holprev summary { cursor: pointer; color: var(--accent); }
+.holyr { margin-top: 8px; }
+.holyr ul { list-style: none; margin: 4px 0 0; padding: 0; columns: 230px 2; column-gap: 18px; }
+.holyr li { display: flex; gap: 8px; break-inside: avoid; padding: 1px 0; }
+label.holl { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+label.holl:first-of-type { margin-top: 0; }
+#region { max-width: 320px; width: 100%; }
+.holyr li span { font-family: var(--font-num); font-size: 12px; color: var(--muted); min-width: 92px; }
+.holyr li.we { color: var(--muted); }
 /* Vorgänger im Detailfenster */
 .dlinks { display: flex; flex-direction: column; gap: 6px; }
 .dlink { display: grid; grid-template-columns: minmax(0, 1fr) 200px 70px 26px; gap: 6px; align-items: center; }

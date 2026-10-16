@@ -271,7 +271,7 @@ function buildGanttDoc(JsPDF, opt) {
   sw((x, y) => { doc.setFillColor(PC.ms); doc.triangle(x + 2, y, x + 6, y - 4, x + 10, y, 'F'); doc.triangle(x + 2, y, x + 6, y + 4, x + 10, y, 'F'); }, 'Meilenstein');
   sw((x, y) => line(PC.link, 0.9, x, y, x + 12, y), 'Abhängigkeit');
   sw((x, y) => line(PC.today, 0.9, x, y, x + 12, y, [2.5, 1.6]), 'Heute');
-  if (step === 1) { sw((x, y) => fill(PC.weekend, x, y - 4, 12, 8), 'Wochenende'); if (sched.hol.size) sw((x, y) => fill(PC.holiday, x, y - 4, 12, 8), 'Feiertag'); }
+  if (step === 1) { sw((x, y) => fill(PC.weekend, x, y - 4, 12, 8), 'Wochenende'); if (sched.hol.size) sw((x, y) => fill(PC.holiday, x, y - 4, 12, 8), 'Feiertag / frei'); }
   font('helvetica', 'normal', 6.6, PC.muted);
   txt('EA Ende-Anfang  ·  AA Anfang-Anfang  ·  EE Ende-Ende  ·  AE Anfang-Ende', M + TW + CW, ly, { align: 'right' });
   return doc;

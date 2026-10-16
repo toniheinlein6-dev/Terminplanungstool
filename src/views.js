@@ -262,7 +262,7 @@ function renderCal() {
   if (calM == null) { const P = sched.P; let maxE = P; sched.out.forEach(o => { if (o.E > maxE) maxE = o.E; }); const t = today >= P && today <= maxE ? today : P; const y = ymd(t); calM = dn(y.y, y.m, 1); }
   const ym = ymd(calM), first = calM, next = dn(ym.m === 12 ? ym.y + 1 : ym.y, ym.m === 12 ? 1 : ym.m + 1, 1);
   const g0 = mondayOf(first), weeks = Math.ceil((next - g0) / 7);
-  const holName = new Map(state.holidays.map(x => [parseISO(x.d), x.n]));
+  const holName = sched.holName || new Map();
   const N = state.rows.length, items = [];
   for (let i = 0; i < N; i++) { const o = sched.out[i]; if ((calSum || !o.summary) && matches(i)) items.push(i); }
   items.sort((a, b) => sched.out[a].S - sched.out[b].S || (sched.out[b].E - sched.out[b].S) - (sched.out[a].E - sched.out[a].S) || a - b);

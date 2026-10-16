@@ -104,7 +104,7 @@
     <div class="editonly">
       <h3>Dieses Projekt</h3>
       <div class="btns"><button class="btn" id="dupProj" type="button">Duplizieren</button><button class="btn" id="delProj" type="button">Projekt löschen</button></div>
-      <p class="hint">Jedes Projekt hat eigene Vorgänge, Verantwortliche und Feiertage. Ein neues Projekt übernimmt Raster, Listen und Feiertage des aktuellen.</p>
+      <p class="hint">Jedes Projekt hat eigene Vorgänge, Verantwortliche und Feiertage. Ein neues Projekt übernimmt Raster, Listen, Bundesland und freie Tage des aktuellen.</p>
     </div>
     <div class="editonly" id="peopleEditor">
       <h3>Verantwortliche</h3>
@@ -113,8 +113,12 @@
     </div>
     <div class="editonly">
       <h3>Feiertage und freie Tage</h3>
-      <textarea id="hols" class="in" spellcheck="false" aria-label="Feiertage, ein Datum pro Zeile"></textarea>
-      <p class="hint" id="holsHint">Ein Eintrag pro Zeile, zum Beispiel 26.03.2027 Karfreitag. Sie zählen nicht als Arbeitstage.</p>
+      <label class="holl" for="region">Gesetzliche Feiertage nach Bundesland</label>
+      <select id="region" class="in"><option value="">Keine automatischen Feiertage</option></select>
+      <div id="holPrev"></div>
+      <label class="holl" for="hols">Eigene freie Tage und Zeiträume (Betriebsurlaub, Brückentage …)</label>
+      <textarea id="hols" class="in" spellcheck="false" placeholder="24.12.2026 - 06.01.2027 Betriebsurlaub"></textarea>
+      <p class="hint" id="holsHint">Ein Eintrag pro Zeile: ein Tag (15.05.2027 Brückentag) oder ein Zeitraum (24.12.2026 - 06.01.2027 Betriebsurlaub). Diese Tage zählen nicht als Arbeitstage.</p>
     </div>
     <div>
       <h3>Daten</h3>

@@ -617,6 +617,17 @@ body.colresize, body.colresize * { cursor: col-resize !important; user-select: n
 /* PDF-Auswahl */
 .panel.pdfdlg { width: min(620px, 100%); }
 .pdfdlg h3 { margin: 0 0 6px; }
+/* Feiertage: Vorschau je Jahr */
+details.holprev { margin: 6px 0 2px; font-size: 13px; }
+details.holprev summary { cursor: pointer; color: var(--accent); }
+.holyr { margin-top: 8px; }
+.holyr ul { list-style: none; margin: 4px 0 0; padding: 0; columns: 230px 2; column-gap: 18px; }
+.holyr li { display: flex; gap: 8px; break-inside: avoid; padding: 1px 0; }
+label.holl { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+label.holl:first-of-type { margin-top: 0; }
+#region { max-width: 320px; width: 100%; }
+.holyr li span { font-family: var(--font-num); font-size: 12px; color: var(--muted); min-width: 92px; }
+.holyr li.we { color: var(--muted); }
 /* Vorgänger im Detailfenster */
 .dlinks { display: flex; flex-direction: column; gap: 6px; }
 .dlink { display: grid; grid-template-columns: minmax(0, 1fr) 200px 70px 26px; gap: 6px; align-items: center; }
@@ -869,7 +880,7 @@ html.tdrag [draggable="true"].drag, html.tdrag .odrag { opacity: .35; }
     <div class="editonly">
       <h3>Dieses Projekt</h3>
       <div class="btns"><button class="btn" id="dupProj" type="button">Duplizieren</button><button class="btn" id="delProj" type="button">Projekt löschen</button></div>
-      <p class="hint">Jedes Projekt hat eigene Vorgänge, Verantwortliche und Feiertage. Ein neues Projekt übernimmt Raster, Listen und Feiertage des aktuellen.</p>
+      <p class="hint">Jedes Projekt hat eigene Vorgänge, Verantwortliche und Feiertage. Ein neues Projekt übernimmt Raster, Listen, Bundesland und freie Tage des aktuellen.</p>
     </div>
     <div class="editonly" id="peopleEditor">
       <h3>Verantwortliche</h3>
@@ -878,8 +889,12 @@ html.tdrag [draggable="true"].drag, html.tdrag .odrag { opacity: .35; }
     </div>
     <div class="editonly">
       <h3>Feiertage und freie Tage</h3>
-      <textarea id="hols" class="in" spellcheck="false" aria-label="Feiertage, ein Datum pro Zeile"></textarea>
-      <p class="hint" id="holsHint">Ein Eintrag pro Zeile, zum Beispiel 26.03.2027 Karfreitag. Sie zählen nicht als Arbeitstage.</p>
+      <label class="holl" for="region">Gesetzliche Feiertage nach Bundesland</label>
+      <select id="region" class="in"><option value="">Keine automatischen Feiertage</option></select>
+      <div id="holPrev"></div>
+      <label class="holl" for="hols">Eigene freie Tage und Zeiträume (Betriebsurlaub, Brückentage …)</label>
+      <textarea id="hols" class="in" spellcheck="false" placeholder="24.12.2026 - 06.01.2027 Betriebsurlaub"></textarea>
+      <p class="hint" id="holsHint">Ein Eintrag pro Zeile: ein Tag (15.05.2027 Brückentag) oder ein Zeitraum (24.12.2026 - 06.01.2027 Betriebsurlaub). Diese Tage zählen nicht als Arbeitstage.</p>
     </div>
     <div>
       <h3>Daten</h3>
@@ -931,14 +946,20 @@ function isoWeek(n) { const th = n - isoWd(n) + 4; const y = ymd(th).y; return M
 function mondayOf(n) { return n - isoWd(n) + 1; }
 function todayDn() { const t = new Date(); return dn(t.getFullYear(), t.getMonth() + 1, t.getDate()); }
 
+// Eine Zeile der eigenen freien Tage: „24.12.2026 Heiligabend“ oder „24.12.2026 - 06.01.2027 Betriebsurlaub“ (auch „bis“, ISO-Datum)
 function parseHolidayLine(line) {
   line = line.trim(); if (!line) return null;
-  let m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})\s*(.*)$/.exec(line), y, mo, d, name;
-  if (m) { d = +m[1]; mo = +m[2]; y = +m[3]; name = m[4]; }
-  else { m = /^(\d{4})-(\d{2})-(\d{2})\s*(.*)$/.exec(line); if (!m) return { bad: true }; y = +m[1]; mo = +m[2]; d = +m[3]; name = m[4]; }
-  if (mo < 1 || mo > 12 || d < 1 || d > 31) return { bad: true };
-  const n = dn(y, mo, d); const c = ymd(n); if (c.d !== d || c.m !== mo) return { bad: true };
-  return { d: toISO(n), n: name.trim() };
+  const D = '(\\d{1,2}\\.\\d{1,2}\\.\\d{4}|\\d{4}-\\d{2}-\\d{2})';
+  const m = new RegExp('^' + D + '(?:\\s*(?:-|–|—|bis)\\s*' + D + ')?\\s*(.*)$').exec(line); if (!m) return { bad: true };
+  const one = t => {
+    let y, mo, d, x = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(t);
+    if (x) { d = +x[1]; mo = +x[2]; y = +x[3]; } else { x = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t); y = +x[1]; mo = +x[2]; d = +x[3]; }
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+    const n = dn(y, mo, d), c = ymd(n); return c.d === d && c.m === mo ? n : null;
+  };
+  const a = one(m[1]), b = m[2] ? one(m[2]) : null;
+  if (a == null || (m[2] && (b == null || b < a || b - a > 366))) return { bad: true };
+  return Object.assign({ d: toISO(a), n: m[3].trim() }, b != null && b > a ? { to: toISO(b) } : {});
 }
 
 // Alle Vorgänger einer Zeile: der erste steht in pred/rel/lag, weitere in deps [{ pred, rel, lag }]
@@ -967,10 +988,58 @@ function dependentsOf(rows, sc, k) {
 }
 const linkText = l => l.pred + (l.rel && l.rel !== 'EA' ? l.rel : '') + (parseInt(l.lag, 10) ? (parseInt(l.lag, 10) > 0 ? '+' : '') + parseInt(l.lag, 10) : '');
 
+/* ---------- Gesetzliche Feiertage nach Bundesland ---------- */
+// Nach den Feiertagsgesetzen der Länder berechnet (Ostern nach Gauß); rein örtliche Feiertage
+// (Augsburger Friedensfest, Fronleichnam nur in Teilen von Sachsen und Thüringen) sind nicht enthalten.
+const REGIONS = [['BW', 'Baden-Württemberg'], ['BY', 'Bayern'], ['BE', 'Berlin'], ['BB', 'Brandenburg'], ['HB', 'Bremen'], ['HH', 'Hamburg'], ['HE', 'Hessen'],
+  ['MV', 'Mecklenburg-Vorpommern'], ['NI', 'Niedersachsen'], ['NW', 'Nordrhein-Westfalen'], ['RP', 'Rheinland-Pfalz'], ['SL', 'Saarland'], ['SN', 'Sachsen'],
+  ['ST', 'Sachsen-Anhalt'], ['SH', 'Schleswig-Holstein'], ['TH', 'Thüringen']];
+const regionName = c => (REGIONS.find(x => x[0] === c) || [])[1] || '';
+function easterDn(y) {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  return dn(y, Math.floor((h + l - 7 * m + 114) / 31), ((h + l - 7 * m + 114) % 31) + 1);
+}
+function legalHolidays(region, y) {
+  if (!regionName(region)) return [];
+  const E = easterDn(y), out = [], in_ = (...l) => l.includes(region), add = (d, n) => out.push({ d, n });
+  add(dn(y, 1, 1), 'Neujahr');
+  if (in_('BW', 'BY', 'ST')) add(dn(y, 1, 6), 'Heilige Drei Könige');
+  if ((region === 'BE' && y >= 2019) || (region === 'MV' && y >= 2023)) add(dn(y, 3, 8), 'Internationaler Frauentag');
+  add(E - 2, 'Karfreitag');
+  if (region === 'BB') add(E, 'Ostersonntag');
+  add(E + 1, 'Ostermontag');
+  add(dn(y, 5, 1), 'Tag der Arbeit');
+  if (region === 'BE' && (y === 2020 || y === 2025)) add(dn(y, 5, 8), 'Tag der Befreiung');
+  add(E + 39, 'Christi Himmelfahrt');
+  if (region === 'BB') add(E + 49, 'Pfingstsonntag');
+  add(E + 50, 'Pfingstmontag');
+  if (in_('BW', 'BY', 'HE', 'NW', 'RP', 'SL')) add(E + 60, 'Fronleichnam');
+  if (in_('BY', 'SL')) add(dn(y, 8, 15), 'Mariä Himmelfahrt');
+  if (region === 'TH' && y >= 2019) add(dn(y, 9, 20), 'Weltkindertag');
+  add(dn(y, 10, 3), 'Tag der Deutschen Einheit');
+  if (y === 2017 || in_('BB', 'MV', 'SN', 'ST', 'TH') || (in_('HB', 'HH', 'NI', 'SH') && y >= 2018)) add(dn(y, 10, 31), 'Reformationstag');
+  if (in_('BW', 'BY', 'NW', 'RP', 'SL')) add(dn(y, 11, 1), 'Allerheiligen');
+  if (region === 'SN') { let d = dn(y, 11, 22); while (isoWd(d) !== 3) d--; add(d, 'Buß- und Bettag'); }
+  add(dn(y, 12, 25), '1. Weihnachtstag'); add(dn(y, 12, 26), '2. Weihnachtstag');
+  return out.sort((a, b) => a.d - b.d);
+}
+// Alle freien Tage eines Plans: gesetzliche Feiertage des Bundeslands (Projektjahr -1 bis +15) und eigene Tage/Zeiträume
+function freeDays(st, P) {
+  const names = new Map(), add = (d, n) => { const o = names.get(d); names.set(d, o && o !== n ? o + ' · ' + n : n); };
+  if (st.region) { const y0 = ymd(P).y; for (let y = y0 - 1; y <= y0 + 15; y++) legalHolidays(st.region, y).forEach(h => add(h.d, h.n)); }
+  (st.holidays || []).forEach(h => {
+    const a = parseISO(h.d); if (a == null) return;
+    const b = parseISO(h.to); const z = b != null && b >= a && b - a <= 366 ? b : a;
+    for (let d = a; d <= z; d++) add(d, h.n || 'Frei');
+  });
+  return names;
+}
+
 function schedule(st) {
   const rows = st.rows, N = rows.length;
   const P = parseISO(st.start) ?? todayDn();
-  const hol = new Set(); (st.holidays || []).forEach(h => { const v = parseISO(h.d); if (v != null) hol.add(v); });
+  const holName = freeDays(st, P), hol = new Set(holName.keys());
   const work = st.mode === 'work';
   const isWork = n => isoWd(n) <= 5 && !hol.has(n);
   const addWork = (x, k) => { if (k === 0) return x; const s = k > 0 ? 1 : -1; let c = Math.abs(k), g = 0; while (c > 0 && g < 40000) { x += s; g++; if (isWork(x)) c--; } return x; };
@@ -1030,7 +1099,7 @@ function schedule(st) {
     if (r.type === 'untervorgang' && parent[i] >= 0) { sub++; psp.push(top + '.' + sub); }
     else { top++; sub = 0; psp.push(String(top)); }
   });
-  return { out, parent, kids, psp, P, hol, work, isWork };
+  return { out, parent, kids, psp, P, hol, holName, work, isWork };
 }
 // ===== LOGIC END =====
 
@@ -1115,9 +1184,7 @@ function demoPlan() {
   return {
     v: 1, example: true, name: 'Beispielprojekt', start: '2026-10-12', raster: 'weeks', mode: 'work', lines: true,
     people: ['Person A', 'Person B', 'Person C'], lanes: defaultLanes(),
-    holidays: [['2026-12-25', '1. Weihnachtstag'], ['2026-12-26', '2. Weihnachtstag'], ['2027-01-01', 'Neujahr'], ['2027-01-06', 'Heilige Drei Könige (BW/BY)'],
-      ['2027-03-26', 'Karfreitag'], ['2027-03-29', 'Ostermontag'], ['2027-05-06', 'Christi Himmelfahrt'], ['2027-05-17', 'Pfingstmontag'],
-      ['2027-05-27', 'Fronleichnam (BW/BY)'], ['2027-11-01', 'Allerheiligen (BW/BY)']].map(([d, n]) => ({ d, n })),
+    region: 'BW', holidays: [{ d: '2026-12-28', to: '2026-12-31', n: 'Betriebsurlaub' }],
     nextId: 14,
     rows: [
       r(1, 'vorgang', 'Planung'), r(2, 'untervorgang', 'Bestandsaufnahme', 'Person A', '', 'EA', '', 3),
@@ -1155,7 +1222,7 @@ function cleanLanes(L) {
 }
 function blankPlan(keep) {
   return { v: 1, name: keep ? keep.name : '', start: keep ? keep.start : toISO(mondayOf(todayDn())), raster: keep ? keep.raster : 'weeks', mode: keep ? keep.mode : 'work',
-    lines: true, people: keep ? keep.people : [], holidays: keep ? keep.holidays : [], lanes: keep && keep.lanes ? JSON.parse(JSON.stringify(keep.lanes)) : defaultLanes(), nextId: 1, rows: [], nextTaskId: 1, tasks: [], org: keep && Array.isArray(keep.org) ? JSON.parse(JSON.stringify(keep.org)) : [] };
+    lines: true, people: keep ? keep.people : [], holidays: keep ? keep.holidays : [], region: keep ? keep.region || '' : 'BW', lanes: keep && keep.lanes ? JSON.parse(JSON.stringify(keep.lanes)) : defaultLanes(), nextId: 1, rows: [], nextTaskId: 1, tasks: [], org: keep && Array.isArray(keep.org) ? JSON.parse(JSON.stringify(keep.org)) : [] };
 }
 function sanitize(p) {
   if (!p || typeof p !== 'object' || !Array.isArray(p.rows)) return null;
@@ -1163,7 +1230,11 @@ function sanitize(p) {
   s.name = String(p.name || ''); s.start = parseISO(p.start) != null ? p.start : s.start;
   s.raster = p.raster === 'days' ? 'days' : 'weeks'; s.mode = p.mode === 'cal' ? 'cal' : 'work'; s.lines = p.lines !== false;
   s.people = Array.isArray(p.people) ? p.people.map(String).filter(Boolean).slice(0, 200) : [];
-  s.holidays = Array.isArray(p.holidays) ? p.holidays.filter(h => h && parseISO(h.d) != null).map(h => ({ d: h.d, n: String(h.n || '') })).slice(0, 400) : [];
+  s.holidays = Array.isArray(p.holidays) ? p.holidays.filter(h => h && parseISO(h.d) != null).map(h => {
+    const a = parseISO(h.d), b = parseISO(h.to);
+    return Object.assign({ d: h.d, n: String(h.n || '') }, b != null && b > a && b - a <= 366 ? { to: h.to } : {});
+  }).slice(0, 400) : [];
+  s.region = regionName(p.region) ? p.region : '';
   s.lanes = cleanLanes(p.lanes);
   let max = 0; const seen = new Set();
   p.rows.slice(0, 500).forEach(r => {
@@ -1384,7 +1455,7 @@ function renderChart(indices = ganttRowIndices()) {
     for (let k2 = 0; k2 < nCols; k2++) {
       const d = first + k2, x = k2 * colW, wd = isoWd(d);
       if (k2 === todayCol) h += '<rect class="g-todaybg" x="' + x + '" y="41" width="' + colW + '" height="' + (HH - 41) + '"/>';
-      else if (wd > 5 || sched.hol.has(d)) h += '<rect class="' + (sched.hol.has(d) && wd <= 5 ? 'g-holiday' : 'g-weekend') + '" x="' + x + '" y="41" width="' + colW + '" height="' + (HH - 41) + '"/>';
+      else if (wd > 5 || sched.hol.has(d)) h += '<rect class="' + (sched.hol.has(d) && wd <= 5 ? 'g-holiday' : 'g-weekend') + '" x="' + x + '" y="41" width="' + colW + '" height="' + (HH - 41) + '">' + (sched.hol.has(d) ? '<title>' + esc(fmt(d) + ': ' + sched.holName.get(d)) + '</title>' : '') + '</rect>';
       const cl = 'hd' + (k2 === todayCol ? ' today' : '');
       h += '<text class="' + cl + '" x="' + (x + colW / 2) + '" y="55" text-anchor="middle">' + ymd(d).d + '</text>' +
         '<text class="' + cl + '" x="' + (x + colW / 2) + '" y="67" text-anchor="middle">' + 'MDMDFSS'[wd - 1] + '</text>';
@@ -1788,7 +1859,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 // Dreiwege-Zusammenführung: base = zuletzt gemeinsamer Stand, mine = meine Änderungen, theirs = Stand der Kollegen
 function mergePlans(b, m, t) {
   const out = JSON.parse(JSON.stringify(t));
-  ['name', 'start', 'raster', 'mode', 'lines', 'people', 'holidays', 'lanes'].forEach(k => { if (!same(m[k], b[k])) out[k] = JSON.parse(JSON.stringify(m[k])); });
+  ['name', 'start', 'raster', 'mode', 'lines', 'people', 'holidays', 'region', 'lanes'].forEach(k => { if (!same(m[k], b[k])) out[k] = JSON.parse(JSON.stringify(m[k])); });
   const B = rowsById(b.rows), M = rowsById(m.rows), T = rowsById(t.rows);
   const ids = new Set([...M.keys(), ...T.keys()]); const res = new Map();
   ids.forEach(id => {
@@ -1910,10 +1981,26 @@ async function startRoom(cl) {
 function openPanel() {
   $('peopleEditor').hidden = hasUserDirectory();
   $('people').value = state.people.join('\n');
-  $('hols').value = state.holidays.map(h => fmtLong(parseISO(h.d)) + (h.n ? ' ' + h.n : '')).join('\n');
+  $('hols').value = state.holidays.map(holLine).join('\n');
+  $('region').value = state.region || ''; paintHolPreview();
   $('holsHint').classList.remove('bad'); $('outWrap').hidden = true;
   $('scrim').hidden = false; $('closePanel').focus();
 }
+const holLine = h => fmtLong(parseISO(h.d)) + (h.to ? ' - ' + fmtLong(parseISO(h.to)) : '') + (h.n ? ' ' + h.n : '');
+// Vorschau der gesetzlichen Feiertage für die Jahre des Projekts
+function paintHolPreview() {
+  const box = $('holPrev'); if (!box) return;
+  if (!state.region) { box.innerHTML = '<p class="hint">Ohne Bundesland werden keine Feiertage automatisch berücksichtigt.</p>'; return; }
+  let maxE = sched.P; sched.out.forEach(o => { if (o.E > maxE) maxE = o.E; });
+  const y0 = ymd(sched.P).y, y1 = Math.min(y0 + 4, Math.max(y0 + 1, ymd(maxE).y));
+  const yrs = []; for (let y = y0; y <= y1; y++) yrs.push(y);
+  const note = { BY: 'Mariä Himmelfahrt gilt in Gemeinden mit überwiegend katholischer Bevölkerung, das Augsburger Friedensfest nur in Augsburg (nicht enthalten).',
+    SN: 'Fronleichnam gilt nur in einzelnen Gemeinden und ist nicht enthalten.', TH: 'Fronleichnam gilt nur in einzelnen Gemeinden und ist nicht enthalten.' }[state.region];
+  box.innerHTML = '<details class="holprev"><summary>Gesetzliche Feiertage in ' + esc(regionName(state.region)) + ' ' + (y0 === y1 ? y0 : y0 + '–' + y1) + '</summary>' +
+    yrs.map(y => '<div class="holyr"><b>' + y + '</b><ul>' + legalHolidays(state.region, y).map(h => '<li' + (isoWd(h.d) > 5 ? ' class="we"' : '') + '><span>' + fmt(h.d) + '</span>' + esc(h.n) + '</li>').join('') + '</ul></div>').join('') +
+    '</details>' + (note ? '<p class="hint">' + esc(note) + '</p>' : '');
+}
+const HOLS_HINT = 'Ein Eintrag pro Zeile: ein Tag (15.05.2027 Brückentag) oder ein Zeitraum (24.12.2026 - 06.01.2027 Betriebsurlaub). Diese Tage zählen nicht als Arbeitstage.';
 function closePanel() { $('scrim').hidden = true; $('openPanel').focus(); }
 function slug() { return (state.name || 'terminplan').toLowerCase().replace(/[^a-z0-9äöüß]+/g, '-').replace(/^-|-$/g, '') || 'terminplan'; }
 async function offer(name, data) {
@@ -2034,8 +2121,21 @@ function boot() {
     const list = [], bad = []; e.target.value.split('\n').forEach((l, k) => { const p = parseHolidayLine(l); if (!p) return; if (p.bad) bad.push(k + 1); else list.push(p); });
     state.holidays = list; const hint = $('holsHint');
     hint.classList.toggle('bad', !!bad.length);
-    hint.textContent = bad.length ? 'Zeile ' + bad.join(', ') + ' nicht lesbar. Erwartet wird zum Beispiel 26.03.2027 Karfreitag.' : 'Ein Eintrag pro Zeile, zum Beispiel 26.03.2027 Karfreitag. Sie zählen nicht als Arbeitstage.';
+    hint.textContent = bad.length ? 'Zeile ' + bad.join(', ') + ' nicht lesbar. Erwartet wird zum Beispiel 15.05.2027 Brückentag oder 24.12.2026 - 06.01.2027 Betriebsurlaub.' : HOLS_HINT;
     refresh(); changed(false);
+  });
+  $('region').insertAdjacentHTML('beforeend', REGIONS.map(([c, n]) => '<option value="' + c + '">' + n + '</option>').join(''));
+  $('region').addEventListener('change', e => {
+    state.region = regionName(e.target.value) ? e.target.value : '';
+    // Eigene Einträge, die jetzt ohnehin gesetzliche Feiertage sind, entfallen
+    let gone = 0;
+    if (state.region) {
+      const legal = new Set(); const y0 = ymd(sched.P).y; for (let y = y0 - 1; y <= y0 + 15; y++) legalHolidays(state.region, y).forEach(h => legal.add(h.d));
+      const keep = state.holidays.filter(h => h.to || !legal.has(parseISO(h.d))); gone = state.holidays.length - keep.length; state.holidays = keep;
+      if (gone) $('hols').value = state.holidays.map(holLine).join('\n');
+    }
+    refresh(); changed(false); paintHolPreview();
+    toast(state.region ? 'Feiertage für ' + regionName(state.region) + ' übernommen' + (gone ? ', ' + (gone === 1 ? 'ein doppelter eigener Eintrag' : gone + ' doppelte eigene Einträge') + ' entfernt' : '') : 'Keine automatischen Feiertage mehr');
   });
   $('expJson').addEventListener('click', () => { const o = planWithAssignees(state); delete o.example; offer('terminplan-' + slug() + '.json', JSON.stringify(o, null, 2)); });
   $('expCsv').addEventListener('click', () => offer('terminplan-' + slug() + '.csv', csvText()));
@@ -2321,7 +2421,7 @@ function renderCal() {
   if (calM == null) { const P = sched.P; let maxE = P; sched.out.forEach(o => { if (o.E > maxE) maxE = o.E; }); const t = today >= P && today <= maxE ? today : P; const y = ymd(t); calM = dn(y.y, y.m, 1); }
   const ym = ymd(calM), first = calM, next = dn(ym.m === 12 ? ym.y + 1 : ym.y, ym.m === 12 ? 1 : ym.m + 1, 1);
   const g0 = mondayOf(first), weeks = Math.ceil((next - g0) / 7);
-  const holName = new Map(state.holidays.map(x => [parseISO(x.d), x.n]));
+  const holName = sched.holName || new Map();
   const N = state.rows.length, items = [];
   for (let i = 0; i < N; i++) { const o = sched.out[i]; if ((calSum || !o.summary) && matches(i)) items.push(i); }
   items.sort((a, b) => sched.out[a].S - sched.out[b].S || (sched.out[b].E - sched.out[b].S) - (sched.out[a].E - sched.out[a].S) || a - b);
@@ -4142,7 +4242,7 @@ function buildGanttDoc(JsPDF, opt) {
   sw((x, y) => { doc.setFillColor(PC.ms); doc.triangle(x + 2, y, x + 6, y - 4, x + 10, y, 'F'); doc.triangle(x + 2, y, x + 6, y + 4, x + 10, y, 'F'); }, 'Meilenstein');
   sw((x, y) => line(PC.link, 0.9, x, y, x + 12, y), 'Abhängigkeit');
   sw((x, y) => line(PC.today, 0.9, x, y, x + 12, y, [2.5, 1.6]), 'Heute');
-  if (step === 1) { sw((x, y) => fill(PC.weekend, x, y - 4, 12, 8), 'Wochenende'); if (sched.hol.size) sw((x, y) => fill(PC.holiday, x, y - 4, 12, 8), 'Feiertag'); }
+  if (step === 1) { sw((x, y) => fill(PC.weekend, x, y - 4, 12, 8), 'Wochenende'); if (sched.hol.size) sw((x, y) => fill(PC.holiday, x, y - 4, 12, 8), 'Feiertag / frei'); }
   font('helvetica', 'normal', 6.6, PC.muted);
   txt('EA Ende-Anfang  ·  AA Anfang-Anfang  ·  EE Ende-Ende  ·  AE Anfang-Ende', M + TW + CW, ly, { align: 'right' });
   return doc;
