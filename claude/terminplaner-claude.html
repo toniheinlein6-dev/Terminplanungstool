@@ -599,11 +599,6 @@ body.dragmode { user-select: none; -webkit-user-select: none; }
 .ib.fold svg { transition: transform .12s; }
 .ib.fold.closed svg { transform: rotate(-90deg); }
 .row.sum.folded-hint { }
-/* Start/Ende als Datumsfelder */
-.row .dc input { font-family: var(--font-num); font-size: 12px; padding-right: 2px; }
-.row.sum .dc input:disabled { opacity: 1; color: var(--ink); font-weight: 600; }
-.row .dc input[data-f="E"]:disabled { opacity: .7; }
-.row.err .dc input { color: var(--warn); }
 /* Spaltenkopf: Breite ziehen, Menü */
 .hrow > div { position: relative; }
 .hrow > div:first-child { display: flex; align-items: center; gap: 0; padding: 0 2px; overflow: visible; }
@@ -615,10 +610,6 @@ body.colresize, body.colresize * { cursor: col-resize !important; user-select: n
 .colmenu .cmh { margin: 0 0 4px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 .colmenu .btns { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
 .colmenu .hint { margin: 4px 0 0; font-size: 11.5px; color: var(--muted); }
-/* Termineingabe-Umschalter */
-.datewrap { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-.datewrap .seg button { padding: 4px 9px; font-size: 12px; }
-html.m .datewrap .dmlbl { display: none; }
 
 /* PDF-Auswahl */
 .panel.pdfdlg { width: min(620px, 100%); }
@@ -629,6 +620,16 @@ html.m .datewrap .dmlbl { display: none; }
 .pquick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
 .pdfdlg .btns .msg.bad { color: var(--warn); }
 .pdfdlg > div > .chk { display: flex; margin: 3px 0; }
+
+/* Eigene Farben */
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.sw { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; }
+.sw.def { background: linear-gradient(135deg, var(--bar-task) 0 50%, var(--bar-sub) 50% 100%); }
+.sw[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
+.sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sw:disabled { cursor: default; opacity: .6; }
+.cdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.cb.ms .msd { background: var(--msc, var(--bar-ms)); }
 </style>
 
 <header class="top">
@@ -676,7 +677,6 @@ html.m .datewrap .dmlbl { display: none; }
     <button type="button" role="tab" data-tab="table" aria-pressed="true">Tabelle</button>
     <button type="button" role="tab" data-tab="chart" aria-pressed="false">Diagramm</button>
   </div>
-  <span class="datewrap" id="dateWrap"><span class="dmlbl" id="lblDate">Termine über</span><span class="seg sm" id="segDate" role="group" aria-labelledby="lblDate"><button type="button" data-v="se" title="Start und Ende eingeben, Dauer wird berechnet">Start + Ende</button><button type="button" data-v="sd" title="Start und Dauer eingeben, Ende wird berechnet">Start + Dauer</button><button type="button" data-v="ed" title="Ende und Dauer eingeben, Start wird berechnet">Ende + Dauer</button></span></span>
   <span class="filter-summary" id="filterSummary" aria-live="polite" hidden></span>
   <span class="spacer"></span>
   <button class="btn chgall" id="chgAll" type="button" hidden></button>
@@ -942,11 +942,15 @@ const TYPES = { vorgang: 'Vorgang', untervorgang: 'Untervorgang', meilenstein: '
 const RELS = ['EA', 'AA', 'EE', 'AE'];
 const RH = 34, HH = 72;
 const PCTS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+// Eigene Farben für Vorgänge (Detailmaske); leer = Standardfarbe nach Typ
+const ROW_COLORS = [['#3b78c4', 'Blau'], ['#2a9d8f', 'Türkis'], ['#4c9a52', 'Grün'], ['#8a9a2b', 'Oliv'], ['#d9a520', 'Gelb'], ['#e07b39', 'Orange'], ['#c8463d', 'Rot'], ['#c2508a', 'Pink'], ['#7d5bb5', 'Lila'], ['#7b8794', 'Grau']];
+const okColor = c => /^#[0-9a-f]{6}$/.test(String(c || '').toLowerCase()) ? String(c).toLowerCase() : '';
+const fillOf = r => r && r.color ? ' style="fill:' + r.color + '"' : '';
 const ZOOMS = [0.4, 0.6, 0.8, 1, 1.3, 1.7, 2.2, 3, 4];   // Zeitachse: 40 % bis 400 %
 const ZMAX = ZOOMS.length - 1;
 
 function demoPlan() {
-  const r = (id, type, name, who, pred, rel, lag, dur) => ({ id, type, name, who: who || '', pred: pred || '', rel: rel || 'EA', lag: lag == null ? '' : String(lag), fixed: '', dur: dur == null ? '' : String(dur), st: '', pct: 0, desc: '' });
+  const r = (id, type, name, who, pred, rel, lag, dur) => ({ id, type, name, who: who || '', pred: pred || '', rel: rel || 'EA', lag: lag == null ? '' : String(lag), fixed: '', dur: dur == null ? '' : String(dur), st: '', pct: 0, desc: '', color: '' });
   return {
     v: 1, example: true, name: 'Beispielprojekt', start: '2026-10-12', raster: 'weeks', mode: 'work', lines: true,
     people: ['Person A', 'Person B', 'Person C'], lanes: defaultLanes(),
@@ -1001,7 +1005,7 @@ function sanitize(p) {
       pred: (r.pred === '' || r.pred == null || !Number.isFinite(Number(r.pred))) ? '' : Number(r.pred), rel: RELS.includes(r.rel) ? r.rel : 'EA',
       lag: r.lag === '' || r.lag == null ? '' : String(parseInt(r.lag, 10) || 0), fixed: parseISO(r.fixed) != null ? r.fixed : '',
       dur: r.dur === '' || r.dur == null ? '' : String(Math.max(0, parseInt(r.dur, 10) || 0)), st: typeof r.st === 'string' && /^[A-Za-z0-9_-]{0,40}$/.test(r.st) ? r.st : '',
-      pct: Math.max(0, Math.min(100, Math.round((parseInt(r.pct, 10) || 0) / 10) * 10)), desc: String(r.desc || '').slice(0, 4000),
+      pct: Math.max(0, Math.min(100, Math.round((parseInt(r.pct, 10) || 0) / 10) * 10)), desc: String(r.desc || '').slice(0, 4000), color: okColor(r.color),
       ...(Array.isArray(r.assignees) ? { assignees: sanitizeAssignees(r.assignees) } : {}) });
   });
   s.nextId = max + 1;
@@ -1049,7 +1053,7 @@ function rowHTML(r, i) {
     '<div><input data-f="lag" type="number" step="1" value="' + esc(r.lag) + '" aria-label="Versatz in Tagen"></div>' +
     '<div><input data-f="fixed" type="date" value="' + esc(r.fixed) + '" aria-label="Fester Start"></div>' +
     '<div><input data-f="dur" type="number" min="0" step="1" value="' + esc(r.dur) + '" aria-label="Dauer" placeholder="1"></div>' +
-    '<div class="dc"><input data-f="S" type="date" aria-label="Start"></div><div class="dc"><input data-f="E" type="date" aria-label="Ende"></div></div>';
+    '<div class="calc" data-c="start"></div><div class="calc" data-c="end"></div></div>';
 }
 function predOptions(i) {
   const cur = state.rows[i].pred;
@@ -1102,15 +1106,13 @@ function updateComputed() {
     if (whoCell && hasUserDirectory()) { const html = assigneeCell(r, i); if (whoCell.innerHTML !== html) whoCell.innerHTML = html; }
     el.querySelectorAll('input, select').forEach(control => { control.disabled = readOnly; });
     el.querySelector('[data-c="psp"]').textContent = sched.psp[i];
-    // Start und Ende direkt eingeben (Sammelvorgänge: nur Anzeige)
-    const st = el.querySelector('[data-f="S"]'), en = el.querySelector('[data-f="E"]'), act = document.activeElement;
-    if (st !== act) st.value = toISO(o.S); if (en !== act) en.value = toISO(o.E);
+    const st = el.querySelector('[data-c="start"]'), en = el.querySelector('[data-c="end"]'), act = document.activeElement;
+    st.textContent = fmt(o.S); en.textContent = fmt(o.E);
+    st.title = en.title = o.err ? 'Zirkelbezug: der Vorgänger hängt selbst von dieser Zeile ab' : '';
+    // Werte aus dem Detailfenster übernehmen
     const di = el.querySelector('[data-f="dur"]'), fi = el.querySelector('[data-f="fixed"]');
     if (di !== act && di.value !== String(r.dur ?? '')) di.value = r.dur ?? '';
     if (fi !== act && fi.value !== String(r.fixed || '')) fi.value = r.fixed || '';
-    st.disabled = readOnly || o.summary; en.disabled = readOnly || o.summary || r.type === 'meilenstein';
-    const tip = d => o.err ? 'Zirkelbezug: der Vorgänger hängt selbst von dieser Zeile ab' : o.summary ? fmt(d) + ' – ergibt sich aus den Untervorgängen' : fmt(d);
-    st.title = tip(o.S); en.title = tip(o.E);
     const fb = el.querySelector('[data-a="fold"]');
     if (fb) { fb.hidden = !o.summary; if (o.summary) { const f = isFolded(r.id); fb.classList.toggle('closed', f); fb.setAttribute('aria-expanded', String(!f)); fb.title = (f ? 'Ausklappen: ' : 'Einklappen: ') + sched.kids[i].length + ' Untervorgänge'; } }
     ['pred', 'rel', 'lag', 'fixed', 'dur'].forEach(f => { const c = el.querySelector('[data-f="' + f + '"]'); c.disabled = readOnly || o.summary || (f === 'dur' && r.type === 'meilenstein'); });
@@ -1221,21 +1223,21 @@ function renderChart(indices = ganttRowIndices()) {
     const tip = '<title>' + esc((r.name || 'ohne Namen') + ': ' + fmt(o.S) + (o.E !== o.S ? ' bis ' + fmt(o.E) : '') + (r.type === 'meilenstein' ? '' : ' (' + (o.summary ? (o.E - o.S + 1) + ' Kalendertage' : o.dur + (sched.work ? ' Arbeitstage' : ' Tage')) + ')') + (who ? ' · ' + who : '') + (o.err ? ' · Zirkelbezug' : '') + (o.pred >= 0 && !positions.has(o.pred) ? ' · Vorgänger ausgeblendet' : '')) + '</title>';
     if (r.type === 'meilenstein') {
       const cx = msX(i);
-      s += '<g data-i="' + i + '">' + tip + '<polygon class="bar-ms" points="' + cx + ',' + (y - 8) + ' ' + (cx + 8) + ',' + y + ' ' + cx + ',' + (y + 8) + ' ' + (cx - 8) + ',' + y + '"/>' +
+      s += '<g data-i="' + i + '">' + tip + '<polygon class="bar-ms"' + fillOf(r) + ' points="' + cx + ',' + (y - 8) + ' ' + (cx + 8) + ',' + y + ' ' + cx + ',' + (y + 8) + ' ' + (cx - 8) + ',' + y + '"/>' +
         '<text class="lbl ms" x="' + (cx + 14) + '" y="' + (y + 4) + '">' + esc(r.name) + '</text></g>';
       return;
     }
     const x = X(o.S), w = Math.max((o.E - o.S + 1) / step * colW, 4);
     if (o.summary) {
-      s += '<g data-i="' + i + '">' + tip + '<rect class="bar-sum" x="' + x + '" y="' + (y - 7) + '" width="' + w + '" height="8" rx="1.5"/>' +
+      s += '<g data-i="' + i + '">' + tip + '<rect class="bar-sum"' + fillOf(r) + ' x="' + x + '" y="' + (y - 7) + '" width="' + w + '" height="8" rx="1.5"/>' +
         (progOf(i) > 0 ? '<rect class="bar-sumprog" x="' + x + '" y="' + (y - 5) + '" width="' + (w * progOf(i) / 100).toFixed(1) + '" height="4" rx="1"/>' : '') +
-        '<polygon class="bar-sum" points="' + x + ',' + (y + 1) + ' ' + (x + 8) + ',' + (y + 1) + ' ' + x + ',' + (y + 8) + '"/>' +
-        '<polygon class="bar-sum" points="' + (x + w) + ',' + (y + 1) + ' ' + (x + w - 8) + ',' + (y + 1) + ' ' + (x + w) + ',' + (y + 8) + '"/>' +
+        '<polygon class="bar-sum"' + fillOf(r) + ' points="' + x + ',' + (y + 1) + ' ' + (x + 8) + ',' + (y + 1) + ' ' + x + ',' + (y + 8) + '"/>' +
+        '<polygon class="bar-sum"' + fillOf(r) + ' points="' + (x + w) + ',' + (y + 1) + ' ' + (x + w - 8) + ',' + (y + 1) + ' ' + (x + w) + ',' + (y + 8) + '"/>' +
         '<text class="lbl" x="' + (x + w + 14) + '" y="' + (y + 4) + '">' + esc(r.name) + (progOf(i) ? ' · ' + progOf(i) + ' %' : '') + '</text></g>';
     } else {
       const sub = r.type === 'untervorgang' && sched.parent[i] >= 0;
       const pg = progOf(i), lab = [assigneeShortText(r), pg ? pg + ' %' : ''].filter(Boolean).join(' · ');
-      s += '<g data-i="' + i + '"' + (rowDone(r) ? ' class="done"' : '') + '>' + tip + '<rect class="' + (sub ? 'bar-sub' : 'bar-task') + '" x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' +
+      s += '<g data-i="' + i + '"' + (rowDone(r) ? ' class="done"' : '') + '>' + tip + '<rect class="' + (sub ? 'bar-sub' : 'bar-task') + '"' + fillOf(r) + ' x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' +
         (pg > 0 && pg < 100 ? '<rect class="bar-prog" x="' + x + '" y="' + (y - 8) + '" width="' + (w * pg / 100).toFixed(1) + '" height="16" rx="3"/>' : pg >= 100 ? '<rect class="bar-prog" x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' : '') +
         (o.err ? '<rect class="bar-err" x="' + x + '" y="' + (y - 8) + '" width="' + w + '" height="16" rx="3"/>' : '') +
         (lab ? '<text class="lbl" x="' + (x + w + 14) + '" y="' + (y + 4) + '">' + esc(lab) + '</text>' : '') + '</g>';
@@ -1300,10 +1302,9 @@ function select(i) {
 
 function onInput(e) {
   if (readOnly) return;
-  const t = e.target, f = t.dataset.f; if (!f || f === 'S' || f === 'E') return;   // Start/Ende: erst beim Übernehmen (change)
+  const t = e.target, f = t.dataset.f; if (!f) return;
   const i = rowIdx(t), r = state.rows[i]; if (!r) return;
   filterEditId = r.id;
-  if (f === 'dur' && dateMode() === 'ed') { const v = parseInt(t.value, 10); if (v >= 1) { applyDate(i, 'D', v, 'ed'); refresh(); changed(false); } return; }
   if (f === 'type') { r.type = t.value; changedFirst(); structural('.row[data-i="' + i + '"] [data-f="type"]'); return; }
   if (f === 'pred') r.pred = t.value === '' ? '' : Number(t.value);
   else if (f === 'lag') r.lag = t.value === '' ? '' : String(parseInt(t.value, 10) || 0);
@@ -1316,7 +1317,7 @@ function changedFirst() { lastPushT = 0; }
 function addRow(type, at) {
   if (readOnly) return;
   resetViewFilters();
-  const r = { id: state.nextId++, type, name: '', who: '', pred: '', rel: 'EA', lag: '', fixed: '', dur: '', st: '', pct: 0, desc: '' };
+  const r = { id: state.nextId++, type, name: '', who: '', pred: '', rel: 'EA', lag: '', fixed: '', dur: '', st: '', pct: 0, desc: '', color: '' };
   let idx = at;
   if (idx == null) {
     idx = state.rows.length;
@@ -1769,23 +1770,14 @@ function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Ma
 function boot() {
   applyTheme(); applyDisplay();
   initViews();
-  initCols(); initDateMode();
+  initCols();
   initDrag();
   initTasks();
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (typeof u.zoom2 === 'number') zoom = Math.max(0, Math.min(ZMAX, u.zoom2)); if (u.leftw) document.documentElement.style.setProperty('--leftw', u.leftw + 'px'); } catch (e) { }
   link($('bodyL'), $('bodyR')); link($('bodyR'), $('bodyL'));
   const rl = $('rowsL');
   rl.addEventListener('input', onInput); rl.addEventListener('click', onClick);
-  rl.addEventListener('change', e => {
-    const f = e.target.dataset.f;
-    if (f === 'name') refreshPredOptions();
-    if ((f === 'S' || f === 'E') && !readOnly) {
-      const i = rowIdx(e.target), v = parseISO(e.target.value); if (i < 0) return;
-      const err = v == null ? 'Bitte ein gültiges Datum eingeben.' : applyDate(i, f, v, dateMode());
-      if (err) { toast(err); e.target.value = toISO(f === 'S' ? sched.out[i].S : sched.out[i].E); return; }
-      filterEditId = state.rows[i].id; refresh(); changed(true);
-    }
-  });
+  rl.addEventListener('change', e => { if (e.target.dataset.f === 'name') refreshPredOptions(); });
   rl.addEventListener('focusin', e => { const i = rowIdx(e.target); if (i >= 0) select(i); });
   rl.addEventListener('focusout', e => {
     if (rl.contains(e.relatedTarget) || $('peoplePicker').contains(e.relatedTarget)) return;
@@ -1973,7 +1965,6 @@ function setView(v) {
   view = v; saveUi({ view: v });
   $('segView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
   $('board').hidden = v !== 'gantt'; $('tabs').hidden = v !== 'gantt';
-  if ($('dateWrap')) $('dateWrap').hidden = v !== 'gantt';
   document.querySelector('.foot').dataset.v = v;   // Legende nur im Gantt, Umschalter immer
   $('vList').hidden = v !== 'list'; $('vKanban').hidden = v !== 'kanban'; $('vCal').hidden = v !== 'cal';
   if ($('vTasks')) $('vTasks').hidden = v !== 'tasks';
@@ -2031,7 +2022,7 @@ function renderList() {
     const pred = pi >= 0 ? state.rows[pi].id + ' ' + r.rel + (parseInt(r.lag, 10) ? (parseInt(r.lag, 10) > 0 ? '+' : '') + parseInt(r.lag, 10) : '') : '';
     h += '<tr class="' + (o.summary ? 'sum' : '') + (isDone(i) ? ' done' : '') + '">' +
       '<td class="n">' + r.id + '</td><td class="n">' + sched.psp[i] + '</td>' +
-      '<td class="nm' + (tree && sub ? ' ind' : '') + '"><button type="button" class="go" data-det="' + i + '" title="Details, Beschreibung und Kommentare">' + (r.type === 'meilenstein' ? '<i class="msd"></i>' : '') + esc(r.name || 'ohne Namen') + '</button>' + marks(r) + '</td>' +
+      '<td class="nm' + (tree && sub ? ' ind' : '') + '"><button type="button" class="go" data-det="' + i + '" title="Details, Beschreibung und Kommentare">' + (r.type === 'meilenstein' ? '<i class="msd"' + (r.color ? ' style="background:' + r.color + '"' : '') + '></i>' : r.color ? '<i class="cdot" style="background:' + r.color + '"></i>' : '') + esc(r.name || 'ohne Namen') + '</button>' + marks(r) + '</td>' +
       '<td>' + (o.summary ? 'Sammelvorgang' : TYPES[r.type]) + '</td><td class="whoc">' + avs(assigneeNames(r)) + esc(assigneeNames(r)) + '</td>' +
       '<td class="d">' + fmt(o.S) + '</td><td class="d' + (late ? ' late' : '') + '">' + fmt(o.E) + (late ? ' <span class="lt">überfällig</span>' : '') + '</td>' +
       '<td class="n">' + durTxt(i) + '</td><td>' + (o.summary ? stBadge(s) : stSelect(i, s.id)) + '</td><td>' + progBar(progOf(i)) + '</td><td class="n">' + esc(pred) + '</td></tr>';
@@ -2069,7 +2060,7 @@ function renderKanban() {
     h += '<div class="kcards">';
     list.forEach(i => {
       const r = state.rows[i], par = sched.parent[i], late = isLate(i);
-      h += '<article class="card' + (r.type === 'meilenstein' ? ' ms' : '') + (late ? ' late' : '') + '" draggable="true" data-i="' + i + '">' +
+      h += '<article class="card' + (r.type === 'meilenstein' ? ' ms' : '') + (late ? ' late' : '') + '" draggable="true" data-i="' + i + '"' + (r.color && !late ? ' style="border-left-color:' + r.color + '"' : '') + '>' +
         '<div class="ctop"><span class="psp">' + sched.psp[i] + '</span>' + (isUnseen(r) ? '<span class="chgtag" title="' + esc(changeTitle(r)) + '">geändert</span>' : '') + (r.type === 'meilenstein' ? '<span class="tag"><i class="msd"></i>Meilenstein</span>' : '') + (late ? '<span class="tag lt">überfällig</span>' : '') + '</div>' +
         '<button type="button" class="cname" data-det="' + i + '" title="Details, Beschreibung und Kommentare">' + esc(r.name || 'ohne Namen') + '</button>' +
         ((r.desc || '').trim() ? '<div class="cdesc">' + esc(r.desc.trim().slice(0, 140)) + (r.desc.trim().length > 140 ? ' …' : '') + '</div>' : '') +
@@ -2155,7 +2146,7 @@ function renderCal() {
       const cls = r.type === 'meilenstein' ? 'ms' : o.summary ? 'sum' : (r.type === 'untervorgang' && sched.parent[i] >= 0 ? 'sub' : 'task');
       const pv = progOf(i), upto = o.S + (o.E - o.S + 1) * pv / 100, fill = Math.max(0, Math.min(1, (upto - sg.s) / (sg.e - sg.s + 1)));
       const tip = (r.name || 'ohne Namen') + ': ' + rangeTxt(i) + (assigneeNames(r) ? ' · ' + assigneeNames(r) : '') + ' · ' + s.name + (r.type === 'meilenstein' ? '' : ' · ' + pv + ' %') + (isLate(i) ? ' · überfällig' : '');
-      h += '<button type="button" class="cb ' + cls + (isDone(i) ? ' done' : '') + (isLate(i) ? ' late' : '') + (sg.s > o.S ? ' cl' : '') + (sg.e < o.E ? ' cr' : '') + '" data-det="' + i + '" title="' + esc(tip) + '" style="left:calc(' + left + '% + 3px);width:calc(' + width + '% - 6px);top:' + (TOP + sg.l * LH) + 'px">' +
+      h += '<button type="button" class="cb ' + cls + (isDone(i) ? ' done' : '') + (isLate(i) ? ' late' : '') + (sg.s > o.S ? ' cl' : '') + (sg.e < o.E ? ' cr' : '') + '" data-det="' + i + '" title="' + esc(tip) + '" style="left:calc(' + left + '% + 3px);width:calc(' + width + '% - 6px);top:' + (TOP + sg.l * LH) + 'px' + (r.color ? (cls === 'sum' ? ';border-top-color:' : cls === 'ms' ? ';--msc:' : ';color:#fff;background:') + r.color : '') + '">' +
         (cls === 'ms' ? '<i class="msd"></i>' : '') + (cls !== 'ms' && fill > 0 ? '<i class="cbp" style="width:' + (fill * 100).toFixed(1) + '%"></i>' : '') + '<span>' + esc(r.name || 'ohne Namen') + (assigneeNames(r) && cls !== 'sum' ? ' · ' + esc(assigneeNames(r)) : '') + '</span></button>';
     });
     h += '</div>';
@@ -2361,6 +2352,9 @@ function openDetails(i) {
         (r.type === 'meilenstein' ? '' : '<label class="pf"><span>Ende <em class="calc-l" data-l="E">berechnet</em></span><input class="in" type="date" id="dE"' + (ro ? ' disabled' : '') + '></label>' +
           '<label class="pf"><span>Dauer (' + (state.mode === 'work' ? 'Arbeitstage' : 'Tage') + ') <em class="calc-l" data-l="D">berechnet</em></span><input class="in" type="number" min="1" step="1" id="dDur"' + (ro ? ' disabled' : '') + '></label>') +
         '</div><p class="hint bad" id="dDateErr" role="alert" hidden></p><p class="hint" id="dDateHint"></p>') +
+    '<div class="pf"><span>Farbe im Diagramm</span><div class="swatches" id="dColor" role="group" aria-label="Farbe">' +
+      '<button type="button" class="sw def" data-col="" title="Standard (nach Typ)" aria-label="Standardfarbe"' + (ro ? ' disabled' : '') + '></button>' +
+      ROW_COLORS.map(([c, n]) => '<button type="button" class="sw" data-col="' + c + '" style="background:' + c + '" title="' + n + '" aria-label="' + n + '"' + (ro ? ' disabled' : '') + '></button>').join('') + '</div></div>' +
     '<div class="pf"><span>Verantwortlich</span><div class="people" id="dWho"></div>' +
     (ro ? '' : '<div class="addp">' + (hasUserDirectory() ? '<select class="in" id="dWhoAdd" aria-label="Person hinzufügen"></select>' : '<input class="in" id="dWhoAdd" list="peopleList" placeholder="Person hinzufügen …" autocomplete="off">') + '<button class="btn" type="button" id="dWhoBtn">Hinzufügen</button></div>') + '</div>' +
     '<div class="pf"><span>Fortschritt</span>' + (o.summary
@@ -2423,6 +2417,9 @@ function openDetails(i) {
   if (q('#dPct')) { q('#dPct').value = String(rowDone(r) ? 100 : r.pct || 0); q('#dPctV').textContent = q('#dPct').value + ' %'; }
   paintHead();
   q('#dName').addEventListener('input', e => save(x => { x.name = e.target.value; }, true));
+  const paintColor = () => { const k = cur(); if (k == null) return; const c = state.rows[k].color || ''; q('#dColor').querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.col === c))); };
+  q('#dColor').addEventListener('click', e => { const b = e.target.closest('.sw'); if (!b) return; save(x => { x.color = okColor(b.dataset.col); }); paintColor(); });
+  paintColor();
   // Drei Eingabearten: Start + Ende (Dauer berechnet), Start + Dauer (Ende berechnet), Ende + Dauer (Start berechnet)
   const ms = r.type === 'meilenstein';
   let mode = ms ? 'sd' : dateMode();
@@ -2606,7 +2603,7 @@ function savePref(base, v) { try { localStorage.setItem(prefKey(base), JSON.stri
 /* Spalten: Reihenfolge wie in rowHTML; [Schlüssel, Bezeichnung, Standardbreite, immer sichtbar] */
 const COLS = [['acts', '', 52, true], ['nr', 'Nr', 34], ['psp', 'PSP', 42], ['type', 'Typ', 134], ['name', 'Vorgang', 220, true], ['who', 'Verantwortlich', 112],
   ['pct', 'Fortschritt', 80], ['pred', 'Vorgänger', 150], ['rel', 'Beziehung', 62], ['lag', 'Versatz', 58], ['fixed', 'Fester Start', 130], ['dur', 'Dauer', 56],
-  ['S', 'Start', 124], ['E', 'Ende', 124]];
+  ['S', 'Start', 98], ['E', 'Ende', 98]];
 let colPref = null, colKey = '';
 function colPrefs() { if (!colPref || colKey !== prefKey('tp-cols-v1')) { colKey = prefKey('tp-cols-v1'); colPref = loadPref('tp-cols-v1', {}); colPref.w = colPref.w || {}; colPref.hide = Array.isArray(colPref.hide) ? colPref.hide : []; } return colPref; }
 const colW = c => Math.max(28, Math.min(640, Number(colPrefs().w[c[0]]) || c[2]));
@@ -2708,39 +2705,6 @@ function paintFoldAll() {
 
 // Sobald die Person bekannt ist: ihre Spalten und eingeklappten Gruppen anwenden
 function prefsForUser() { applyCols(true); if (sched) renderFilteredViews(true); }
-
-/* Termineingabe: Start + Ende, Start + Dauer oder Ende + Dauer (gemeinsam mit dem Detailfenster) */
-// which: 'S' Start, 'E' Ende, 'D' Dauer; v: Tageszahl bzw. Dauer. Liefert eine Fehlermeldung oder null.
-function applyDate(i, which, v, mode) {
-  const r = state.rows[i], o = sched && sched.out[i];
-  if (!r || !o || o.summary || readOnly) return 'Termine von Sammelvorgängen ergeben sich aus den Untervorgängen.';
-  const ms = r.type === 'meilenstein';
-  if (which === 'S') {
-    if (mode === 'se' && !ms) {
-      if (v > o.E) return 'Der Start liegt nach dem Ende. Verschiebe zuerst das Ende.';
-      r.dur = String(Math.max(1, spanDays(v, o.E)));
-    }
-    r.fixed = toISO(v);
-  } else if (which === 'E') {
-    if (ms) { r.fixed = toISO(v); return null; }
-    if (mode === 'ed') r.fixed = toISO(startFor(v, o.dur));
-    else { if (v < o.S) return 'Das Ende liegt vor dem Start. Verschiebe zuerst den Start.'; r.dur = String(Math.max(1, spanDays(o.S, v))); }
-  } else if (which === 'D') {
-    const d = Math.max(1, v);
-    if (mode === 'ed') r.fixed = toISO(startFor(o.E, d));
-    r.dur = String(d);
-  }
-  return null;
-}
-function paintDateMode() {
-  const seg = $('segDate'); if (!seg) return;
-  const m = dateMode(); seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === m)));
-}
-function initDateMode() {
-  const seg = $('segDate'); if (!seg) return;
-  seg.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; saveUi({ dmode: b.dataset.v }); paintDateMode(); });
-  paintDateMode();
-}
 
 /* ---------- Aufgaben: eigene Rubrik für To-dos mit Zuständigen, Termin und Priorität ---------- */
 // Aufgaben gehören zum Projekt (state.tasks) und werden mit dem Plan gespeichert und abgeglichen.
@@ -3200,6 +3164,8 @@ function loadJsPdf() {
   });
   return jsPdfP;
 }
+// Farbe mischen (für erledigte und Fortschrittsanteile eigener Farben)
+function mixHex(a, b, t) { const p = h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16)), x = p(a), y = p(b); return '#' + x.map((v, k) => Math.round(v + (y[k] - v) * t).toString(16).padStart(2, '0')).join(''); }
 // Standardschrift im PDF kennt nur Westeuropäisch (WinAnsi)
 const pt = s => String(s ?? '').replace(/→/g, '->').replace(/[^\x20-\x7e\xa0-\xff–—„“”‚‘’•…€]/g, '');
 
@@ -3408,22 +3374,22 @@ function buildPdf(JsPDF, opt) {
     const r = rows[i], x2 = o[i], y = cy(i);
     font('helvetica', 'normal', 6.4, PC.muted);
     if (r.type === 'meilenstein') {
-      const mx = msX(i), s = 4.6; doc.setFillColor(PC.ms);
+      const mx = msX(i), s = 4.6; doc.setFillColor(r.color || PC.ms);
       doc.triangle(mx - s, y, mx, y - s, mx + s, y, 'F'); doc.triangle(mx - s, y, mx, y + s, mx + s, y, 'F');
       font('helvetica', 'normal', 6.6, PC.ink); txt(r.name || '', mx + 8, y);
       return;
     }
     const x = X(x2.S), w = Math.max((x2.E - x2.S + 1) / step * colW, 2.5);
     if (x2.summary) {
-      doc.setFillColor(PC.sum); doc.rect(x, y - 4, w, 4.5, 'F');
+      doc.setFillColor(r.color || PC.sum); doc.rect(x, y - 4, w, 4.5, 'F');
       doc.triangle(x, y + 0.5, x + 4.5, y + 0.5, x, y + 4.5, 'F'); doc.triangle(x + w, y + 0.5, x + w - 4.5, y + 0.5, x + w, y + 4.5, 'F');
       font('helvetica', 'bold', 6.6, PC.ink); txt(r.name || '', x + w + 6, y);
     } else {
       const sub = r.type === 'untervorgang' && sched.parent[i] >= 0;
-      doc.setFillColor(rowDone(r) ? (sub ? '#c9e1d4' : '#9ebfae') : (sub ? PC.sub : PC.task));
+      doc.setFillColor(r.color ? (rowDone(r) ? mixHex(r.color, '#ffffff', 0.45) : r.color) : rowDone(r) ? (sub ? '#c9e1d4' : '#9ebfae') : (sub ? PC.sub : PC.task));
       doc.roundedRect(x, y - 4.5, w, 9, 1.6, 1.6, 'F');
       const pg = progOf(i);
-      if (pg > 0) { doc.setFillColor(sub ? '#5f9a7c' : '#2a5a42'); doc.roundedRect(x, y - 4.5, Math.max(2, w * Math.min(pg, 100) / 100), 9, 1.6, 1.6, 'F'); }
+      if (pg > 0) { doc.setFillColor(r.color ? mixHex(r.color, '#000000', 0.32) : sub ? '#5f9a7c' : '#2a5a42'); doc.roundedRect(x, y - 4.5, Math.max(2, w * Math.min(pg, 100) / 100), 9, 1.6, 1.6, 'F'); }
       if (x2.err) { doc.setDrawColor(PC.warn); doc.setLineWidth(0.8); doc.setLineDashPattern([2, 1.4], 0); doc.roundedRect(x, y - 4.5, w, 9, 1.6, 1.6, 'S'); doc.setLineDashPattern([], 0); }
       const lab = [r.who, rowDone(r) ? 'erledigt' : (progOf(i) ? progOf(i) + ' %' : '')].filter(Boolean).join('  ·  ');
       if (lab) { font('helvetica', 'normal', 6.4, PC.muted); txt(lab, x + w + 6, y); }

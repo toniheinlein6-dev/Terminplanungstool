@@ -7,7 +7,7 @@ function savePref(base, v) { try { localStorage.setItem(prefKey(base), JSON.stri
 /* Spalten: Reihenfolge wie in rowHTML; [Schlüssel, Bezeichnung, Standardbreite, immer sichtbar] */
 const COLS = [['acts', '', 52, true], ['nr', 'Nr', 34], ['psp', 'PSP', 42], ['type', 'Typ', 134], ['name', 'Vorgang', 220, true], ['who', 'Verantwortlich', 112],
   ['pct', 'Fortschritt', 80], ['pred', 'Vorgänger', 150], ['rel', 'Beziehung', 62], ['lag', 'Versatz', 58], ['fixed', 'Fester Start', 130], ['dur', 'Dauer', 56],
-  ['S', 'Start', 124], ['E', 'Ende', 124]];
+  ['S', 'Start', 98], ['E', 'Ende', 98]];
 let colPref = null, colKey = '';
 function colPrefs() { if (!colPref || colKey !== prefKey('tp-cols-v1')) { colKey = prefKey('tp-cols-v1'); colPref = loadPref('tp-cols-v1', {}); colPref.w = colPref.w || {}; colPref.hide = Array.isArray(colPref.hide) ? colPref.hide : []; } return colPref; }
 const colW = c => Math.max(28, Math.min(640, Number(colPrefs().w[c[0]]) || c[2]));
@@ -109,36 +109,3 @@ function paintFoldAll() {
 
 // Sobald die Person bekannt ist: ihre Spalten und eingeklappten Gruppen anwenden
 function prefsForUser() { applyCols(true); if (sched) renderFilteredViews(true); }
-
-/* Termineingabe: Start + Ende, Start + Dauer oder Ende + Dauer (gemeinsam mit dem Detailfenster) */
-// which: 'S' Start, 'E' Ende, 'D' Dauer; v: Tageszahl bzw. Dauer. Liefert eine Fehlermeldung oder null.
-function applyDate(i, which, v, mode) {
-  const r = state.rows[i], o = sched && sched.out[i];
-  if (!r || !o || o.summary || readOnly) return 'Termine von Sammelvorgängen ergeben sich aus den Untervorgängen.';
-  const ms = r.type === 'meilenstein';
-  if (which === 'S') {
-    if (mode === 'se' && !ms) {
-      if (v > o.E) return 'Der Start liegt nach dem Ende. Verschiebe zuerst das Ende.';
-      r.dur = String(Math.max(1, spanDays(v, o.E)));
-    }
-    r.fixed = toISO(v);
-  } else if (which === 'E') {
-    if (ms) { r.fixed = toISO(v); return null; }
-    if (mode === 'ed') r.fixed = toISO(startFor(v, o.dur));
-    else { if (v < o.S) return 'Das Ende liegt vor dem Start. Verschiebe zuerst den Start.'; r.dur = String(Math.max(1, spanDays(o.S, v))); }
-  } else if (which === 'D') {
-    const d = Math.max(1, v);
-    if (mode === 'ed') r.fixed = toISO(startFor(o.E, d));
-    r.dur = String(d);
-  }
-  return null;
-}
-function paintDateMode() {
-  const seg = $('segDate'); if (!seg) return;
-  const m = dateMode(); seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === m)));
-}
-function initDateMode() {
-  const seg = $('segDate'); if (!seg) return;
-  seg.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; saveUi({ dmode: b.dataset.v }); paintDateMode(); });
-  paintDateMode();
-}

@@ -599,11 +599,6 @@ body.dragmode { user-select: none; -webkit-user-select: none; }
 .ib.fold svg { transition: transform .12s; }
 .ib.fold.closed svg { transform: rotate(-90deg); }
 .row.sum.folded-hint { }
-/* Start/Ende als Datumsfelder */
-.row .dc input { font-family: var(--font-num); font-size: 12px; padding-right: 2px; }
-.row.sum .dc input:disabled { opacity: 1; color: var(--ink); font-weight: 600; }
-.row .dc input[data-f="E"]:disabled { opacity: .7; }
-.row.err .dc input { color: var(--warn); }
 /* Spaltenkopf: Breite ziehen, Menü */
 .hrow > div { position: relative; }
 .hrow > div:first-child { display: flex; align-items: center; gap: 0; padding: 0 2px; overflow: visible; }
@@ -615,10 +610,6 @@ body.colresize, body.colresize * { cursor: col-resize !important; user-select: n
 .colmenu .cmh { margin: 0 0 4px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 .colmenu .btns { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
 .colmenu .hint { margin: 4px 0 0; font-size: 11.5px; color: var(--muted); }
-/* Termineingabe-Umschalter */
-.datewrap { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-.datewrap .seg button { padding: 4px 9px; font-size: 12px; }
-html.m .datewrap .dmlbl { display: none; }
 
 /* PDF-Auswahl */
 .panel.pdfdlg { width: min(620px, 100%); }
@@ -629,4 +620,14 @@ html.m .datewrap .dmlbl { display: none; }
 .pquick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
 .pdfdlg .btns .msg.bad { color: var(--warn); }
 .pdfdlg > div > .chk { display: flex; margin: 3px 0; }
+
+/* Eigene Farben */
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.sw { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; }
+.sw.def { background: linear-gradient(135deg, var(--bar-task) 0 50%, var(--bar-sub) 50% 100%); }
+.sw[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
+.sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sw:disabled { cursor: default; opacity: .6; }
+.cdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.cb.ms .msd { background: var(--msc, var(--bar-ms)); }
 </style>

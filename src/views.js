@@ -119,7 +119,6 @@ function setView(v) {
   view = v; saveUi({ view: v });
   $('segView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
   $('board').hidden = v !== 'gantt'; $('tabs').hidden = v !== 'gantt';
-  if ($('dateWrap')) $('dateWrap').hidden = v !== 'gantt';
   document.querySelector('.foot').dataset.v = v;   // Legende nur im Gantt, Umschalter immer
   $('vList').hidden = v !== 'list'; $('vKanban').hidden = v !== 'kanban'; $('vCal').hidden = v !== 'cal';
   if ($('vTasks')) $('vTasks').hidden = v !== 'tasks';
@@ -177,7 +176,7 @@ function renderList() {
     const pred = pi >= 0 ? state.rows[pi].id + ' ' + r.rel + (parseInt(r.lag, 10) ? (parseInt(r.lag, 10) > 0 ? '+' : '') + parseInt(r.lag, 10) : '') : '';
     h += '<tr class="' + (o.summary ? 'sum' : '') + (isDone(i) ? ' done' : '') + '">' +
       '<td class="n">' + r.id + '</td><td class="n">' + sched.psp[i] + '</td>' +
-      '<td class="nm' + (tree && sub ? ' ind' : '') + '"><button type="button" class="go" data-det="' + i + '" title="Details, Beschreibung und Kommentare">' + (r.type === 'meilenstein' ? '<i class="msd"></i>' : '') + esc(r.name || 'ohne Namen') + '</button>' + marks(r) + '</td>' +
+      '<td class="nm' + (tree && sub ? ' ind' : '') + '"><button type="button" class="go" data-det="' + i + '" title="Details, Beschreibung und Kommentare">' + (r.type === 'meilenstein' ? '<i class="msd"' + (r.color ? ' style="background:' + r.color + '"' : '') + '></i>' : r.color ? '<i class="cdot" style="background:' + r.color + '"></i>' : '') + esc(r.name || 'ohne Namen') + '</button>' + marks(r) + '</td>' +
       '<td>' + (o.summary ? 'Sammelvorgang' : TYPES[r.type]) + '</td><td class="whoc">' + avs(assigneeNames(r)) + esc(assigneeNames(r)) + '</td>' +
       '<td class="d">' + fmt(o.S) + '</td><td class="d' + (late ? ' late' : '') + '">' + fmt(o.E) + (late ? ' <span class="lt">überfällig</span>' : '') + '</td>' +
       '<td class="n">' + durTxt(i) + '</td><td>' + (o.summary ? stBadge(s) : stSelect(i, s.id)) + '</td><td>' + progBar(progOf(i)) + '</td><td class="n">' + esc(pred) + '</td></tr>';
@@ -215,7 +214,7 @@ function renderKanban() {
     h += '<div class="kcards">';
     list.forEach(i => {
       const r = state.rows[i], par = sched.parent[i], late = isLate(i);
-      h += '<article class="card' + (r.type === 'meilenstein' ? ' ms' : '') + (late ? ' late' : '') + '" draggable="true" data-i="' + i + '">' +
+      h += '<article class="card' + (r.type === 'meilenstein' ? ' ms' : '') + (late ? ' late' : '') + '" draggable="true" data-i="' + i + '"' + (r.color && !late ? ' style="border-left-color:' + r.color + '"' : '') + '>' +
         '<div class="ctop"><span class="psp">' + sched.psp[i] + '</span>' + (isUnseen(r) ? '<span class="chgtag" title="' + esc(changeTitle(r)) + '">geändert</span>' : '') + (r.type === 'meilenstein' ? '<span class="tag"><i class="msd"></i>Meilenstein</span>' : '') + (late ? '<span class="tag lt">überfällig</span>' : '') + '</div>' +
         '<button type="button" class="cname" data-det="' + i + '" title="Details, Beschreibung und Kommentare">' + esc(r.name || 'ohne Namen') + '</button>' +
         ((r.desc || '').trim() ? '<div class="cdesc">' + esc(r.desc.trim().slice(0, 140)) + (r.desc.trim().length > 140 ? ' …' : '') + '</div>' : '') +
@@ -301,7 +300,7 @@ function renderCal() {
       const cls = r.type === 'meilenstein' ? 'ms' : o.summary ? 'sum' : (r.type === 'untervorgang' && sched.parent[i] >= 0 ? 'sub' : 'task');
       const pv = progOf(i), upto = o.S + (o.E - o.S + 1) * pv / 100, fill = Math.max(0, Math.min(1, (upto - sg.s) / (sg.e - sg.s + 1)));
       const tip = (r.name || 'ohne Namen') + ': ' + rangeTxt(i) + (assigneeNames(r) ? ' · ' + assigneeNames(r) : '') + ' · ' + s.name + (r.type === 'meilenstein' ? '' : ' · ' + pv + ' %') + (isLate(i) ? ' · überfällig' : '');
-      h += '<button type="button" class="cb ' + cls + (isDone(i) ? ' done' : '') + (isLate(i) ? ' late' : '') + (sg.s > o.S ? ' cl' : '') + (sg.e < o.E ? ' cr' : '') + '" data-det="' + i + '" title="' + esc(tip) + '" style="left:calc(' + left + '% + 3px);width:calc(' + width + '% - 6px);top:' + (TOP + sg.l * LH) + 'px">' +
+      h += '<button type="button" class="cb ' + cls + (isDone(i) ? ' done' : '') + (isLate(i) ? ' late' : '') + (sg.s > o.S ? ' cl' : '') + (sg.e < o.E ? ' cr' : '') + '" data-det="' + i + '" title="' + esc(tip) + '" style="left:calc(' + left + '% + 3px);width:calc(' + width + '% - 6px);top:' + (TOP + sg.l * LH) + 'px' + (r.color ? (cls === 'sum' ? ';border-top-color:' : cls === 'ms' ? ';--msc:' : ';color:#fff;background:') + r.color : '') + '">' +
         (cls === 'ms' ? '<i class="msd"></i>' : '') + (cls !== 'ms' && fill > 0 ? '<i class="cbp" style="width:' + (fill * 100).toFixed(1) + '%"></i>' : '') + '<span>' + esc(r.name || 'ohne Namen') + (assigneeNames(r) && cls !== 'sum' ? ' · ' + esc(assigneeNames(r)) : '') + '</span></button>';
     });
     h += '</div>';
@@ -507,6 +506,9 @@ function openDetails(i) {
         (r.type === 'meilenstein' ? '' : '<label class="pf"><span>Ende <em class="calc-l" data-l="E">berechnet</em></span><input class="in" type="date" id="dE"' + (ro ? ' disabled' : '') + '></label>' +
           '<label class="pf"><span>Dauer (' + (state.mode === 'work' ? 'Arbeitstage' : 'Tage') + ') <em class="calc-l" data-l="D">berechnet</em></span><input class="in" type="number" min="1" step="1" id="dDur"' + (ro ? ' disabled' : '') + '></label>') +
         '</div><p class="hint bad" id="dDateErr" role="alert" hidden></p><p class="hint" id="dDateHint"></p>') +
+    '<div class="pf"><span>Farbe im Diagramm</span><div class="swatches" id="dColor" role="group" aria-label="Farbe">' +
+      '<button type="button" class="sw def" data-col="" title="Standard (nach Typ)" aria-label="Standardfarbe"' + (ro ? ' disabled' : '') + '></button>' +
+      ROW_COLORS.map(([c, n]) => '<button type="button" class="sw" data-col="' + c + '" style="background:' + c + '" title="' + n + '" aria-label="' + n + '"' + (ro ? ' disabled' : '') + '></button>').join('') + '</div></div>' +
     '<div class="pf"><span>Verantwortlich</span><div class="people" id="dWho"></div>' +
     (ro ? '' : '<div class="addp">' + (hasUserDirectory() ? '<select class="in" id="dWhoAdd" aria-label="Person hinzufügen"></select>' : '<input class="in" id="dWhoAdd" list="peopleList" placeholder="Person hinzufügen …" autocomplete="off">') + '<button class="btn" type="button" id="dWhoBtn">Hinzufügen</button></div>') + '</div>' +
     '<div class="pf"><span>Fortschritt</span>' + (o.summary
@@ -569,6 +571,9 @@ function openDetails(i) {
   if (q('#dPct')) { q('#dPct').value = String(rowDone(r) ? 100 : r.pct || 0); q('#dPctV').textContent = q('#dPct').value + ' %'; }
   paintHead();
   q('#dName').addEventListener('input', e => save(x => { x.name = e.target.value; }, true));
+  const paintColor = () => { const k = cur(); if (k == null) return; const c = state.rows[k].color || ''; q('#dColor').querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.col === c))); };
+  q('#dColor').addEventListener('click', e => { const b = e.target.closest('.sw'); if (!b) return; save(x => { x.color = okColor(b.dataset.col); }); paintColor(); });
+  paintColor();
   // Drei Eingabearten: Start + Ende (Dauer berechnet), Start + Dauer (Ende berechnet), Ende + Dauer (Start berechnet)
   const ms = r.type === 'meilenstein';
   let mode = ms ? 'sd' : dateMode();

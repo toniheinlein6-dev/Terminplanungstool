@@ -19,6 +19,8 @@ function loadJsPdf() {
   });
   return jsPdfP;
 }
+// Farbe mischen (für erledigte und Fortschrittsanteile eigener Farben)
+function mixHex(a, b, t) { const p = h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16)), x = p(a), y = p(b); return '#' + x.map((v, k) => Math.round(v + (y[k] - v) * t).toString(16).padStart(2, '0')).join(''); }
 // Standardschrift im PDF kennt nur Westeuropäisch (WinAnsi)
 const pt = s => String(s ?? '').replace(/→/g, '->').replace(/[^\x20-\x7e\xa0-\xff–—„“”‚‘’•…€]/g, '');
 
@@ -227,22 +229,22 @@ function buildPdf(JsPDF, opt) {
     const r = rows[i], x2 = o[i], y = cy(i);
     font('helvetica', 'normal', 6.4, PC.muted);
     if (r.type === 'meilenstein') {
-      const mx = msX(i), s = 4.6; doc.setFillColor(PC.ms);
+      const mx = msX(i), s = 4.6; doc.setFillColor(r.color || PC.ms);
       doc.triangle(mx - s, y, mx, y - s, mx + s, y, 'F'); doc.triangle(mx - s, y, mx, y + s, mx + s, y, 'F');
       font('helvetica', 'normal', 6.6, PC.ink); txt(r.name || '', mx + 8, y);
       return;
     }
     const x = X(x2.S), w = Math.max((x2.E - x2.S + 1) / step * colW, 2.5);
     if (x2.summary) {
-      doc.setFillColor(PC.sum); doc.rect(x, y - 4, w, 4.5, 'F');
+      doc.setFillColor(r.color || PC.sum); doc.rect(x, y - 4, w, 4.5, 'F');
       doc.triangle(x, y + 0.5, x + 4.5, y + 0.5, x, y + 4.5, 'F'); doc.triangle(x + w, y + 0.5, x + w - 4.5, y + 0.5, x + w, y + 4.5, 'F');
       font('helvetica', 'bold', 6.6, PC.ink); txt(r.name || '', x + w + 6, y);
     } else {
       const sub = r.type === 'untervorgang' && sched.parent[i] >= 0;
-      doc.setFillColor(rowDone(r) ? (sub ? '#c9e1d4' : '#9ebfae') : (sub ? PC.sub : PC.task));
+      doc.setFillColor(r.color ? (rowDone(r) ? mixHex(r.color, '#ffffff', 0.45) : r.color) : rowDone(r) ? (sub ? '#c9e1d4' : '#9ebfae') : (sub ? PC.sub : PC.task));
       doc.roundedRect(x, y - 4.5, w, 9, 1.6, 1.6, 'F');
       const pg = progOf(i);
-      if (pg > 0) { doc.setFillColor(sub ? '#5f9a7c' : '#2a5a42'); doc.roundedRect(x, y - 4.5, Math.max(2, w * Math.min(pg, 100) / 100), 9, 1.6, 1.6, 'F'); }
+      if (pg > 0) { doc.setFillColor(r.color ? mixHex(r.color, '#000000', 0.32) : sub ? '#5f9a7c' : '#2a5a42'); doc.roundedRect(x, y - 4.5, Math.max(2, w * Math.min(pg, 100) / 100), 9, 1.6, 1.6, 'F'); }
       if (x2.err) { doc.setDrawColor(PC.warn); doc.setLineWidth(0.8); doc.setLineDashPattern([2, 1.4], 0); doc.roundedRect(x, y - 4.5, w, 9, 1.6, 1.6, 'S'); doc.setLineDashPattern([], 0); }
       const lab = [r.who, rowDone(r) ? 'erledigt' : (progOf(i) ? progOf(i) + ' %' : '')].filter(Boolean).join('  ·  ');
       if (lab) { font('helvetica', 'normal', 6.4, PC.muted); txt(lab, x + w + 6, y); }
