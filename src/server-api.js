@@ -310,7 +310,7 @@
       '<label class="pf">Titel<input id="tTitle" class="in" maxlength="200" placeholder="Kurz und klar, z. B. „PDF-Schrift zu klein“"></label>' +
       '<label class="pf">Beschreibung<textarea id="tBody" class="in" rows="5" maxlength="8000" placeholder="Was ist passiert, was wünschst du dir?"></textarea></label>' +
       (cur ? '<label class="chk"><input type="checkbox" id="tProj" checked> betrifft das Projekt „' + esc(pname || 'Ohne Namen') + '“</label>' : '') +
-      '<div class="btns"><button class="btn primary" type="button" id="tSend">An die Administratoren senden</button><span id="tMsg" class="msg"></span></div>' +
+      '<div class="btns"><button class="btn primary" type="button" id="tSend">An die Administratoren senden</button><span id="tMsg" class="msg" role="status" aria-live="polite"></span></div>' +
       '<h3>Meine Tickets</h3><div id="tList" class="tlist">Wird geladen …</div></div>');
     const $d = id => d.el.querySelector('#' + id);
     let kind = 'idee';
@@ -321,14 +321,32 @@
       $d('tList').innerHTML = mine.length ? mine.map(t => '<article class="tcard"><div class="tmeta"><span class="tkind k-' + t.kind + '">' + KINDS[t.kind] + '</span><span class="tst s-' + t.status + '">' + STATES[t.status] + '</span><span>' + new Date(t.createdAt).toLocaleDateString('de-DE') + '</span></div>' +
         '<b>' + esc(t.title) + '</b>' + (t.note ? '<div class="tnote"><span>Antwort:</span> ' + esc(t.note) + '</div>' : '') + '</article>').join('') : '<p class="hint">Du hast noch keine Tickets geschickt.</p>';
     };
-    list();
+    list().catch(() => { $d('tList').textContent = 'Konnte nicht geladen werden.'; });
+    let sending = false, submission = null;
     $d('tSend').addEventListener('click', async () => {
+      if (sending) return;
       const title = $d('tTitle').value.trim(), m = $d('tMsg');
       if (title.length < 3) { m.textContent = 'Bitte einen Titel angeben.'; m.classList.add('bad'); $d('tTitle').focus(); return; }
       const body = { kind, title, body: $d('tBody').value.trim(), projectId: cur && $d('tProj') && $d('tProj').checked ? cur : null };
-      const r = await post('ticket_new', body); const j = await r.json().catch(() => ({}));
-      if (!r.ok) { m.textContent = j.error || 'Senden fehlgeschlagen'; m.classList.add('bad'); return; }
-      m.classList.remove('bad'); m.textContent = 'Danke, ist angekommen.'; $d('tTitle').value = $d('tBody').value = ''; list();
+      const fingerprint = JSON.stringify(body);
+      if (!submission || submission.fingerprint !== fingerprint) submission = { fingerprint, requestId: crypto.randomUUID() };
+      const button = $d('tSend'), oldText = button.textContent;
+      const controls = [$d('tTitle'), $d('tBody'), $d('tProj'), ...$d('tKind').querySelectorAll('button')].filter(Boolean);
+      const disabled = controls.map(control => control.disabled);
+      sending = true; button.disabled = true; button.textContent = 'Wird gesendet …';
+      controls.forEach(control => { control.disabled = true; });
+      m.classList.remove('bad'); m.textContent = 'Ticket wird gesendet …';
+      try {
+        const r = await post('ticket_new', { ...body, requestId: submission.requestId }); const j = await r.json().catch(() => ({}));
+        if (!r.ok) { m.textContent = j.error || 'Senden fehlgeschlagen. Bitte erneut versuchen.'; m.classList.add('bad'); return; }
+        submission = null;
+        m.classList.remove('bad'); m.textContent = 'Danke, ist angekommen.'; $d('tTitle').value = $d('tBody').value = '';
+        await list().catch(() => { $d('tList').textContent = 'Ticket gesendet. Die Liste konnte nicht geladen werden.'; });
+      } catch (e) { m.textContent = 'Senden fehlgeschlagen. Bitte erneut versuchen.'; m.classList.add('bad'); }
+      finally {
+        sending = false; button.disabled = false; button.textContent = oldText;
+        controls.forEach((control, i) => { control.disabled = disabled[i]; });
+      }
     });
     $d('tTitle').focus();
   }

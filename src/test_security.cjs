@@ -180,7 +180,7 @@ test('Rollen: Lesen darf nicht speichern, „Nur Gantt“ sieht keine Kommentare
 test('IDOR: fremde Kommentare löschen und fremde Tickets lesen nicht möglich', async () => {
   const a = browser(); await a.call('login', { name: 'Anna', password: PW });
   await a.call('comment_new', { projectId: 'p1', rowId: 1, body: 'von Anna' });
-  await a.call('ticket_new', { kind: 'idee', title: 'Annas Ticket', body: 'privat' });
+  await a.call('ticket_new', { kind: 'idee', title: 'Annas Ticket', body: 'privat', requestId: 'security-test-ticket-1' });
   const { q } = await setup(); const cid = (await q("SELECT id FROM tp_comments WHERE body = 'von Anna'")).rows[0].id;
   await addUser('Emil', PW, 'editor');
   const e = browser(); await e.call('login', { name: 'Emil', password: PW });

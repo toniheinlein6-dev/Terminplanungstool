@@ -139,11 +139,19 @@ function paintTickets() {
     : '<p class="hint">Keine Tickets in dieser Auswahl.</p>';
 }
 $('tf').onchange = paintTickets;
+const savingTickets = new Set();
 $('tickets').addEventListener('click', async e => {
   const b = e.target.closest('button[data-act]'); if (!b) return; const card = b.closest('[data-id]'), id = +card.dataset.id;
+  if (savingTickets.has(id)) return;
   if (b.dataset.act === 'tsave') {
-    const r = await post('ticket_update', { id, status: card.querySelector('[data-f=status]').value, note: card.querySelector('[data-f=note]').value });
-    say(r.ok ? 'Ticket gespeichert.' : 'Speichern fehlgeschlagen.', !r.ok); tickets();
+    const controls = [...card.querySelectorAll('button, select, textarea')], disabled = controls.map(control => control.disabled), oldText = b.textContent;
+    savingTickets.add(id); controls.forEach(control => { control.disabled = true; }); b.textContent = 'Wird gespeichert …';
+    try {
+      const r = await post('ticket_update', { id, status: card.querySelector('[data-f=status]').value, note: card.querySelector('[data-f=note]').value });
+      say(r.ok ? 'Ticket gespeichert.' : 'Speichern fehlgeschlagen.', !r.ok);
+      if (r.ok) await tickets();
+    } catch (error) { say('Speichern fehlgeschlagen. Bitte erneut versuchen.', true); }
+    finally { savingTickets.delete(id); b.textContent = oldText; controls.forEach((control, i) => { control.disabled = disabled[i]; }); }
   } else {
     if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Wirklich löschen?'; return; }
     const r = await post('ticket_del', { id }); say(r.ok ? 'Ticket gelöscht.' : 'Löschen fehlgeschlagen.', !r.ok); tickets();
