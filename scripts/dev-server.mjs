@@ -16,7 +16,7 @@ if (!process.env.DATABASE_URL) {
 const handler = (await import('../lib/handler.js')).default;
 const { sentMails } = await import('../lib/mail.js');
 const { runReminders } = await import('../lib/reminders.js');
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json' };
+const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 const port = Number(process.env.PORT || 3000);
 http.createServer(async (req, res) => {
   const u = new URL(req.url, 'http://localhost');

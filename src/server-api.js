@@ -6,6 +6,19 @@
   const api = (a, opt) => fetch('api/tp?a=' + a, Object.assign({ credentials: 'same-origin', cache: 'no-store' }, opt));
   const post = (a, body) => api(a, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-TP': '1' }, body: JSON.stringify(body || {}) });
 
+  // Auge neben Passwortfeldern: Eingabe sichtbar machen und wieder verbergen
+  const EYE = 'M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z';
+  const eyeSvg = off => '<svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + EYE + (off ? 'M2.5 2.5l11 11' : '') + '"/></svg>';
+  function pwEyes(root) {
+    root.querySelectorAll('input[type="password"]:not([data-eye])').forEach(inp => {
+      inp.dataset.eye = '1';
+      const w = document.createElement('span'); w.className = 'pwwrap'; inp.parentNode.insertBefore(w, inp); w.appendChild(inp);
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'pweye';
+      const set = show => { inp.type = show ? 'text' : 'password'; b.innerHTML = eyeSvg(show); b.setAttribute('aria-pressed', String(show)); b.setAttribute('aria-label', show ? 'Passwort verbergen' : 'Passwort anzeigen'); b.title = b.getAttribute('aria-label'); };
+      b.addEventListener('click', () => { set(inp.type === 'password'); inp.focus(); });
+      inp.__hide = () => set(false); set(false); w.appendChild(b);
+    });
+  }
   function loginOverlay() {
     return new Promise(resolve => {
       const o = document.createElement('div');
@@ -14,7 +27,7 @@
         '<h2 style="margin:0 0 6px;font-size:18px">Terminplaner</h2><label style="font-size:12px">Name<input id="lgN" class="in" autocomplete="username" required style="width:100%;box-sizing:border-box;margin-top:4px"></label>' +
         '<label style="font-size:12px">Passwort<input id="lgP" class="in" type="password" autocomplete="current-password" required style="width:100%;box-sizing:border-box;margin-top:4px"></label>' +
         '<div id="lgE" style="color:#b3392b;font-size:13px;min-height:18px"></div><button class="btn" style="background:var(--accent,#2f5d50);color:#fff;border-color:transparent">Anmelden</button></form>';
-      document.body.appendChild(o);
+      document.body.appendChild(o); pwEyes(o);
       const f = o.querySelector('form'), e = o.querySelector('#lgE'); o.querySelector('#lgN').focus();
       f.addEventListener('submit', async ev => {
         ev.preventDefault(); e.textContent = '';
@@ -109,6 +122,7 @@
       '<button type="button" role="menuitem" data-m="profile">Mein Profil und Passwort</button>' +
       '<button type="button" role="menuitem" data-m="ticket">Idee oder Problem melden</button>' +
       (me.role === 'admin' ? '<button type="button" role="menuitem" data-m="admin">Verwaltung</button>' : '') +
+      (isStandalone() ? '' : '<button type="button" role="menuitem" data-m="install">Als App installieren</button>') +
       '<button type="button" role="menuitem" data-m="logout">Abmelden</button></div>';
     anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
     const btn = wrap.querySelector('#userBtn'), menu = wrap.querySelector('#userMenu');
@@ -132,9 +146,26 @@
       if (m === 'profile') profileDialog();
       else if (m === 'ticket') ticketDialog();
       else if (m === 'admin') location.href = 'admin.html';
+      else if (m === 'install') installApp();
       else if (m === 'logout') { try { await post('logout'); } catch (x) { } location.reload(); }
     });
     paintMenuButton();
+  }
+
+  /* ---------- Als App installieren (PWA) ---------- */
+  let installEvt = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+  window.addEventListener('appinstalled', () => { installEvt = null; });
+  function isStandalone() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => { }); });
+  async function installApp() {
+    if (installEvt) { const e = installEvt; installEvt = null; e.prompt(); try { await e.userChoice; } catch (x) { } return; }
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    dialog('Als App installieren', '<div class="prof"><p>Der Terminplaner lässt sich wie eine App auf den Startbildschirm legen. Er startet dann ohne Browserleiste im Vollbild, mit eigenem Symbol.</p>' +
+      (ios ? '<ol><li>Diese Seite in <b>Safari</b> öffnen.</li><li>Unten auf <b>Teilen</b> tippen (Quadrat mit Pfeil nach oben).</li><li><b>Zum Home-Bildschirm</b> wählen und mit <b>Hinzufügen</b> bestätigen.</li></ol>'
+        : '<ol><li>Diese Seite in <b>Chrome</b> oder <b>Edge</b> öffnen.</li><li>Das Menü öffnen (⋮ bzw. ⋯).</li><li><b>App installieren</b> bzw. <b>Zum Startbildschirm hinzufügen</b> wählen.</li></ol>' +
+          '<p class="hint">Am Computer erscheint in Chrome und Edge zusätzlich ein Installieren-Symbol rechts in der Adressleiste.</p>') +
+      '<p class="hint">Angemeldet bleibst du wie im Browser. Neue Versionen lädt die App automatisch.</p></div>');
   }
 
   /* ---------- Dialoge ---------- */
@@ -173,6 +204,7 @@
       '<div class="btns"><button class="btn" type="button" id="pPw">Passwort ändern</button><span id="pwMsg" class="msg"></span></div>' +
       '<p class="hint">Nach der Änderung wirst du auf anderen Geräten abgemeldet.</p></div></div>');
     const $d = id => d.el.querySelector('#' + id);
+    pwEyes(d.el);
     const paint = () => { $d('pAv').innerHTML = avatarHtml(me.name, avatar, 'big'); $d('pAvDel').disabled = !avatar; };
     const say = (id, t, bad) => { const m = $d(id); m.textContent = t; m.classList.toggle('bad', !!bad); };
     paint();
@@ -194,7 +226,7 @@
       if (n !== n2) { say('pwMsg', 'Die beiden neuen Passwörter stimmen nicht überein.', true); return; }
       const r = await post('password', { old: o, password: n }); const j = await r.json().catch(() => ({}));
       if (!r.ok) { say('pwMsg', j.error || 'Ändern fehlgeschlagen', true); return; }
-      $d('pOld').value = $d('pNew').value = $d('pNew2').value = ''; say('pwMsg', 'Passwort geändert.');
+      ['pOld', 'pNew', 'pNew2'].forEach(k => { const x = $d(k); x.value = ''; if (x.__hide) x.__hide(); }); say('pwMsg', 'Passwort geändert.');
     });
   }
   const KINDS = { idee: 'Idee', problem: 'Problem', frage: 'Frage' };

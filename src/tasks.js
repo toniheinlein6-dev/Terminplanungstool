@@ -42,7 +42,7 @@ function paintTaskBadge() {
   const b = document.querySelector('#segView button[data-v="tasks"]'); if (!b) return;
   const me = meUser(), open = tasks().filter(t => !t.done && (!me || taskMine(t, me)));
   const late = open.some(taskLate);
-  b.innerHTML = 'Aufgaben' + (open.length ? '<span class="tkbadge' + (late ? ' late' : '') + '" title="' + (me ? 'Meine offenen Aufgaben' : 'Offene Aufgaben') + (late ? ', davon überfällige' : '') + '">' + open.length + '</span>' : '');
+  const lbl = b.querySelector('.vlbl') || b; lbl.innerHTML = 'Aufgaben' + (open.length ? '<span class="tkbadge' + (late ? ' late' : '') + '" title="' + (me ? 'Meine offenen Aufgaben' : 'Offene Aufgaben') + (late ? ', davon überfällige' : '') + '">' + open.length + '</span>' : '');
 }
 
 function taskMatches(t, me) {

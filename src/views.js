@@ -314,6 +314,7 @@ function renderCal() {
 function initViews() {
   if ($('chgAll')) $('chgAll').addEventListener('click', () => { markSeen(state.rows.filter(isUnseen)); updateComputed(); renderView(); });
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (u.view) view = u.view; } catch (e) { }
+  try { const qv = new URLSearchParams(location.search).get('v'); if (qv) view = qv; } catch (e) { }   // Verknüpfungen der App
   $('segView').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); });
   const applyFilters = () => { filterEditId = null; renderFilteredViews(); };
   $('fWho').addEventListener('change', e => { fWho = e.target.value; applyFilters(); });

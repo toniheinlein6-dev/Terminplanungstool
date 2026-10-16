@@ -10,6 +10,7 @@ Gantt-Terminplaner für die gemeinsame Projektplanung im Team.
 - Rubrik „Aufgaben“: To-dos anlegen, mehreren Teammitgliedern zuweisen, Termin, Priorität und Bezug zu einem Vorgang; neu Zugewiesene bekommen eine E-Mail, zwei Tage vor dem Termin eine Erinnerung
 - Wochenübersicht per E-Mail jeden Montag: Vorgänge und Aufgaben der Woche, Überfälliges und offene Aufgaben ohne Termin (im Profil abschaltbar)
 - Darstellung umschaltbar: automatisch, Desktop oder Mobil (je Gerät gespeichert)
+- Als App installierbar (PWA): auf dem Handy über „Zum Home-Bildschirm“ bzw. „App installieren“, startet im Vollbild mit eigenem Symbol; mobil mit Navigationsleiste am unteren Rand
 - Termine im Detailfenster über Start + Ende, Start + Dauer oder Ende + Dauer eingeben; neue Vorgänge öffnen gleich die Detailmaske
 - Balken im Gantt-Diagramm ziehen: verschieben (Start), rechtes Ende (Dauer), linkes Ende (Start bei gleichem Ende); Nachfolger passen sich an
 - Organigramm (Ansicht „Team“): Projektleitung nebeneinander, darunter Teams und Unterteams mit Teamleitung und untereinander gelisteten Teammitgliedern; Personen mit Bild, Name und Rolle, auch in mehreren Teams (Hauptteam, Rolle je Team); per Ziehen zuordnen
