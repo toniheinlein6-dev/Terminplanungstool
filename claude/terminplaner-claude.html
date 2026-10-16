@@ -614,6 +614,8 @@ body.colresize, body.colresize * { cursor: col-resize !important; user-select: n
 /* PDF-Auswahl */
 .panel.pdfdlg { width: min(620px, 100%); }
 .pdfdlg h3 { margin: 0 0 6px; }
+.pdfdlg .pplan { display: flex; flex-direction: column; gap: 16px; }
+.pdfdlg .pplan[hidden] { display: none; }
 .pcols { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 2px 12px; }
 .prange { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
 .pdfdlg .pf { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
@@ -798,7 +800,7 @@ html.tdrag [draggable="true"].drag, html.tdrag .odrag { opacity: .35; }
   <span class="spacer"></span>
   <button class="btn chgall" id="chgAll" type="button" hidden></button>
   <div class="projprog" id="projProg" role="img" aria-label="Projektfortschritt"><span>Projekt</span><span class="pgb"><i></i></span><b>0 %</b></div>
-  <button class="btn" id="pdfBtn" type="button" title="Gantt-Diagramm als PDF, eine Seite im Querformat">PDF exportieren</button>
+  <button class="btn" id="pdfBtn" type="button" title="Terminplan und Organigramm als PDF zum Drucken">PDF exportieren</button>
 </div>
 <div class="vfilters" id="vfilters" role="group" aria-label="Vorgänge filtern" hidden>
   <div class="filter-field filter-search"><label for="fQ">Suche</label><input id="fQ" class="in" type="search" placeholder="Vorgänge durchsuchen" autocomplete="off"></div>
@@ -3793,12 +3795,14 @@ function mixHex(a, b, t) { const p = h => [1, 3, 5].map(k => parseInt(h.slice(k,
 const pt = s => String(s ?? '').replace(/→/g, '->').replace(/[^\x20-\x7e\xa0-\xff–—„“”‚‘’•…€]/g, '');
 
 async function exportPdf(opt) {
-  if (!state.rows.length) { toast('Der Plan ist noch leer'); return; }
+  opt = opt || pdfOptions();
+  if (opt.plan !== false && !state.rows.length && !opt.org) { toast('Der Plan ist noch leer'); return; }
   const btn = $('pdfBtn'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'PDF wird erstellt …';
   try {
     const JsPDF = await loadJsPdf();
+    if (opt.org) opt.photos = await orgPhotoMap();
     const buf = buildPdf(JsPDF, opt);
-    await offerBin('terminplan-' + slug() + '.pdf', buf);
+    await offerBin((opt.plan === false ? 'organigramm-' : 'terminplan-') + slug() + '.pdf', buf);
   } catch (e) { toast((e && e.message) || 'PDF konnte nicht erstellt werden'); }
   btn.disabled = false; btn.textContent = old;
 }
@@ -3811,8 +3815,16 @@ async function offerBin(name, buf) {
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
+// Erstellt das PDF: Terminplan und/oder Organigramm, je als eigene Seite
 function buildPdf(JsPDF, opt) {
   opt = opt || pdfOptions();
+  let doc = null;
+  if (opt.plan !== false) doc = buildGanttDoc(JsPDF, opt);
+  if (opt.org) doc = buildOrgPage(JsPDF, doc, opt.photos || {});
+  if (!doc) throw new Error('Bitte mindestens einen Inhalt auswählen.');
+  return doc.output('arraybuffer');
+}
+function buildGanttDoc(JsPDF, opt) {
   const rows = state.rows.map(row => ({ ...row, who: assigneeNames(row) })), o = sched.out, today = todayDn();
   const M = 28, RH = 16, HH = 36, step = state.raster === 'weeks' ? 7 : 1;
   // Zeilen: alle oder wie in der Ansicht; optional ohne Erledigte; optional nur im Zeitraum
@@ -4021,7 +4033,7 @@ function buildPdf(JsPDF, opt) {
 
   doc.restoreGraphicsState();
   // Legende
-  if (opt.legend === false) return doc.output('arraybuffer');
+  if (opt.legend === false) return doc;
   const ly = B + N * RH + 18; let lx = M;
   const sw = (draw, label) => { draw(lx, ly); font('helvetica', 'normal', 7, PC.muted); txt(label, lx + 16, ly); lx += 22 + doc.getTextWidth(label) + 10; };
   sw((x, y) => { doc.setFillColor(PC.sum); doc.rect(x, y - 2.5, 12, 4, 'F'); }, 'Sammelvorgang');
@@ -4033,18 +4045,187 @@ function buildPdf(JsPDF, opt) {
   if (step === 1) { sw((x, y) => fill(PC.weekend, x, y - 4, 12, 8), 'Wochenende'); if (sched.hol.size) sw((x, y) => fill(PC.holiday, x, y - 4, 12, 8), 'Feiertag'); }
   font('helvetica', 'normal', 6.6, PC.muted);
   txt('EA Ende-Anfang  ·  AA Anfang-Anfang  ·  EE Ende-Ende  ·  AE Anfang-Ende', M + TW + CW, ly, { align: 'right' });
-  return doc.output('arraybuffer');
+  return doc;
+}
+
+/* ---------- Organigramm als eigene PDF-Seite ---------- */
+// Fotos vorab rund zuschneiden (PNG mit transparenten Ecken); was nicht lädt, erscheint mit Initialen
+async function orgPhotoMap() {
+  const out = {};
+  await Promise.all(orgPeople().filter(p => orgPhoto(p)).map(p => new Promise(res => {
+    const im = new Image(), url = orgPhoto(p), t = setTimeout(res, 5000);
+    if (!/^data:/.test(url)) im.crossOrigin = 'anonymous';
+    im.onload = () => {
+      try {
+        const n = 160, c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d');
+        g.beginPath(); g.arc(n / 2, n / 2, n / 2, 0, Math.PI * 2); g.clip();
+        const k = Math.max(n / im.naturalWidth, n / im.naturalHeight), w = im.naturalWidth * k, h = im.naturalHeight * k;
+        g.drawImage(im, (n - w) / 2, (n - h) / 2, w, h); out[p.id] = c.toDataURL('image/png');
+      } catch (e) { }
+      clearTimeout(t); res();
+    };
+    im.onerror = () => { clearTimeout(t); res(); };
+    im.src = url;
+  })));
+  return out;
+}
+const orgIsEmpty = () => !orgPeople().length && !orgTeams().length;
+
+function buildOrgPage(JsPDF, doc, photos) {
+  if (orgIsEmpty()) throw new Error('Das Organigramm ist noch leer.');
+  const pls = orgPeople().filter(p => p.pl), loose = orgPeople().filter(p => !p.pl && !orgMemberships(p).length);
+  const M = 32, GX = 18, GY = 30, BW = 180, PAD = 10, CARD = 98, titleH = 46, today = todayDn();
+  // Zum Messen der Texte genügt ein beliebiges Dokument
+  let d = doc || new JsPDF({ unit: 'pt', format: 'a4', compress: true });
+  const font = (f, st, sz, c) => { d.setFont(f, st); d.setFontSize(sz); d.setTextColor(c); };
+  const fit = (s, w) => { s = pt(s); if (d.getTextWidth(s) <= w) return s; while (s.length > 1 && d.getTextWidth(s + '…') > w) s = s.slice(0, -1); return s + '…'; };
+  const wrap = (s, w, max) => { const l = d.splitTextToSize(pt(s), w); return l.length > max ? l.slice(0, max - 1).concat(fit(l.slice(max - 1).join(' '), w)) : l; };
+  const txt = (s, x, y, o2) => d.text(s, x, y, Object.assign({ baseline: 'middle' }, o2 || {}));
+  const teamName = t => orgName(t) || 'Team ohne Namen', personName = p => orgName(p) || 'Ohne Namen';
+
+  // Person als Zeile (Teamleitung größer, Teammitglied kleiner) mit Rolle und ggf. Hauptteam
+  const rowInfo = (p, teamId, lead) => {
+    const m = teamId != null ? orgMemberships(p).find(x => x.team === teamId) : null, role = (m && m.role) || p.role || '';
+    const main = orgMemberships(p)[0], sec = teamId != null && main && main.team !== teamId ? 'Hauptteam: ' + teamName(orgById(main.team)) : '';
+    const av = lead ? 22 : 16, lines = 1 + (role ? 1 : 0) + (sec ? 1 : 0);
+    return { p, role, sec, av, h: Math.max(av, 4 + lines * 8.6) + (lead ? 5 : 3) };
+  };
+  const drawRow = (r, x, y, w) => {
+    avatar(r.p, x, y + (r.h - r.av) / 2 - 1, r.av);
+    const tx = x + r.av + 6, tw = w - r.av - 6, n = 1 + (r.role ? 1 : 0) + (r.sec ? 1 : 0);
+    let ty = y + (r.h - n * 8.6) / 2 + 3.6;
+    font('helvetica', 'bold', 7.8, PC.ink); txt(fit(personName(r.p), tw), tx, ty); ty += 8.6;
+    if (r.role) { font('helvetica', 'normal', 6.6, PC.muted); txt(fit(r.role, tw), tx, ty); ty += 8.6; }
+    if (r.sec) { font('helvetica', 'italic', 6.2, PC.muted); txt(fit(r.sec, tw), tx, ty); }
+  };
+  const avatar = (p, x, y, s) => {
+    const im = photos[p.id];
+    if (im) { try { d.addImage(im, 'PNG', x, y, s, s, 'oav' + p.id); return; } catch (e) { } }
+    const nm = orgName(p) || '?';
+    d.setFillColor(orgHue(nm)); d.circle(x + s / 2, y + s / 2, s / 2, 'F');
+    font('helvetica', 'bold', s * 0.36, '#ffffff'); txt(pt(orgInitials(nm)), x + s / 2, y + s / 2 + 0.3, { align: 'center' });
+  };
+  const label = (s, x, y) => { font('helvetica', 'bold', 5.8, PC.muted); txt(s, x, y, { charSpace: 0.6 }); };
+  const box = (x, y, w, h, strip, tint, dashed) => {
+    d.setFillColor(tint); d.roundedRect(x, y, w, h, 5, 5, 'F');
+    if (strip) { d.setFillColor(strip); d.roundedRect(x, y, w, 9, 5, 5, 'F'); d.setFillColor(tint); d.rect(x, y + 4.5, w, 5.5, 'F'); }
+    d.setDrawColor(PC.line); d.setLineWidth(0.7); d.setLineDashPattern(dashed ? [3, 2] : [], 0); d.roundedRect(x, y, w, h, 5, 5, 'S'); d.setLineDashPattern([], 0);
+  };
+
+  // Knoten: Projektleitung (Karten nebeneinander) und Teams (Teamleitung, darunter Teammitglieder untereinander)
+  const plNode = () => {
+    font('helvetica', 'bold', 7.8, PC.ink);
+    const cards = pls.map(p => {
+      font('helvetica', 'bold', 7.8, PC.ink); const nl = wrap(personName(p), CARD - 10, 2);
+      font('helvetica', 'normal', 6.6, PC.muted); const rl = p.role ? wrap(p.role, CARD - 10, 2) : [];
+      return { p, nl, rl, h: 8 + 34 + 7 + nl.length * 9.4 + rl.length * 8.4 + 6 };
+    });
+    const ch = Math.max(24, ...cards.map(c => c.h)), w = Math.max(BW, cards.length * CARD + Math.max(0, cards.length - 1) * 8 + 2 * PAD);
+    return {
+      w, h: 9 + PAD + 12 + ch + PAD, kids: [],
+      draw(x, y) {
+        box(x, y, this.w, this.h, PC.ink, PC.white);
+        label('PROJEKTLEITUNG', x + this.w / 2 - d.getTextWidth('PROJEKTLEITUNG') / 2 - 4, y + 9 + PAD);
+        if (!cards.length) { font('helvetica', 'normal', 8, PC.muted); txt('–', x + this.w / 2, y + 9 + PAD + 12 + ch / 2, { align: 'center' }); return; }
+        let cx = x + (this.w - (cards.length * CARD + (cards.length - 1) * 8)) / 2; const cy = y + 9 + PAD + 12;
+        cards.forEach(c => {
+          d.setDrawColor(PC.line); d.setLineWidth(0.6); d.roundedRect(cx, cy, CARD, ch, 4, 4, 'S');
+          avatar(c.p, cx + (CARD - 34) / 2, cy + 8, 34);
+          let ty = cy + 8 + 34 + 7 + 3.5;
+          font('helvetica', 'bold', 7.8, PC.ink); c.nl.forEach(l => { txt(l, cx + CARD / 2, ty, { align: 'center' }); ty += 9.4; });
+          font('helvetica', 'normal', 6.6, PC.muted); c.rl.forEach(l => { txt(l, cx + CARD / 2, ty, { align: 'center' }); ty += 8.4; });
+          cx += CARD + 8;
+        });
+      }
+    };
+  };
+  const teamNode = (t, depth) => {
+    const tc = t.color || ORG_COLORS[0], iw = BW - 2 * PAD;
+    font('helvetica', 'normal', 6.6, PC.muted); const desc = t.role ? wrap(t.role, iw, 3) : [];
+    const leads = orgInTeam(t.id, true).map(p => rowInfo(p, t.id, true)), mem = orgInTeam(t.id, false).map(p => rowInfo(p, t.id, false));
+    const zone = rs => rs.length ? rs.reduce((s, r) => s + r.h, 0) : 12;
+    const h = 9 + 6 + 12 + desc.length * 8.4 + 6 + 10 + zone(leads) + 9 + 10 + zone(mem) + PAD;
+    return {
+      w: BW, h, kids: depth > 30 ? [] : orgSubTeams(t.id).map(s => teamNode(s, depth + 1)),
+      draw(x, y) {
+        box(x, y, BW, h, tc, mixHex(tc, '#ffffff', 0.93));
+        let yy = y + 9 + 6 + 5;
+        font('helvetica', 'bold', 9.6, mixHex(tc, '#000000', 0.25)); txt(fit(teamName(t), iw), x + PAD, yy); yy += 7;
+        font('helvetica', 'normal', 6.6, PC.muted); desc.forEach(l => { yy += 4.2; txt(l, x + PAD, yy); yy += 4.2; });
+        yy += 6; label('TEAMLEITUNG', x + PAD, yy + 3); yy += 10;
+        if (leads.length) leads.forEach(r => { drawRow(r, x + PAD, yy, iw); yy += r.h; }); else { font('helvetica', 'normal', 7.5, PC.muted); txt('–', x + PAD, yy + 6); yy += 12; }
+        yy += 4; d.setDrawColor(mixHex(tc, '#ffffff', 0.6)); d.setLineWidth(0.6); d.line(x + PAD, yy, x + BW - PAD, yy); yy += 5;
+        label('TEAMMITGLIEDER', x + PAD, yy + 3); yy += 10;
+        if (mem.length) mem.forEach(r => { drawRow(r, x + PAD, yy, iw); yy += r.h; }); else { font('helvetica', 'normal', 7.5, PC.muted); txt('–', x + PAD, yy + 6); }
+      }
+    };
+  };
+
+  // Baum anordnen: Teilbaumbreite, Ebenenhöhe je Tiefe, Eltern mittig über den Kindern
+  const root = plNode(); root.kids = orgSubTeams(null).map(t => teamNode(t, 0));
+  const levelH = [], sw = n => n.sw ?? (n.sw = Math.max(n.w, n.kids.reduce((s, k) => s + sw(k), 0) + GX * Math.max(0, n.kids.length - 1)));
+  const lv = (n, k) => { levelH[k] = Math.max(levelH[k] || 0, n.h); n.kids.forEach(c => lv(c, k + 1)); }; lv(root, 0);
+  const levelY = [0]; levelH.forEach((h, k) => { levelY[k + 1] = levelY[k] + h + GY; });
+  const place = (n, x0, k) => {
+    n.k = k; n.y = levelY[k];
+    const kw = n.kids.reduce((s, c) => s + sw(c), 0) + GX * Math.max(0, n.kids.length - 1);
+    let cx = x0 + (sw(n) - kw) / 2; n.kids.forEach(c => { place(c, cx, k + 1); cx += sw(c) + GX; });
+    const mid = n.kids.length ? (n.kids[0].x + n.kids[0].w / 2 + n.kids[n.kids.length - 1].x + n.kids[n.kids.length - 1].w / 2) / 2 : x0 + sw(n) / 2;
+    n.x = Math.min(Math.max(mid - n.w / 2, x0), x0 + sw(n) - n.w);
+  };
+  place(root, 0, 0);
+  const treeW = sw(root), treeH = levelY[levelH.length] - GY;
+  // „Noch ohne Team“ unter dem Baum, Personen in Spalten
+  const lr = loose.map(p => rowInfo(p, null, false)), lcols = Math.max(1, Math.min(lr.length, Math.floor((Math.max(treeW, 400) - 2 * PAD + 12) / (BW - 2 * PAD + 12))));
+  const lrows = Math.ceil(lr.length / lcols), lW = Math.max(220, lcols * (BW - 2 * PAD) + (lcols - 1) * 12 + 2 * PAD);
+  const lH = lr.length ? PAD + 12 + Math.max(...lr.map(r => r.h)) * lrows + PAD : 0;
+  const contentW = Math.max(treeW, lW), H = M + titleH + treeH + (lH ? GY + lH : 0) + M;
+  const Hp = Math.max(H, 595), Wp = Math.min(14000, Math.max(contentW + 2 * M, Hp * 1.3, 842));
+  if (doc) doc.addPage([Wp, Hp], 'landscape');
+  else doc = d = new JsPDF({ orientation: 'landscape', unit: 'pt', format: [Wp, Hp], compress: true }), doc.setProperties({ title: pt((state.name || 'Projekt') + ' – Organigramm'), subject: 'Organigramm', creator: 'Terminplaner' });
+  d = doc;
+
+  // Titel
+  font('helvetica', 'bold', 15, PC.ink); txt(pt((state.name || 'Projekt') + ' – Organigramm'), M, M + 10);
+  font('helvetica', 'normal', 8, PC.muted); txt(pt('Projektleitung, Teams und Unterteams   ·   Stand ' + fmtLong(today)), M, M + 27);
+  // Linien und Kästen
+  const ox = (Wp - contentW) / 2 + (contentW - treeW) / 2, oy = M + titleH;
+  const walk = n => {
+    const X = ox + n.x, Y = oy + n.y;
+    if (n.kids.length) {
+      const midY = oy + levelY[n.k + 1] - GY / 2, cxs = n.kids.map(c => ox + c.x + c.w / 2);
+      d.setDrawColor('#b8c4bd'); d.setLineWidth(1.1); d.setLineDashPattern([], 0);
+      d.line(X + n.w / 2, Y + n.h, X + n.w / 2, midY);
+      if (cxs.length > 1) d.line(Math.min(...cxs, X + n.w / 2), midY, Math.max(...cxs, X + n.w / 2), midY);
+      else d.line(X + n.w / 2, midY, cxs[0], midY);
+      cxs.forEach(cx => d.line(cx, midY, cx, oy + levelY[n.k + 1]));
+    }
+    n.draw(X, Y); n.kids.forEach(walk);
+  };
+  walk(root);
+  if (lH) {
+    const x = (Wp - lW) / 2, y = oy + treeH + GY, rh = Math.max(...lr.map(r => r.h));
+    box(x, y, lW, lH, null, PC.white, true); label('NOCH OHNE TEAM', x + PAD, y + PAD + 3);
+    lr.forEach((r, k) => drawRow(r, x + PAD + (k % lcols) * (BW - 2 * PAD + 12), y + PAD + 12 + Math.floor(k / lcols) * rh, BW - 2 * PAD));
+  }
+  return doc;
 }
 
 /* ---------- Auswahl vor dem Export ---------- */
 const PDF_COLS = [['nr', 'Nr'], ['psp', 'PSP'], ['type', 'Typ'], ['who', 'Verantwortlich'], ['pct', 'Fortschritt'], ['pred', 'Vorgänger und Beziehung'], ['lag', 'Versatz'], ['fixed', 'Fester Start'], ['dur', 'Dauer'], ['S', 'Start'], ['E', 'Ende']];
 function pdfOptions() {
   let u = {}; try { u = JSON.parse(localStorage.getItem(LS_UI) || '{}').pdf || {}; } catch (e) { }
-  return { cols: Array.isArray(u.cols) ? u.cols : null, view: !!u.view, done: u.done !== false, onlyRange: u.onlyRange !== false, lines: u.lines ?? !!state.lines, legend: u.legend !== false, from: '', to: '' };
+  return { plan: true, org: !!u.org, cols: Array.isArray(u.cols) ? u.cols : null, view: !!u.view, done: u.done !== false, onlyRange: u.onlyRange !== false, lines: u.lines ?? !!state.lines, legend: u.legend !== false, from: '', to: '' };
 }
 function openPdfDialog() {
-  if (!state.rows.length) { toast('Der Plan ist noch leer'); return; }
+  const hasOrg = typeof orgIsEmpty === 'function' && !orgIsEmpty();
+  if (!state.rows.length && !hasOrg) { toast('Der Plan ist noch leer'); return; }
   const op = pdfOptions(), today = todayDn();
+  // Vorauswahl: in der Team-Ansicht nur das Organigramm, sonst der Terminplan und das Organigramm, wenn zuletzt mitgedruckt
+  if (view === 'org' && hasOrg) { op.plan = false; op.org = true; } else op.plan = true;
+  if (!state.rows.length) op.plan = false;
+  if (!hasOrg) op.org = false;
+  if (!op.plan && !op.org) op.plan = true;
   const defCols = PDF_COLS.map(c => c[0]).filter(k => !['lag', 'fixed'].includes(k) || state.rows.some(r => k === 'lag' ? parseInt(r.lag, 10) : r.fixed));
   const on = k => (op.cols || defCols).includes(k);
   let minS = sched.P, maxE = sched.P; sched.out.forEach(x => { if (x.S < minS) minS = x.S; if (x.E > maxE) maxE = x.E; });
@@ -4052,7 +4233,11 @@ function openPdfDialog() {
   const ck = (id, t, c) => '<label class="chk"><input type="checkbox" id="' + id + '"' + (c ? ' checked' : '') + '> ' + t + '</label>';
   s.innerHTML = '<div class="panel pdfdlg" role="dialog" aria-modal="true" aria-labelledby="pdfT">' +
     '<div class="head"><h2 id="pdfT">PDF exportieren</h2><button class="btn" type="button" data-x>Abbrechen</button></div>' +
-    '<div><h3>Spalten der Tabelle</h3><div class="pcols">' + PDF_COLS.map(([k, t]) => '<label class="chk"><input type="checkbox" data-pc="' + k + '"' + (on(k) ? ' checked' : '') + '> ' + t + '</label>').join('') + '</div>' +
+    '<div><h3>Inhalt</h3><div class="pcols">' +
+    '<label class="chk"><input type="checkbox" id="pPlan"' + (op.plan ? ' checked' : '') + (state.rows.length ? '' : ' disabled') + '> Terminplan (Gantt)</label>' +
+    '<label class="chk"><input type="checkbox" id="pOrg"' + (op.org ? ' checked' : '') + (hasOrg ? '' : ' disabled') + '> Organigramm</label></div>' +
+    '<p class="hint">Jeder Inhalt kommt auf eine eigene Seite im Querformat.' + (hasOrg ? '' : ' Das Organigramm ist noch leer.') + '</p></div>' +
+    '<div id="pPlanOpts" class="pplan"><div><h3>Spalten der Tabelle</h3><div class="pcols">' + PDF_COLS.map(([k, t]) => '<label class="chk"><input type="checkbox" data-pc="' + k + '"' + (on(k) ? ' checked' : '') + '> ' + t + '</label>').join('') + '</div>' +
     '<p class="hint">„Vorgang“ und das Balkendiagramm sind immer enthalten.</p></div>' +
     '<div><h3>Zeitraum</h3><div class="prange"><label class="pf">Von<input class="in" type="date" id="pFrom"></label><label class="pf">Bis<input class="in" type="date" id="pTo"></label></div>' +
     '<div class="pquick"><button type="button" class="btn sm" data-q="all">Gesamtes Projekt</button><button type="button" class="btn sm" data-q="4w">Ab heute 4 Wochen</button><button type="button" class="btn sm" data-q="3m">Ab heute 3 Monate</button><button type="button" class="btn sm" data-q="mon">Dieser Monat</button><button type="button" class="btn sm" data-q="next">Nächster Monat</button></div>' +
@@ -4060,13 +4245,15 @@ function openPdfDialog() {
     '<div><h3>Vorgänge</h3><label class="chk"><input type="radio" name="pv" value="all"' + (op.view ? '' : ' checked') + '> Alle Vorgänge</label>' +
     '<label class="chk"><input type="radio" name="pv" value="view"' + (op.view ? ' checked' : '') + '> Wie in der Ansicht (aktive Filter, eingeklappte Untervorgänge)</label>' +
     ck('pDone', 'Erledigte Vorgänge einschließen', op.done) + '</div>' +
-    '<div><h3>Weitere Inhalte</h3>' + ck('pLines', 'Abhängigkeitslinien', op.lines) + ck('pLegend', 'Legende', op.legend) + '</div>' +
+    '<div><h3>Weitere Inhalte</h3>' + ck('pLines', 'Abhängigkeitslinien', op.lines) + ck('pLegend', 'Legende', op.legend) + '</div></div>' +
     '<div class="btns"><span class="msg" id="pMsg"></span><span class="spacer"></span><button class="btn primary" type="button" id="pGo">PDF erstellen</button></div></div>';
   document.body.appendChild(s);
   const q = x => s.querySelector(x), close = () => { s.remove(); document.removeEventListener('keydown', key); $('pdfBtn').focus(); };
   const key = e => { if (e.key === 'Escape') close(); };
   document.addEventListener('keydown', key);
   s.addEventListener('click', e => { if (e.target === s || e.target.closest('[data-x]')) close(); });
+  const sync = () => { q('#pPlanOpts').hidden = !q('#pPlan').checked; q('#pMsg').textContent = ''; q('#pMsg').classList.remove('bad'); };
+  q('#pPlan').addEventListener('change', sync); q('#pOrg').addEventListener('change', sync); sync();
   q('.pquick').addEventListener('click', e => {
     const b = e.target.closest('[data-q]'); if (!b) return; const t = ymd(today);
     let a = '', z = '';
@@ -4078,13 +4265,15 @@ function openPdfDialog() {
   });
   q('#pGo').addEventListener('click', async () => {
     const opt = {
+      plan: q('#pPlan').checked, org: q('#pOrg').checked,
       cols: [...s.querySelectorAll('[data-pc]')].filter(x => x.checked).map(x => x.dataset.pc),
       view: q('input[name="pv"]:checked').value === 'view', done: q('#pDone').checked, onlyRange: q('#pOnly').checked,
       lines: q('#pLines').checked, legend: q('#pLegend').checked, from: q('#pFrom').value, to: q('#pTo').value
     };
+    if (!opt.plan && !opt.org) { q('#pMsg').textContent = 'Bitte mindestens einen Inhalt auswählen.'; q('#pMsg').classList.add('bad'); return; }
     const f = parseISO(opt.from), t = parseISO(opt.to);
-    if (f != null && t != null && t < f) { q('#pMsg').textContent = 'Das Ende des Zeitraums liegt vor dem Anfang.'; q('#pMsg').classList.add('bad'); return; }
-    saveUi({ pdf: { cols: opt.cols, view: opt.view, done: opt.done, onlyRange: opt.onlyRange, lines: opt.lines, legend: opt.legend } });
+    if (opt.plan && f != null && t != null && t < f) { q('#pMsg').textContent = 'Das Ende des Zeitraums liegt vor dem Anfang.'; q('#pMsg').classList.add('bad'); return; }
+    saveUi({ pdf: { org: view === 'org' ? pdfOptions().org : opt.org, cols: opt.cols, view: opt.view, done: opt.done, onlyRange: opt.onlyRange, lines: opt.lines, legend: opt.legend } });
     close(); await exportPdf(opt);
   });
   q('#pGo').focus();
