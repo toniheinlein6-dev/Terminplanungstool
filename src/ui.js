@@ -566,7 +566,7 @@ async function persist() {
   if (saving) { pending = true; return; }
   saving = true; setStatus('saving', 'Speichert …');
   const prev = base.get(id);
-  try { const at = new Date().toISOString(); base.set(id, json); srv.set(id, { by: uid, savedAt: at }); await dbc.doc(id).set({ json, savedAt: at, by: uid }); setStatus('saved', 'Gespeichert'); showLast(); }
+  try { const at = new Date().toISOString(); base.set(id, norm(json)); srv.set(id, { by: uid, savedAt: at }); await dbc.doc(id).set({ json, savedAt: at, by: uid }); setStatus('saved', 'Gespeichert'); showLast(); }
   catch (err) {
     base.set(id, prev);
     if (err && err.code === 'conflict' && err.doc) { setStatus('saving', 'Gleicht ab …'); try { onRemote({ type: 'modified', doc: { id, data: () => err.doc } }); } catch (x) { } }
@@ -725,7 +725,8 @@ function onRemote(ch) {
   const d = ch.doc.data(); if (!d || typeof d.json !== 'string') return;
   srv.set(id, { by: d.by, savedAt: d.savedAt, byName: d.byName }); const nj = norm(d.json);
   if (id !== curId) { proj.set(id, { name: nameOf(d.json), json: d.json }); base.set(id, nj); localPut(id, d.json); refreshSelect(); return; }
-  const mine = JSON.stringify(state);
+  // Vergleich immer in normalisierter Form, sonst gilt der eigene Stand nach dem Speichern als fremde Änderung
+  const mine = norm(JSON.stringify(state));
   if (nj === mine) { base.set(id, nj); showLast(); return; }
   if (nj === base.get(id)) return;
   let theirs; try { theirs = sanitize(JSON.parse(d.json)); } catch (x) { return; }
@@ -735,7 +736,7 @@ function onRemote(ch) {
   let next = theirs;
   if (dirty) { let b = null; try { b = b0 !== undefined ? sanitize(JSON.parse(b0)) : Object.assign({}, theirs, { rows: [] }); } catch (x) { } next = b ? mergePlans(b, state, theirs) : state; }
   base.set(id, nj); proj.set(id, { name: nameOf(d.json), json: d.json });
-  if (JSON.stringify(next) !== mine) applyRemote(next);
+  if (norm(JSON.stringify(next)) !== mine) applyRemote(next);
   if (dirty) { lastJson = JSON.stringify(state); scheduleSave(); }
   showLast(true);
 }
