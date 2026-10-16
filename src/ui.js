@@ -35,6 +35,13 @@ function demoPlan() {
     tasks: [
       { id: 1, title: 'Bestandspläne beim Bauamt anfragen', desc: '', who: 'Person A', due: '2026-10-16', prio: 'hoch', done: false, row: 2, by: '', created: '2026-10-12' },
       { id: 2, title: 'Termin für Konzeptbesprechung finden', desc: '', who: 'Person B, Person C', due: '', prio: 'normal', done: false, row: 3, by: '', created: '2026-10-12' }
+    ],
+    org: [
+      { id: 1, kind: 'person', name: 'Person A', role: 'Projektleitung', uid: '', photo: '', parent: '', color: '' },
+      { id: 2, kind: 'team', name: 'Planung', role: 'Entwurf und Tragwerk', uid: '', photo: '', parent: 1, color: '#2f6fb2' },
+      { id: 3, kind: 'team', name: 'Ausführung', role: 'Arbeitsvorbereitung und Montage', uid: '', photo: '', parent: 1, color: '#b0612a' },
+      { id: 4, kind: 'person', name: 'Person B', role: 'Tragwerksplanung', uid: '', photo: '', parent: 2, color: '' },
+      { id: 5, kind: 'person', name: 'Person C', role: 'Arbeitsvorbereitung', uid: '', photo: '', parent: 3, color: '' }
     ]
   };
 }
@@ -51,7 +58,7 @@ function cleanLanes(L) {
 }
 function blankPlan(keep) {
   return { v: 1, name: keep ? keep.name : '', start: keep ? keep.start : toISO(mondayOf(todayDn())), raster: keep ? keep.raster : 'weeks', mode: keep ? keep.mode : 'work',
-    lines: true, people: keep ? keep.people : [], holidays: keep ? keep.holidays : [], lanes: keep && keep.lanes ? JSON.parse(JSON.stringify(keep.lanes)) : defaultLanes(), nextId: 1, rows: [], nextTaskId: 1, tasks: [] };
+    lines: true, people: keep ? keep.people : [], holidays: keep ? keep.holidays : [], lanes: keep && keep.lanes ? JSON.parse(JSON.stringify(keep.lanes)) : defaultLanes(), nextId: 1, rows: [], nextTaskId: 1, tasks: [], org: keep && Array.isArray(keep.org) ? JSON.parse(JSON.stringify(keep.org)) : [] };
 }
 function sanitize(p) {
   if (!p || typeof p !== 'object' || !Array.isArray(p.rows)) return null;
@@ -84,6 +91,16 @@ function sanitize(p) {
       ...(Array.isArray(t.assignees) ? { assignees: sanitizeAssignees(t.assignees) } : {}) });
   });
   s.nextTaskId = Math.max(tmax + 1, Number.isInteger(Number(p.nextTaskId)) ? Number(p.nextTaskId) : 1);
+  // Organigramm
+  const okPhoto = v => typeof v === 'string' && v.length <= 90000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(v) ? v : '';
+  let omax = 0; const oseen = new Set();
+  (Array.isArray(p.org) ? p.org : []).slice(0, 300).forEach(n => {
+    if (!n || typeof n !== 'object') return;
+    let id = Number(n.id); if (!Number.isInteger(id) || id < 1 || oseen.has(id)) id = omax + 1; oseen.add(id); omax = Math.max(omax, id);
+    const par = Number(n.parent);
+    s.org.push({ id, kind: n.kind === 'team' ? 'team' : 'person', name: String(n.name || '').slice(0, 80), role: String(n.role || '').slice(0, 80),
+      uid: /^[1-9]\d{0,9}$/.test(String(n.uid || '')) ? String(n.uid) : '', photo: okPhoto(n.photo), parent: n.parent !== '' && n.parent != null && Number.isInteger(par) && par > 0 && par !== id ? par : '', color: okColor(n.color) });
+  });
   if (p.example) s.example = true;
   return s;
 }
@@ -661,19 +678,23 @@ function mergePlans(b, m, t) {
   else { (t.rows || []).forEach(r => put(r.id)); mIds.forEach((id, i) => { if (!order.includes(id) && res.has(id)) { const prev = mIds.slice(0, i).reverse().find(x => order.includes(x)); order.splice(prev ? order.indexOf(prev) + 1 : 0, 0, id); } }); }
   out.rows = order.map(id => res.get(id));
   out.nextId = Math.max(m.nextId || 0, t.nextId || 0, ...out.rows.map(r => +r.id || 0), 0) + (out.rows.length ? 0 : 0);
-  // Aufgaben: gleiche Dreiwege-Logik je Aufgabe, Reihenfolge der Kollegen, eigene neue hinten
-  const BT = rowsById(b.tasks), MT = rowsById(m.tasks), TT = rowsById(t.tasks), tasks = [];
-  const tids = (t.tasks || []).map(x => x.id).concat((m.tasks || []).map(x => x.id).filter(id => !TT.has(id)));
-  tids.forEach(id => {
-    const inB = BT.has(id), inM = MT.has(id), inT = TT.has(id); let v;
-    if (inM && inT) v = !inB ? MT.get(id) : same(MT.get(id), BT.get(id)) ? TT.get(id) : same(TT.get(id), BT.get(id)) ? MT.get(id) : mergeRow(BT.get(id), MT.get(id), TT.get(id));
-    else if (inM) { if (!inB || !same(MT.get(id), BT.get(id))) v = MT.get(id); }
-    else if (inT) { if (!inB || !same(TT.get(id), BT.get(id))) v = TT.get(id); }
-    if (v) tasks.push(v);
-  });
-  out.tasks = tasks;
+  // Aufgaben und Organigramm: gleiche Dreiwege-Logik je Eintrag, Reihenfolge der Kollegen, eigene neue hinten
+  const tasks = mergeList(b.tasks, m.tasks, t.tasks);
+  out.tasks = tasks; out.org = mergeList(b.org, m.org, t.org);
   out.nextTaskId = Math.max(m.nextTaskId || 1, t.nextTaskId || 1, ...tasks.map(x => x.id + 1));
   return out;
+}
+function mergeList(bl, ml, tl) {
+  const B = rowsById(bl), M = rowsById(ml), T = rowsById(tl), res = [];
+  const ids = (tl || []).map(x => x.id).concat((ml || []).map(x => x.id).filter(id => !T.has(id)));
+  ids.forEach(id => {
+    const inB = B.has(id), inM = M.has(id), inT = T.has(id); let v;
+    if (inM && inT) v = !inB ? M.get(id) : same(M.get(id), B.get(id)) ? T.get(id) : same(T.get(id), B.get(id)) ? M.get(id) : mergeRow(B.get(id), M.get(id), T.get(id));
+    else if (inM) { if (!inB || !same(M.get(id), B.get(id))) v = M.get(id); }
+    else if (inT) { if (!inB || !same(T.get(id), B.get(id))) v = T.get(id); }
+    if (v) res.push(v);
+  });
+  return res;
 }
 function mergeRow(b, m, t) {
   const o = { ...t };
@@ -835,7 +856,7 @@ function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Ma
 function boot() {
   applyTheme(); applyDisplay();
   initViews();
-  initCols(); initBarDrag();
+  initCols(); initBarDrag(); if (typeof initOrg === 'function') initOrg();
   initDrag();
   initTasks();
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (typeof u.zoom2 === 'number') zoom = Math.max(0, Math.min(ZMAX, u.zoom2)); if (u.leftw) document.documentElement.style.setProperty('--leftw', u.leftw + 'px'); } catch (e) { }

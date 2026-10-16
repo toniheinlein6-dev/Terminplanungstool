@@ -115,23 +115,24 @@ function resetViewFilters() {
 }
 
 function setView(v) {
-  if (!['gantt', 'list', 'kanban', 'cal', 'tasks'].includes(v) || (v === 'tasks' && !$('vTasks'))) v = 'gantt';
+  if (!['gantt', 'list', 'kanban', 'cal', 'tasks', 'org'].includes(v) || (v === 'tasks' && !$('vTasks')) || (v === 'org' && !$('vOrg'))) v = 'gantt';
   view = v; saveUi({ view: v });
   $('segView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
   $('board').hidden = v !== 'gantt'; $('tabs').hidden = v !== 'gantt';
   document.querySelector('.foot').dataset.v = v;   // Legende nur im Gantt, Umschalter immer
   $('vList').hidden = v !== 'list'; $('vKanban').hidden = v !== 'kanban'; $('vCal').hidden = v !== 'cal';
   if ($('vTasks')) $('vTasks').hidden = v !== 'tasks';
+  if ($('vOrg')) $('vOrg').hidden = v !== 'org';
   // Aufgaben haben eigene Filter
-  if ($('toggleFilters')) $('toggleFilters').hidden = v === 'tasks';
-  if (v === 'tasks' && $('vfilters')) $('vfilters').hidden = true;
+  if ($('toggleFilters')) $('toggleFilters').hidden = v === 'tasks' || v === 'org';
+  if ((v === 'tasks' || v === 'org') && $('vfilters')) $('vfilters').hidden = true;
   if (v === 'gantt' && sched) renderFilteredViews();
   else renderView();
 }
 function renderView() {
   if (!sched || typeof view === 'undefined') return;
   updateFilterUi();
-  if (view === 'list') renderList(); else if (view === 'kanban') renderKanban(); else if (view === 'cal') renderCal(); else if (view === 'tasks' && typeof renderTasks === 'function') renderTasks();
+  if (view === 'list') renderList(); else if (view === 'kanban') renderKanban(); else if (view === 'cal') renderCal(); else if (view === 'tasks' && typeof renderTasks === 'function') renderTasks(); else if (view === 'org' && typeof renderOrg === 'function') renderOrg();
   if (typeof tasksAfterRender === 'function') tasksAfterRender();
   paintChangeChip();
 }

@@ -12,6 +12,7 @@ Gantt-Terminplaner für die gemeinsame Projektplanung im Team.
 - Darstellung umschaltbar: automatisch, Desktop oder Mobil (je Gerät gespeichert)
 - Termine im Detailfenster über Start + Ende, Start + Dauer oder Ende + Dauer eingeben; neue Vorgänge öffnen gleich die Detailmaske
 - Balken im Gantt-Diagramm ziehen: verschieben (Start), rechtes Ende (Dauer), linkes Ende (Start bei gleichem Ende); Nachfolger passen sich an
+- Organigramm (Ansicht „Team“): Personen mit Bild, Name und Rolle sowie Unterteams als Baum, per Ziehen umzuordnen; offene Vorgänge und Aufgaben je Person
 - Eigene Farben je Vorgang (Detailfenster), sichtbar in Gantt, Liste, Kanban, Kalender und PDF
 - Spalten je Person ein- und ausblenden und in der Breite anpassen; Untervorgänge je Sammelvorgang ein- und ausklappen
 - PDF-Export mit Auswahl der Spalten, des Zeitraums und der Vorgänge

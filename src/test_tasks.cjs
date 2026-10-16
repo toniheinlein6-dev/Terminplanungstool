@@ -45,3 +45,16 @@ test('Abgleich: Zuständige werden als Ganzes übernommen', () => {
   const out = run('mergePlans(' + [b, m, t].map(x => JSON.stringify(x)).join(',') + ')');
   assert.equal(out.tasks[0].title, 'A erweitert'); assert.equal(out.tasks[0].who, 'Alice, Bob'); assert.equal(out.tasks[0].assignees.length, 2);
 });
+
+test('Organigramm: Bereinigung und Abgleich', () => {
+  const run = app();
+  const node = (id, name, extra) => ({ id, kind: 'person', name, role: '', uid: '', photo: '', parent: '', color: '', ...extra });
+  const s = run('sanitize(' + JSON.stringify({ rows: [], org: [node(1, 'A', { kind: 'team', color: 'rot' }), node(2, 'B', { parent: 1, photo: 'javascript:x' }), node(3, 'C', { parent: 3 })] }) + ')');
+  assert.equal(s.org[0].kind, 'team'); assert.equal(s.org[0].color, ''); assert.equal(s.org[1].photo, ''); assert.equal(s.org[1].parent, 1); assert.equal(s.org[2].parent, '');
+  const b = { rows: [], org: [node(1, 'Leitung'), node(2, 'B', { parent: 1 })] };
+  const m = { rows: [], org: [node(1, 'Leitung'), node(2, 'B', { parent: 1, role: 'Statik' }), node(300001, 'Neu von mir', { parent: 1 })] };
+  const t = { rows: [], org: [node(1, 'Projektleitung'), node(2, 'B', { parent: 1 })] };
+  const out = run('mergePlans(' + [b, m, t].map(x => JSON.stringify(x)).join(',') + ')');
+  assert.deepEqual(out.org.map(n => n.id), [1, 2, 300001]);
+  assert.equal(out.org[0].name, 'Projektleitung'); assert.equal(out.org[1].role, 'Statik');
+});

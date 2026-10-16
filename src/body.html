@@ -36,7 +36,7 @@
 
 <div class="viewbar">
   <div class="seg" id="segView" role="group" aria-label="Ansicht">
-    <button type="button" data-v="gantt" aria-pressed="true">Gantt</button><button type="button" data-v="list" aria-pressed="false">Liste</button><button type="button" data-v="kanban" aria-pressed="false">Kanban</button><button type="button" data-v="cal" aria-pressed="false">Kalender</button><button type="button" data-v="tasks" aria-pressed="false">Aufgaben</button>
+    <button type="button" data-v="gantt" aria-pressed="true">Gantt</button><button type="button" data-v="list" aria-pressed="false">Liste</button><button type="button" data-v="kanban" aria-pressed="false">Kanban</button><button type="button" data-v="cal" aria-pressed="false">Kalender</button><button type="button" data-v="tasks" aria-pressed="false">Aufgaben</button><button type="button" data-v="org" aria-pressed="false">Team</button>
   </div>
   <button class="btn filter-toggle" id="toggleFilters" type="button" aria-controls="vfilters" aria-expanded="false"><span id="filterArrow" aria-hidden="true">▸</span>Filter<span class="filter-count" id="filterCount" hidden></span></button>
   <div class="tabs seg" id="tabs" role="tablist">
@@ -76,6 +76,7 @@
 <section class="vw" id="vKanban" aria-label="Kanban-Board" hidden></section>
 <section class="vw" id="vCal" aria-label="Kalender" hidden></section>
 <section class="vw" id="vTasks" aria-label="Aufgaben" hidden></section>
+<section class="vw" id="vOrg" aria-label="Organigramm" hidden></section>
 
 <footer class="foot">
   <span class="lg"><i style="background:var(--bar-sum)"></i>Sammelvorgang</span>

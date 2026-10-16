@@ -635,4 +635,48 @@ body.colresize, body.colresize * { cursor: col-resize !important; user-select: n
 .bars g.mv { touch-action: none; }
 body.bardrag, body.bardrag * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
 .bartip { position: fixed; z-index: 40; pointer-events: none; background: var(--ink); color: var(--surface); font: 500 12px/1.3 var(--font-num); padding: 4px 8px; border-radius: 6px; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+
+/* Organigramm */
+#vOrg { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.orgbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.orgbar .hint { font-size: 12px; color: var(--muted); }
+.orgwrap { overflow: auto; padding: 8px 4px 16px; flex: 1 1 auto; }
+.org, .org ul { display: flex; justify-content: center; margin: 0; padding: 0; position: relative; }
+.org { width: max-content; min-width: 100%; }
+.org ul { padding-top: 22px; }
+.org li { list-style: none; position: relative; padding: 22px 8px 0; display: flex; flex-direction: column; align-items: center; }
+.org li::before, .org li::after { content: ""; position: absolute; top: 0; right: 50%; width: 50%; height: 22px; border-top: 2px solid var(--line); }
+.org li::after { right: auto; left: 50%; border-left: 2px solid var(--line); }
+.org li:only-child::before, .org li:only-child::after { display: none; }
+.org li:only-child { padding-top: 0; }
+.org li:first-child::before, .org li:last-child::after { border: 0 none; }
+.org li:last-child::before { border-right: 2px solid var(--line); border-radius: 0 8px 0 0; }
+.org li:first-child::after { border-radius: 8px 0 0 0; }
+.org ul ul::before, .org li > ul::before { content: ""; position: absolute; top: 0; left: 50%; height: 22px; border-left: 2px solid var(--line); }
+.org > li { padding-top: 0; }
+.org > li::before, .org > li::after { display: none; }
+.onode { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 10px; width: 168px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; cursor: pointer; }
+.onode:hover, .onode:focus-within { border-color: var(--accent); }
+.onode.team { border-top: 5px solid var(--tc); padding-top: 9px; background: color-mix(in srgb, var(--tc) 7%, var(--surface)); }
+.onode .oth { display: flex; align-items: center; gap: 6px; justify-content: center; }
+.onode .otn { font-weight: 700; color: var(--tc); filter: brightness(.85); }
+.oav { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: none; }
+.oav.ini { display: grid; place-items: center; color: #fff; font-weight: 600; font-size: 19px; letter-spacing: .02em; }
+.oav.sm { width: 24px; height: 24px; font-size: 10px; }
+.oav.lg { width: 84px; height: 84px; font-size: 28px; }
+.oname { font-weight: 600; margin-top: 4px; overflow-wrap: anywhere; }
+.orole { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.ometa { font-size: 11.5px; color: var(--muted); }
+.oload { all: unset; font-size: 11.5px; color: var(--accent); cursor: pointer; margin-top: 2px; }
+.oload:hover, .oload:focus-visible { text-decoration: underline; }
+.oacts { position: absolute; top: 4px; right: 4px; display: flex; gap: 0; opacity: 0; transition: opacity .12s; background: var(--surface); border-radius: 6px; }
+.onode:hover .oacts, .onode:focus-within .oacts { opacity: 1; }
+@media (hover: none) { .oacts { opacity: 1; position: static; margin-top: 4px; } }
+.onode.drag { opacity: .4; }
+.onode.over, .orgroot.over { outline: 2px dashed var(--accent); outline-offset: 3px; }
+.orgroot { display: none; margin: 18px auto 0; max-width: 320px; text-align: center; font-size: 12px; color: var(--muted); border: 1.5px dashed var(--line); border-radius: 8px; padding: 10px; }
+.odragging .orgroot { display: block; }
+.orgdlg .orow { display: flex; align-items: center; gap: 14px; }
+.orgdlg #oKind { align-self: flex-start; }
+html.m .onode { width: 140px; }
 </style>
