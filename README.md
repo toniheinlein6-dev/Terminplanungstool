@@ -17,6 +17,7 @@ Gantt-Terminplaner für die gemeinsame Projektplanung im Team.
 - Organigramm (Ansicht „Team“): Projektleitung nebeneinander, darunter Teams und Unterteams mit Teamleitung und untereinander gelisteten Teammitgliedern; Personen mit Bild, Name und Rolle, auch in mehreren Teams (Hauptteam, Rolle je Team); per Ziehen zuordnen (zusätzlich zuordnen mit Strg/Alt oder dem Schalter „Zusätzlich zuordnen“)
 - Eigene Farben je Vorgang (Detailfenster), sichtbar in Gantt, Liste, Kanban, Kalender und PDF
 - Spalten je Person ein- und ausblenden und in der Breite anpassen; Untervorgänge je Sammelvorgang ein- und ausklappen
+- Mehrere Vorgänger je Vorgang, jeweils mit Beziehung (EA, AA, EE, AE) und Versatz; bearbeitbar im Detailfenster, der späteste Vorgänger bestimmt den Start; Vorgänger, die einen Zirkelbezug erzeugen würden, sind nicht wählbar
 - PDF-Export zum Drucken: Terminplan (Gantt) und/oder Organigramm, je eine Seite im Querformat; beim Terminplan Auswahl der Spalten, des Zeitraums und der Vorgänge; das Organigramm mit Fotos, Projektleitung, Teams, Unterteams und „Noch ohne Team“
 - Vorgänge, Untervorgänge und Meilensteine per Ziehen und Ablegen verschieben (Tastatur: Griff fokussieren, Pfeil hoch/runter); Löschen im Detailfenster
 - Änderungsprotokoll: jede Änderung mit Person und Zeit, als Eintrag im Verlauf des Vorgangs; von anderen geänderte Vorgänge werden markiert, bis man sie öffnet; Administratoren sehen das gesamte Protokoll und wer zuletzt bearbeitet hat

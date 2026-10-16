@@ -174,7 +174,7 @@ function renderList() {
     const r = state.rows[i], o = sched.out[i], s = stInfo(i), late = isLate(i);
     const sub = r.type === 'untervorgang' && sched.parent[i] >= 0;
     const pi = o.pred >= 0 ? o.pred : -1;
-    const pred = pi >= 0 ? state.rows[pi].id + ' ' + r.rel + (parseInt(r.lag, 10) ? (parseInt(r.lag, 10) > 0 ? '+' : '') + parseInt(r.lag, 10) : '') : '';
+    const pred = o.preds && o.preds.length > 1 ? rowLinks(r).map(l => linkText(l)).join(', ') : pi >= 0 ? state.rows[pi].id + ' ' + r.rel + (parseInt(r.lag, 10) ? (parseInt(r.lag, 10) > 0 ? '+' : '') + parseInt(r.lag, 10) : '') : '';
     h += '<tr class="' + (o.summary ? 'sum' : '') + (isDone(i) ? ' done' : '') + '">' +
       '<td class="n">' + r.id + '</td><td class="n">' + sched.psp[i] + '</td>' +
       '<td class="nm' + (tree && sub ? ' ind' : '') + '"><button type="button" class="go" data-det="' + i + '" title="Details, Beschreibung und Kommentare">' + (r.type === 'meilenstein' ? '<i class="msd"' + (r.color ? ' style="background:' + r.color + '"' : '') + '></i>' : r.color ? '<i class="cdot" style="background:' + r.color + '"></i>' : '') + esc(r.name || 'ohne Namen') + '</button>' + marks(r) + '</td>' +
@@ -508,6 +508,10 @@ function openDetails(i) {
         (r.type === 'meilenstein' ? '' : '<label class="pf"><span>Ende <em class="calc-l" data-l="E">berechnet</em></span><input class="in" type="date" id="dE"' + (ro ? ' disabled' : '') + '></label>' +
           '<label class="pf"><span>Dauer (' + (state.mode === 'work' ? 'Arbeitstage' : 'Tage') + ') <em class="calc-l" data-l="D">berechnet</em></span><input class="in" type="number" min="1" step="1" id="dDur"' + (ro ? ' disabled' : '') + '></label>') +
         '</div><p class="hint bad" id="dDateErr" role="alert" hidden></p><p class="hint" id="dDateHint"></p>') +
+    // Vorgänger mit Beziehung und Versatz, beliebig viele
+    (o.summary ? '' : '<div class="pf dlinkbox"><span>Vorgänger und Beziehung</span><div class="dlinks" id="dLinks"></div>' +
+      (ro ? '' : '<div><button type="button" class="btn sm" id="dLinkAdd">+ Vorgänger</button></div>') +
+      '<p class="hint">EA Ende → Anfang · AA Anfang → Anfang · EE Ende → Ende · AE Anfang → Ende. Versatz in ' + (state.mode === 'work' ? 'Arbeitstagen' : 'Tagen') + ', negativ für Überlappung. Bei mehreren Vorgängern bestimmt der späteste den Start.</p></div>') +
     '<div class="pf"><span>Farbe im Diagramm</span><div class="swatches" id="dColor" role="group" aria-label="Farbe">' +
       '<button type="button" class="sw def" data-col="" title="Standard (nach Typ)" aria-label="Standardfarbe"' + (ro ? ' disabled' : '') + '></button>' +
       ROW_COLORS.map(([c, n]) => '<button type="button" class="sw" data-col="' + c + '" style="background:' + c + '" title="' + n + '" aria-label="' + n + '"' + (ro ? ' disabled' : '') + '></button>').join('') + '</div></div>' +
@@ -541,6 +545,7 @@ function openDetails(i) {
       (ci ? ' · zuletzt geändert von ' + (ci.byName || 'jemandem') + ', ' + whenTxt(ci.at) : '');
     if (q('#dProgSum')) q('#dProgSum').innerHTML = progBar(progOf(k));
     if (q('#dTasks')) paintDetTasks(q('#dTasks'), id);
+    paintLinks();
     paintDates();
     paintPeople();
   }
@@ -557,6 +562,48 @@ function openDetails(i) {
     else if (pi < 0) h.push('Ohne Vorgänger und festen Start beginnt die Zeile am Projektstart.');
     if (sched.work && fx != null && !sched.isWork(fx)) h.push('Der gewählte Tag ist kein Arbeitstag, Start ist der nächste Arbeitstag.');
     q('#dDateHint').innerHTML = esc(h.join(' ')) + (fx != null && !ro ? ' <button type="button" class="linkb" id="dFixClr">Festen Start entfernen</button>' : '');
+  }
+  // Vorgängerliste; eine neu hinzugefügte, noch leere Zeile bleibt bis zur Auswahl nur in der Anzeige
+  let linkPending = false;
+  const REL_LABEL = { EA: 'EA · Ende → Anfang', AA: 'AA · Anfang → Anfang', EE: 'EE · Ende → Ende', AE: 'AE · Anfang → Ende' };
+  function paintLinks(force) {
+    const box = q('#dLinks'), k = cur(); if (!box || k == null) return;
+    if (!force && box.contains(document.activeElement)) return;
+    const rr = state.rows[k], links = rowLinks(rr), oo = sched.out[k];
+    const taken = new Set(links.map(l => l.pred)), dep = dependentsOf(state.rows, sched, k);
+    const opts = cur => '<option value="">Vorgang wählen …</option>' + state.rows.map((x, j) => ((dep.has(j) && x.id !== cur) || (taken.has(x.id) && x.id !== cur)) ? '' :
+      '<option value="' + x.id + '"' + (x.id === cur ? ' selected' : '') + '>' + x.id + ' · ' + esc(sched.psp[j]) + ' ' + esc(x.name || 'ohne Namen') + '</option>').join('');
+    const line = (l, j) => '<div class="dlink" data-j="' + j + '">' +
+      '<select class="in" data-lk="pred" aria-label="Vorgänger"' + (ro ? ' disabled' : '') + '>' + opts(l ? l.pred : null) + '</select>' +
+      '<select class="in" data-lk="rel" aria-label="Beziehung"' + (ro ? ' disabled' : '') + '>' + RELS.map(x => '<option value="' + x + '"' + ((l ? l.rel : 'EA') === x ? ' selected' : '') + '>' + REL_LABEL[x] + '</option>').join('') + '</select>' +
+      '<label class="dlag"><input class="in" type="number" step="1" data-lk="lag" aria-label="Versatz in Tagen" placeholder="0" value="' + esc(l ? l.lag : '') + '"' + (ro ? ' disabled' : '') + '><span>T</span></label>' +
+      (ro ? '' : '<button type="button" class="ib" data-lrm="' + j + '" title="Vorgänger entfernen" aria-label="Vorgänger entfernen">×</button>') + '</div>';
+    box.innerHTML = (links.length || linkPending ? links.map(line).join('') + (linkPending ? line(null, links.length) : '') : '<p class="hint">Kein Vorgänger. Die Zeile beginnt am Projektstart oder am festen Start.</p>') +
+      (oo.err ? '<p class="hint bad">Zirkelbezug: ein Vorgänger hängt selbst von dieser Zeile ab.</p>' : '') +
+      (links.length > 1 && oo.pred >= 0 ? '<p class="hint">Maßgeblich ist zurzeit ' + state.rows[oo.pred].id + ' „' + esc(state.rows[oo.pred].name || 'ohne Namen') + '“.</p>' : '');
+    if (q('#dLinkAdd')) q('#dLinkAdd').disabled = ro || linkPending;
+  }
+  if (q('#dLinks') && !ro) {
+    const editLink = (j, fn) => save(x => { const L = rowLinks(x); if (j < L.length) fn(L, j); setRowLinks(x, L); });
+    q('#dLinks').addEventListener('change', e => {
+      const f = e.target.dataset.lk, row = e.target.closest('.dlink'); if (!f || !row) return;
+      const k = cur(); if (k == null) return; const j = +row.dataset.j, L = rowLinks(state.rows[k]);
+      if (j >= L.length) {   // neue Zeile: erst mit gewähltem Vorgang speichern
+        if (f !== 'pred' || e.target.value === '') return;
+        const rel = row.querySelector('[data-lk="rel"]').value, lag = row.querySelector('[data-lk="lag"]').value;
+        linkPending = false; save(x => setRowLinks(x, rowLinks(x).concat({ pred: Number(e.target.value), rel, lag })));
+      } else if (f === 'pred') editLink(j, (L2, jj) => { if (e.target.value === '') L2.splice(jj, 1); else L2[jj].pred = Number(e.target.value); });
+      else if (f === 'rel') editLink(j, (L2, jj) => { L2[jj].rel = e.target.value; });
+      else editLink(j, (L2, jj) => { L2[jj].lag = e.target.value === '' ? '' : String(parseInt(e.target.value, 10) || 0); });
+      paintLinks(true); paintDates(true);
+    });
+    q('#dLinks').addEventListener('click', e => {
+      const b = e.target.closest('[data-lrm]'); if (!b) return;
+      const k = cur(); if (k == null) return; const j = +b.dataset.lrm;
+      if (j >= rowLinks(state.rows[k]).length) linkPending = false; else editLink(j, (L2, jj) => L2.splice(jj, 1));
+      paintLinks(true); paintDates(true);
+    });
+    q('#dLinkAdd').addEventListener('click', () => { linkPending = true; paintLinks(true); const all = s.querySelectorAll('#dLinks .dlink [data-lk="pred"]'), sl = all[all.length - 1]; if (sl) sl.focus(); });
   }
   function paintPeople() {
     const k = cur(); if (k == null) return; const ents = assigneeEntries(state.rows[k]);

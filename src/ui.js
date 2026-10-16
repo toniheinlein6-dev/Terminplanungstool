@@ -78,6 +78,8 @@ function sanitize(p) {
       dur: r.dur === '' || r.dur == null ? '' : String(Math.max(0, parseInt(r.dur, 10) || 0)), st: typeof r.st === 'string' && /^[A-Za-z0-9_-]{0,40}$/.test(r.st) ? r.st : '',
       pct: Math.max(0, Math.min(100, Math.round((parseInt(r.pct, 10) || 0) / 10) * 10)), desc: String(r.desc || '').slice(0, 4000), color: okColor(r.color),
       ...(Array.isArray(r.assignees) ? { assignees: sanitizeAssignees(r.assignees) } : {}) });
+    // Weitere Vorgänger (höchstens 20); nur vorhanden, wenn es mehr als einen gibt
+    if (Array.isArray(r.deps) && r.deps.length) setRowLinks(s.rows[s.rows.length - 1], rowLinks(r).slice(0, 20));
   });
   s.nextId = max + 1;
   let tmax = 0; const tseen = new Set();
@@ -145,7 +147,7 @@ function rowHTML(r, i) {
     '<div class="nm"><button class="ib fold" data-a="fold" type="button" hidden aria-label="Untervorgänge ein- oder ausklappen">' + icon('fold') + '</button><input data-f="name" type="text" value="' + esc(r.name) + '" aria-label="Bezeichnung" autocomplete="off"><button class="ib det" data-a="det" type="button" title="Details, Beschreibung und Kommentare" aria-label="Details öffnen">' + icon('det') + '<span class="cnt" data-c="cnt"></span></button></div>' +
     '<div class="who-cell">' + assigneeCell(r, i) + '</div>' +
     '<div><select data-f="pct" aria-label="Fortschritt in Prozent">' + PCTS.map(p => '<option value="' + p + '"' + (p === (r.pct || 0) ? ' selected' : '') + '>' + p + ' %</option>').join('') + '</select></div>' +
-    '<div><select data-f="pred" aria-label="Vorgänger"></select></div>' +
+    '<div class="predc"><select data-f="pred" aria-label="Vorgänger"></select><button type="button" class="predm" data-a="preds" hidden></button></div>' +
     '<div><select data-f="rel" aria-label="Beziehung">' + RELS.map(k => opt(k, k, r.rel)).join('') + '</select></div>' +
     '<div><input data-f="lag" type="number" step="1" value="' + esc(r.lag) + '" aria-label="Versatz in Tagen"></div>' +
     '<div><input data-f="fixed" type="date" value="' + esc(r.fixed) + '" aria-label="Fester Start"></div>' +
@@ -153,9 +155,9 @@ function rowHTML(r, i) {
     '<div class="calc" data-c="start"></div><div class="calc" data-c="end"></div></div>';
 }
 function predOptions(i) {
-  const cur = state.rows[i].pred;
+  const cur = state.rows[i].pred, dep = sched ? dependentsOf(state.rows, sched, i) : new Set([i]);
   let h = '<option value="">–</option>';
-  state.rows.forEach((r, k) => { if (k !== i) h += '<option value="' + r.id + '"' + (String(cur) === String(r.id) ? ' selected' : '') + '>' + r.id + ' · ' + esc(r.name || 'ohne Namen') + '</option>'; });
+  state.rows.forEach((r, k) => { if (!dep.has(k) || String(cur) === String(r.id)) h += '<option value="' + r.id + '"' + (String(cur) === String(r.id) ? ' selected' : '') + '>' + r.id + ' · ' + esc(r.name || 'ohne Namen') + '</option>'; });
   return h;
 }
 // Eine gerade bearbeitete Zeile bleibt bis zum Verlassen der Tabelle sichtbar,
@@ -213,6 +215,18 @@ function updateComputed() {
     const fb = el.querySelector('[data-a="fold"]');
     if (fb) { fb.hidden = !o.summary; if (o.summary) { const f = isFolded(r.id); fb.classList.toggle('closed', f); fb.setAttribute('aria-expanded', String(!f)); fb.title = (f ? 'Ausklappen: ' : 'Einklappen: ') + sched.kids[i].length + ' Untervorgänge'; } }
     ['pred', 'rel', 'lag', 'fixed', 'dur'].forEach(f => { const c = el.querySelector('[data-f="' + f + '"]'); c.disabled = readOnly || o.summary || (f === 'dur' && r.type === 'meilenstein'); });
+    // Vorgänger: Werte aus dem Detailfenster übernehmen; bei mehreren Vorgängern Kurzform, bearbeitet wird im Detailfenster
+    const links = rowLinks(r), multi = links.length > 1, pSel = el.querySelector('[data-f="pred"]'), pBtn = el.querySelector('.predm');
+    const rSel = el.querySelector('[data-f="rel"]'), lIn = el.querySelector('[data-f="lag"]');
+    if (pSel !== act && pSel.value !== String(r.pred ?? '')) { if (!pSel.querySelector('option[value="' + r.pred + '"]')) pSel.innerHTML = predOptions(i); pSel.value = String(r.pred ?? ''); }
+    if (rSel !== act && rSel.value !== (r.rel || 'EA')) rSel.value = r.rel || 'EA';
+    if (lIn !== act && lIn.value !== String(r.lag ?? '')) lIn.value = r.lag ?? '';
+    pSel.hidden = multi; pBtn.hidden = !multi;
+    if (multi) {
+      pBtn.textContent = links.map(l => l.pred).join(', ');
+      pBtn.title = 'Mehrere Vorgänger: ' + links.map(l => linkText(l)).join(', ') + '. Bearbeiten im Detailfenster.';
+      rSel.disabled = lIn.disabled = true; rSel.title = lIn.title = 'Mehrere Vorgänger: im Detailfenster bearbeiten';
+    } else rSel.title = lIn.title = '';
     el.querySelector('[data-a="sub"]').style.visibility = r.type === 'meilenstein' ? 'hidden' : '';
     const ps = el.querySelector('[data-f="pct"]');
     if (o.summary) { ps.innerHTML = '<option>' + progOf(i) + ' %</option>'; ps.disabled = true; }
@@ -300,9 +314,8 @@ function renderChart(indices = ganttRowIndices()) {
   const ax = (i, end) => isMs(i) ? msX(i) + (end ? 8 : -8) : (end ? X(sched.out[i].E + 1) : X(sched.out[i].S));
   if (state.lines) {
     let ls = '';
-    sched.out.forEach((o, i) => {
-      if (o.pred < 0 || o.err || !positions.has(i) || !positions.has(o.pred)) return;
-      const r = state.rows[i], rel = r.rel, p = o.pred;
+    sched.out.forEach((o, i) => (o.preds || []).forEach(({ i: p, rel }) => {
+      if (o.err || !positions.has(i) || !positions.has(p)) return;
       const x1 = ax(p, !(rel === 'AA' || rel === 'AE')), y1 = cy(p);
       const e = (rel === 'EE' || rel === 'AE') ? -1 : 1, x2 = ax(i, e === -1), y2 = cy(i);
       const g = 10, d1 = (rel === 'AA' || rel === 'AE') ? -1 : 1, vx = x1 + d1 * g, apx = x2 - e * g, dir = y2 >= y1 ? 1 : -1;
@@ -311,7 +324,7 @@ function renderChart(indices = ganttRowIndices()) {
       const on = (i === sel || p === sel) ? ' on' : '';
       ls += '<path class="link' + on + '" d="M' + pts.map(q => q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' L') + '"/>' +
         '<polygon class="arrow' + on + '" points="' + x2.toFixed(1) + ',' + y2 + ' ' + (x2 - e * 6).toFixed(1) + ',' + (y2 - 3.6) + ' ' + (x2 - e * 6).toFixed(1) + ',' + (y2 + 3.6) + '"/>';
-    });
+    }));
     s += ls;
   }
   s += '<g class="bars">';
@@ -523,7 +536,7 @@ function deleteRow(i) {
   const r = state.rows[i]; let promoted = 0;
   if (r.type === 'vorgang') { let k = i + 1; while (k < state.rows.length && state.rows[k].type === 'untervorgang') { state.rows[k].type = 'vorgang'; promoted++; k++; } }
   state.rows.splice(i, 1);
-  state.rows.forEach(x => { if (Number(x.pred) === r.id) x.pred = ''; });
+  state.rows.forEach(x => { const L = rowLinks(x); if (L.some(l => l.pred === r.id)) setRowLinks(x, L.filter(l => l.pred !== r.id)); });
   sel = -1; structural();
   toast('Zeile gelöscht' + (promoted ? ', ihre Untervorgänge sind jetzt Vorgänge' : ''), 'Rückgängig', undo);
 }
@@ -532,7 +545,7 @@ function onClick(e) {
   const i = rowIdx(b), a = b.dataset.a;
   if (a === 'fold') { toggleFold(i); return; }
   if (a === 'sub') addRow('untervorgang', state.rows[i].type === 'vorgang' ? groupEnd(i) + 1 : i + 1);
-  else if (a === 'det') openDetails(i);
+  else if (a === 'det' || a === 'preds') openDetails(i);
 }
 
 /* ---------- Meldungen ---------- */
@@ -822,7 +835,7 @@ function csvText() {
   const lines = [head.map(q).join(';')];
   state.rows.forEach((r, i) => {
     const o = sched.out[i];
-    lines.push([r.id, sched.psp[i], TYPES[r.type], r.name, assigneeNames(r), r.pred, o.summary ? '' : r.rel, o.summary ? '' : r.lag, r.fixed ? fmtLong(parseISO(r.fixed)) : '',
+    lines.push([r.id, sched.psp[i], TYPES[r.type], r.name, assigneeNames(r), rowLinks(r).map(l => l.pred).join(', '), o.summary ? '' : rowLinks(r).map(l => l.rel).join(', ') || r.rel, o.summary ? '' : rowLinks(r).length > 1 ? rowLinks(r).map(l => parseInt(l.lag, 10) || 0).join(', ') : r.lag, r.fixed ? fmtLong(parseISO(r.fixed)) : '',
       o.summary ? o.E - o.S + 1 : (r.type === 'meilenstein' ? '' : o.dur), fmtLong(o.S), fmtLong(o.E), stInfo(i).name].map(q).join(';'));
   });
   return '﻿' + lines.join('\r\n');

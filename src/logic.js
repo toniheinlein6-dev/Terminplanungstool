@@ -26,6 +26,32 @@ function parseHolidayLine(line) {
   return { d: toISO(n), n: name.trim() };
 }
 
+// Alle Vorgänger einer Zeile: der erste steht in pred/rel/lag, weitere in deps [{ pred, rel, lag }]
+function rowLinks(r) {
+  const out = [], seen = new Set(), add = (p, rel, lag) => {
+    if (p === '' || p == null || !Number.isFinite(Number(p)) || seen.has(Number(p))) return;
+    seen.add(Number(p)); out.push({ pred: Number(p), rel: ['EA', 'AA', 'EE', 'AE'].includes(rel) ? rel : 'EA', lag: lag === '' || lag == null ? '' : String(parseInt(lag, 10) || 0) });
+  };
+  if (r) { add(r.pred, r.rel, r.lag); (Array.isArray(r.deps) ? r.deps : []).forEach(d => d && add(d.pred, d.rel, d.lag)); }
+  return out;
+}
+// Schreibt eine Vorgängerliste zurück: erster nach pred/rel/lag, weitere nach deps (deps entfällt, wenn leer)
+function setRowLinks(r, links) {
+  const L = rowLinks({ deps: links });
+  if (L.length) { r.pred = L[0].pred; r.rel = L[0].rel; r.lag = L[0].lag; } else { r.pred = ''; r.rel = r.rel || 'EA'; r.lag = ''; }
+  if (L.length > 1) r.deps = L.slice(1); else delete r.deps;
+}
+// Zeilen, die (auch über Sammelvorgänge) von Zeile k abhängen: als Vorgänger von k nicht wählbar, sonst Zirkelbezug
+function dependentsOf(rows, sc, k) {
+  const by = new Map(rows.map((r, j) => [Number(r.id), j])), next = rows.map(() => []);
+  rows.forEach((r, j) => rowLinks(r).forEach(l => { const p = by.get(l.pred); if (p !== undefined) next[p].push(j); }));
+  if (sc && sc.parent && sc.parent.length === rows.length) sc.parent.forEach((p, j) => { if (p >= 0) next[j].push(p); });
+  const seen = new Set([k]), st = [k];
+  while (st.length) { const x = st.pop(); for (const y of next[x]) if (!seen.has(y)) { seen.add(y); st.push(y); } }
+  return seen;
+}
+const linkText = l => l.pred + (l.rel && l.rel !== 'EA' ? l.rel : '') + (parseInt(l.lag, 10) ? (parseInt(l.lag, 10) > 0 ? '+' : '') + parseInt(l.lag, 10) : '');
+
 function schedule(st) {
   const rows = st.rows, N = rows.length;
   const P = parseISO(st.start) ?? todayDn();
@@ -53,34 +79,37 @@ function schedule(st) {
       let S = Infinity, E = -Infinity;
       for (const k of kids[i]) { const c = calc(k); if (c) { S = Math.min(S, c.S); E = Math.max(E, c.E); } }
       let err = null; if (S === Infinity) { S = P; E = P; err = 'Zirkelbezug'; }
-      res = { S, E, summary: true, err, pred: -1, dur: E - S + 1 };
+      res = { S, E, summary: true, err, pred: -1, preds: [], dur: E - S + 1 };
     } else {
       const d = r.type === 'meilenstein' ? 1 : Math.max(parseInt(r.dur, 10) || 1, 1);
-      let S = P, err = null, pidx = -1;
+      let S = P, err = null, pidx = -1, best = -Infinity;
       const fx = parseISO(r.fixed); if (fx != null) S = Math.max(S, fx);
-      const pi = (r.pred !== '' && r.pred != null) ? idIdx.get(Number(r.pred)) : undefined;
-      if (pi !== undefined && pi !== i) {
+      const preds = [];
+      // Mehrere Vorgänger: der späteste bestimmt den Start (pred = maßgeblicher Vorgänger)
+      for (const l of rowLinks(r)) {
+        const pi = idIdx.get(l.pred);
+        if (pi === undefined || pi === i) continue;
         const pr = calc(pi);
-        if (!pr) err = 'Zirkelbezug';
-        else {
-          const lag = parseInt(r.lag, 10) || 0; let c;
-          switch (r.rel) {
-            case 'AA': c = sh(pr.S, lag); break;
-            case 'EE': c = sh(sh(pr.E, lag), 1 - d); break;
-            case 'AE': c = sh(sh(pr.S, lag), 1 - d); break;
-            default: c = sh(pr.E, 1 + lag);
-          }
-          S = Math.max(S, c); pidx = pi;
+        if (!pr) { err = 'Zirkelbezug'; continue; }
+        const lag = parseInt(l.lag, 10) || 0; let c;
+        switch (l.rel) {
+          case 'AA': c = sh(pr.S, lag); break;
+          case 'EE': c = sh(sh(pr.E, lag), 1 - d); break;
+          case 'AE': c = sh(sh(pr.S, lag), 1 - d); break;
+          default: c = sh(pr.E, 1 + lag);
         }
+        preds.push({ i: pi, rel: l.rel });
+        if (c > best) { best = c; pidx = pi; }
+        S = Math.max(S, c);
       }
       if (work) S = nextWork(S);
       const E = r.type === 'meilenstein' ? S : sh(S, d - 1);
-      res = { S, E, summary: false, err, pred: pidx, dur: d };
+      res = { S, E, summary: false, err, pred: pidx, preds, dur: d };
     }
     seen[i] = 2; out[i] = res; return res;
   }
   for (let i = 0; i < N; i++) calc(i);
-  for (let i = 0; i < N; i++) if (!out[i]) out[i] = { S: P, E: P, summary: false, err: 'Zirkelbezug', pred: -1, dur: 1 };
+  for (let i = 0; i < N; i++) if (!out[i]) out[i] = { S: P, E: P, summary: false, err: 'Zirkelbezug', pred: -1, preds: [], dur: 1 };
   let top = 0, sub = 0; const psp = [];
   rows.forEach((r, i) => {
     if (r.type === 'untervorgang' && parent[i] >= 0) { sub++; psp.push(top + '.' + sub); }

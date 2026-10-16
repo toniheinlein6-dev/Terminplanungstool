@@ -192,9 +192,9 @@ function buildGanttDoc(JsPDF, opt) {
         case 'type': v = x2.summary ? 'Sammelvorg.' : TYPES[r.type]; colr = PC.muted; break;
         case 'name': v = r.name || ''; bold = x2.summary; break;
         case 'who': v = r.who; break;
-        case 'pred': v = pi >= 0 ? rows[pi].id + ' · ' + (rows[pi].name || 'ohne Namen') : ''; break;
-        case 'rel': v = pi >= 0 ? r.rel : ''; break;
-        case 'lag': v = x2.summary ? '' : r.lag; break;
+        case 'pred': v = x2.preds.length > 1 ? rowLinks(r).map(l => linkText(l)).join(', ') : pi >= 0 ? rows[pi].id + ' · ' + (rows[pi].name || 'ohne Namen') : ''; break;
+        case 'rel': v = x2.preds.length > 1 ? '' : pi >= 0 ? r.rel : ''; break;
+        case 'lag': v = x2.summary || x2.preds.length > 1 ? '' : r.lag; break;
         case 'fixed': v = r.fixed ? fmt(parseISO(r.fixed)) : ''; break;
         case 'dur': v = r.type === 'meilenstein' ? '' : x2.summary ? (x2.E - x2.S + 1) : x2.dur; break;
         case 'pct': v = r.type === 'meilenstein' ? '' : progOf(i) + ' %'; bold = x2.summary; break;
@@ -221,9 +221,8 @@ function buildGanttDoc(JsPDF, opt) {
   const msX = i => X(o[i].S + 0.5);
   const ax = (i, end) => isMs(i) ? msX(i) + (end ? 5 : -5) : (end ? X(o[i].E + 1) : X(o[i].S));
   if (opt.lines) {
-    o.forEach((x2, i) => {
-      if (x2.pred < 0 || x2.err || !pos.has(i) || !pos.has(x2.pred)) return;
-      const rel = rows[i].rel, p = x2.pred;
+    o.forEach((x2, i) => (x2.preds || []).forEach(({ i: p, rel }) => {
+      if (x2.err || !pos.has(i) || !pos.has(p)) return;
       const x1 = ax(p, !(rel === 'AA' || rel === 'AE')), y1 = cy(p);
       const e = (rel === 'EE' || rel === 'AE') ? -1 : 1, xe = ax(i, e === -1), y2 = cy(i);
       const g = 5, d1 = (rel === 'AA' || rel === 'AE') ? -1 : 1, vx = x1 + d1 * g, apx = xe - e * g, dir = y2 >= y1 ? 1 : -1;
@@ -232,7 +231,7 @@ function buildGanttDoc(JsPDF, opt) {
       doc.setDrawColor(PC.link); doc.setLineWidth(0.6); doc.setLineDashPattern([], 0);
       for (let k = 1; k < pts.length; k++) doc.line(pts[k - 1][0], pts[k - 1][1], pts[k][0], pts[k][1]);
       doc.setFillColor(PC.link); doc.triangle(xe, y2, xe - e * 4, y2 - 2.4, xe - e * 4, y2 + 2.4, 'F');
-    });
+    }));
   }
   // Balken
   idx.forEach(i => {

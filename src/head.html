@@ -136,6 +136,9 @@ h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; whit
 }
 .row input:hover, .row select:hover { border-color: var(--line); }
 .row input:focus, .row select:focus { background: var(--surface); border-color: var(--accent); outline: none; }
+.row .predm { width: 100%; height: 28px; padding: 4px 5px; border: 1px dashed var(--line); border-radius: 4px; background: transparent; color: var(--ink); font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.row .predm:hover { border-color: var(--accent); border-style: solid; }
+.row .predm[hidden], .row select[hidden] { display: none; }
 .row input:disabled, .row select:disabled { opacity: 0.35; cursor: default; background: transparent; border-color: transparent; }
 .who-picker-btn { display: flex; align-items: center; gap: 3px; width: 100%; min-width: 0; height: 28px; padding: 2px 4px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--ink); cursor: pointer; }
 .who-picker-btn:hover, .who-picker-btn[aria-expanded="true"] { border-color: var(--line); background: var(--surface); }
@@ -614,6 +617,15 @@ body.colresize, body.colresize * { cursor: col-resize !important; user-select: n
 /* PDF-Auswahl */
 .panel.pdfdlg { width: min(620px, 100%); }
 .pdfdlg h3 { margin: 0 0 6px; }
+/* Vorgänger im Detailfenster */
+.dlinks { display: flex; flex-direction: column; gap: 6px; }
+.dlink { display: grid; grid-template-columns: minmax(0, 1fr) 200px 70px 26px; gap: 6px; align-items: center; }
+.dlink .dlag { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; }
+.dlink .dlag input { width: 100%; min-width: 0; }
+.dlinks .hint { margin: 0; }
+html.m .dlinks { gap: 12px; }
+html.m .dlink { grid-template-columns: minmax(0, 1fr) 74px 28px; }
+html.m .dlink [data-lk="pred"] { grid-column: 1 / -1; }
 .pdfdlg .pplan { display: flex; flex-direction: column; gap: 16px; }
 .pdfdlg .pplan[hidden] { display: none; }
 .pcols { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 2px 12px; }
