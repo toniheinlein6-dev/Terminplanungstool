@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.env.SESSION_SECRET ||= 'nur-fuer-die-lokale-entwicklung-0123456789abcdef';
 process.env.SETUP_KEY ||= 'lokal1234';
+process.env.PWNED_CHECK ||= 'off';   // lokal ohne Abfrage bei haveibeenpwned
 if (!process.env.RESEND_API_KEY && !process.env.SMTP_HOST) process.env.MAIL_TRANSPORT ||= 'log';   // E-Mails nur in die Konsole schreiben
 if (!process.env.DATABASE_URL) {
   const { newDb } = await import('pg-mem');
@@ -16,10 +17,14 @@ if (!process.env.DATABASE_URL) {
 const handler = (await import('../lib/handler.js')).default;
 const { sentMails } = await import('../lib/mail.js');
 const { runReminders } = await import('../lib/reminders.js');
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+// dieselben Sicherheits-Kopfzeilen wie auf Vercel (vercel.json), damit lokale Tests realistisch sind
+const vcfg = JSON.parse(fs.readFileSync(path.join(root, 'vercel.json'), 'utf8'));
+const globalHeaders = (vcfg.headers.find(h => h.source === '/(.*)') || { headers: [] }).headers.filter(h => h.key !== 'Strict-Transport-Security');
+const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.css': 'text/css; charset=utf-8' };
 const port = Number(process.env.PORT || 3000);
 http.createServer(async (req, res) => {
   const u = new URL(req.url, 'http://localhost');
+  for (const h of globalHeaders) res.setHeader(h.key, h.value.replace('; upgrade-insecure-requests', ''));
   if (u.pathname === '/api/tp') return handler(req, res);
   // nur lokal: verschickte Test-Mails ansehen und Erinnerungen für ein Datum auslösen
   if (u.pathname === '/__outbox') { res.setHeader('Content-Type', 'application/json; charset=utf-8'); return res.end(JSON.stringify(sentMails())); }

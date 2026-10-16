@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Datenschutz – Terminplaner</title>
+<style>
+:root{--bg:#f1f4f2;--panel:#fff;--ink:#1c2a25;--muted:#5f6f68;--line:#d5ddd9;--accent:#2f5d50;--warn:#8a5a00;--warnbg:#fff4dc}
+@media (prefers-color-scheme:dark){:root{--bg:#141a18;--panel:#1d2522;--ink:#e6ece9;--muted:#9aa9a2;--line:#33403b;--accent:#6fb59f;--warn:#f1c46b;--warnbg:#2e2614;color-scheme:dark}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:28px 0 6px}
+p,li{max-width:68ch}ul{padding-left:20px}a{color:var(--accent)}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 20px 20px}
+.todo{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:10px 14px;font-size:14px;margin:16px 0}
+mark{background:var(--warnbg);color:var(--warn);padding:0 3px;border-radius:3px}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.small{color:var(--muted);font-size:13px}
+</style></head><body><main>
+<p><a href="index.html">← Zum Terminplaner</a></p>
+<div class="box">
+<h1>Datenschutzhinweise zum Terminplaner</h1>
+<p class="small">Stand: <mark>[Datum einsetzen]</mark></p>
+<div class="todo"><b>Vorlage:</b> Diese Seite ist ein Entwurf, der die tatsächliche technische Verarbeitung des Terminplaners beschreibt. Die gelb markierten Stellen müsst ihr ergänzen, und der Text sollte vor dem Echtbetrieb geprüft werden (z. B. vom Datenschutzbeauftragten der Hochschule). Danach diesen Hinweis entfernen.</div>
+
+<h2>1. Verantwortlich</h2>
+<p><mark>[Name(n) bzw. Projektteam, Anschrift, E-Mail-Adresse für Datenschutzanfragen]</mark></p>
+<p>Datenschutzbeauftragte(r), falls vorhanden: <mark>[Kontakt]</mark></p>
+
+<h2>2. Zweck</h2>
+<p>Der Terminplaner dient der gemeinsamen Termin- und Aufgabenplanung des Projektteams <mark>[Projekt / Studienarbeit]</mark>: Terminplan (Gantt), Aufgaben, Organigramm, Kommentare sowie Erinnerungen per E-Mail.</p>
+
+<h2>3. Welche Daten verarbeitet werden</h2>
+<table>
+<tr><th>Daten</th><th>Wozu</th><th>Rechtsgrundlage</th></tr>
+<tr><td>Name, Rolle, Passwort (nur als scrypt-Hash, nie im Klartext)</td><td>Benutzerkonto, Anmeldung, Rechte</td><td>Art. 6 Abs. 1 lit. b bzw. f DSGVO <mark>[prüfen]</mark></td></tr>
+<tr><td>E-Mail-Adresse (freiwillig)</td><td>Erinnerungen, Wochenübersicht, Erwähnungen, Passwort vergessen</td><td>Art. 6 Abs. 1 lit. b/f DSGVO; Erinnerungen im Profil abschaltbar</td></tr>
+<tr><td>Profilbild und Fotos im Organigramm (freiwillig)</td><td>Anzeige im Team</td><td>Einwilligung, Art. 6 Abs. 1 lit. a DSGVO; jederzeit entfernbar</td></tr>
+<tr><td>Projektinhalte: Vorgänge, Aufgaben, Zuständigkeiten, Kommentare, Beschreibungen</td><td>Projektplanung</td><td>Art. 6 Abs. 1 lit. b/f DSGVO</td></tr>
+<tr><td>Änderungsprotokoll (wer hat wann was geändert)</td><td>Nachvollziehbarkeit im Team</td><td>Art. 6 Abs. 1 lit. f DSGVO</td></tr>
+<tr><td>Sicherheitsprotokoll (z. B. fehlgeschlagene Anmeldungen), IP-Adresse nur als nicht umkehrbares Kürzel</td><td>Schutz vor Angriffen</td><td>Art. 6 Abs. 1 lit. f DSGVO</td></tr>
+<tr><td>Online-Anzeige (wer gerade im Planer ist)</td><td>Zusammenarbeit</td><td>Art. 6 Abs. 1 lit. f DSGVO</td></tr>
+</table>
+
+<h2>4. Cookies und lokale Speicherung</h2>
+<p>Der Terminplaner setzt genau ein Cookie: das Anmelde-Cookie (Sitzungskennung, HttpOnly, nur über HTTPS). Es ist für die Anmeldung technisch erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG) und läuft nach 3 Tagen ohne Nutzung, spätestens nach 14 Tagen ab. Im Browser werden außerdem Anzeige-Einstellungen gespeichert (Ansicht, Spalten, Farbschema). Als installierte App speichert der Browser die Programmdateien zwischen, aber keine Projektdaten. Es gibt kein Tracking, keine Analyse und keine Werbung; Schriften und Programmteile werden nicht von fremden Servern geladen.</p>
+
+<h2>5. Empfänger und Dienstleister</h2>
+<ul>
+<li><b>Vercel Inc.</b> (Hosting, Serverfunktionen in Frankfurt am Main), Auftragsverarbeitung nach Art. 28 DSGVO.</li>
+<li><b>Neon Inc.</b> (Datenbank, Region Frankfurt am Main), Auftragsverarbeitung nach Art. 28 DSGVO.</li>
+<li><mark>[Resend Inc. oder SMTP-Server von …]</mark> (E-Mail-Versand), Auftragsverarbeitung nach Art. 28 DSGVO.</li>
+<li><mark>[Nur falls eingerichtet: Microsoft (Teams-Kanal für Erwähnungen)]</mark></li>
+</ul>
+<p>Vercel, Neon und Resend sind US-Unternehmen. Eine Übermittlung in die USA kann deshalb nicht ausgeschlossen werden; sie stützt sich auf den Angemessenheitsbeschluss zum EU-US Data Privacy Framework bzw. auf Standardvertragsklauseln. <mark>[Zertifizierung der Anbieter prüfen]</mark></p>
+
+<h2>6. Speicherdauer</h2>
+<ul>
+<li>Benutzerkonto: bis zur Löschung durch eine Administratorin oder einen Administrator. Dabei werden Sitzungen und Zuordnungen gelöscht und Verweise in Kommentaren, Tickets und im Änderungsprotokoll anonymisiert; auf Wunsch wird der Name auch in den Plänen ersetzt.</li>
+<li>Sitzungen: bis zur Abmeldung, höchstens 14 Tage.</li>
+<li>Änderungsprotokoll: 12 Monate. Sicherheitsprotokoll: 90 Tage. Ratenbegrenzung: 2 Tage.</li>
+<li>Versionen eines Projekts: die letzten 40 Speicherstände.</li>
+<li>Links zum Zurücksetzen des Passworts: 30 Minuten.</li>
+<li>Projekte: bis zur Löschung des Projekts <mark>[ggf. Frist nach Projektende festlegen]</mark>.</li>
+</ul>
+
+<h2>7. Deine Rechte</h2>
+<p>Du hast das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO) sowie das Recht, eine Einwilligung jederzeit zu widerrufen. Eine Kopie deiner Daten kannst du jederzeit selbst unter „Mein Profil“ → „Meine Daten herunterladen“ abrufen. Du kannst dich bei einer Datenschutzaufsichtsbehörde beschweren, zum Beispiel beim Landesbeauftragten für den Datenschutz und die Informationsfreiheit Baden-Württemberg <mark>[zuständige Behörde prüfen]</mark>.</p>
+
+<h2>8. Sicherheit</h2>
+<p>Verbindungen sind verschlüsselt (HTTPS, TLS zur Datenbank und zum Mailserver). Passwörter werden mit scrypt gehasht; Anmeldungen und andere sensible Aktionen sind gegen Durchprobieren begrenzt; Änderungen sind gegen Cross-Site-Request-Forgery geschützt; Hochgeladene Bilder werden geprüft und von Metadaten (z. B. GPS) befreit.</p>
+<p>Es findet keine automatisierte Entscheidungsfindung oder Profilbildung statt.</p>
+</div>
+</main></body></html>

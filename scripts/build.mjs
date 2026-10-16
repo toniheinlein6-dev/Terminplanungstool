@@ -18,19 +18,27 @@ const webHead = head
     '<meta name="theme-color" content="#26664b">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n' +
     '<meta name="apple-mobile-web-app-title" content="Terminplaner">\n<meta name="apple-mobile-web-app-status-bar-style" content="default">\n' +
     '<style>[hidden]{display:none!important}body{margin:0}img{max-width:100%}</style>');
+// Keine Inline-Skripte: die Content-Security-Policy erlaubt nur Skripte aus eigenen Dateien (script-src 'self')
 fs.writeFileSync(path.join(root, 'public', 'index.html'),
   '<!doctype html>\n<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' + webHead +
-  '\n</head><body>\n' + body + '\n<script>window.JSPDF_SRC = "vendor/jspdf.umd.min.js";</script>\n<script src="app-api.js"></script>\n<script>\n' + app + '</script>\n</body></html>\n');
+  '\n</head><body>\n' + body + '\n<script src="app-api.js"></script>\n<script src="app.js"></script>\n</body></html>\n');
+fs.writeFileSync(path.join(root, 'public', 'app.js'), 'window.JSPDF_SRC = "vendor/jspdf.umd.min.js";\n' + app);
 fs.copyFileSync(path.join(root, 'src', 'server-api.js'), path.join(root, 'public', 'app-api.js'));
-fs.copyFileSync(path.join(root, 'src', 'admin.html'), path.join(root, 'public', 'admin.html'));
-fs.copyFileSync(path.join(root, 'src', 'setup.html'), path.join(root, 'public', 'setup.html'));
+// Verwaltung und Einrichtung: Skript in eigene Datei auslagern
+for (const page of ['admin', 'setup']) {
+  const html = rd(page + '.html'), m = /<script>([\s\S]*?)<\/script>/.exec(html);
+  if (!m || /<script>/.test(html.slice(m.index + m[0].length))) throw new Error(page + '.html: genau ein Inline-Skript erwartet');
+  fs.writeFileSync(path.join(root, 'public', page + '.js'), m[1].trim() + '\n');
+  fs.writeFileSync(path.join(root, 'public', page + '.html'), html.replace(m[0], '<script src="' + page + '.js"></script>'));
+}
+fs.copyFileSync(path.join(root, 'src', 'datenschutz.html'), path.join(root, 'public', 'datenschutz.html'));
 // App (PWA): Manifest, Symbole, Service Worker (Version = Prüfsumme der Seite, damit Updates ankommen)
 fs.mkdirSync(path.join(root, 'public', 'icons'), { recursive: true });
 for (const f of fs.readdirSync(path.join(root, 'src', 'icons'))) fs.copyFileSync(path.join(root, 'src', 'icons', f), path.join(root, 'public', 'icons', f));
 fs.copyFileSync(path.join(root, 'src', 'manifest.webmanifest'), path.join(root, 'public', 'manifest.webmanifest'));
 {
   const { createHash } = await import('node:crypto');
-  const h = createHash('sha256').update(fs.readFileSync(path.join(root, 'public', 'index.html'))).update(fs.readFileSync(path.join(root, 'src', 'server-api.js'))).digest('hex').slice(0, 10);
+  const h = createHash('sha256').update(fs.readFileSync(path.join(root, 'public', 'index.html'))).update(fs.readFileSync(path.join(root, 'public', 'app.js'))).update(fs.readFileSync(path.join(root, 'src', 'server-api.js'))).digest('hex').slice(0, 10);
   fs.writeFileSync(path.join(root, 'public', 'sw.js'), rd('sw.js').replace('__VERSION__', h));
 }
 fs.copyFileSync(path.join(root, 'node_modules', 'jspdf', 'dist', 'jspdf.umd.min.js'), path.join(root, 'public', 'vendor', 'jspdf.umd.min.js'));

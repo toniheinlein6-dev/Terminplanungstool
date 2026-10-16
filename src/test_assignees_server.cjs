@@ -4,7 +4,8 @@ const { newDb } = require('pg-mem');
 (async () => {
   const { resolveAssignees, normalizeProjectAssignees } = await import('../lib/assignees.js');
   const { setPool, ensureSchema, q } = await import('../lib/db.js');
-  const { makeToken } = await import('../lib/auth.js');
+  const { csrfToken } = await import('../lib/auth.js');
+  const { sha256 } = await import('../lib/security.js');
   const { default: handler } = await import('../lib/handler.js');
   const { dueReminders } = await import('../lib/reminders.js');
   const logic = require('../lib/logic.cjs');
@@ -58,9 +59,12 @@ const { newDb } = require('pg-mem');
     await addUser('alex', null, false);
     const solo = await addUser('Solo', 'solo@example.test');
     const other = await addUser('MAX NEU', 'other@example.test');
+    // Sitzung direkt anlegen (wie nach der Anmeldung): Cookie mit zufälliger ID, CSRF-Token dazu
+    const sidRaw = 'test-session-' + 'x'.repeat(40);
+    await q('INSERT INTO tp_sessions (id, user_id, created_at, last_seen) VALUES ($1,$2,$3,$3)', [sha256(sidRaw), admin.id, Math.floor(Date.now() / 1000)]);
     const request = async (action, body, params = '') => {
-      const response = { statusCode: 200, setHeader() {}, end(value) { this.body = JSON.parse(value); } };
-      await handler({ url: '/api/tp?a=' + action + params, method: body === undefined ? 'GET' : 'POST', headers: { host: 'localhost', 'x-tp': '1', cookie: 'tp_session=' + makeToken(admin.id, 0) }, body }, response);
+      const response = { statusCode: 200, setHeader() {}, getHeader() {}, end(value) { this.body = JSON.parse(value); } };
+      await handler({ url: '/api/tp?a=' + action + params, method: body === undefined ? 'GET' : 'POST', headers: { host: 'localhost', 'x-tp': '1', 'x-csrf': csrfToken(sha256(sidRaw)), cookie: 'tp_sid=' + sidRaw }, body }, response);
       return response;
     };
     const today = logic.parseISO('2026-10-19');

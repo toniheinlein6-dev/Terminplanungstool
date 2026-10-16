@@ -20,6 +20,8 @@ Gantt-Terminplaner für die gemeinsame Projektplanung im Team.
 - Mehrere Vorgänger je Vorgang, jeweils mit Beziehung (EA, AA, EE, AE) und Versatz; bearbeitbar im Detailfenster, der späteste Vorgänger bestimmt den Start; Vorgänger, die einen Zirkelbezug erzeugen würden, sind nicht wählbar
 - Feiertage automatisch: Bundesland wählen, alle gesetzlichen Feiertage werden berechnet (alle 16 Länder, jedes Jahr); dazu eigene freie Tage und Zeiträume wie Betriebsurlaub
 - Rolle „Nur Gantt ansehen“ (Verwaltung → Benutzer): sieht nur den Terminplan als Gantt-Diagramm und kann ihn als PDF exportieren; Aufgaben, Organigramm, Beschreibungen und Kommentare liefert der Server an diese Rolle gar nicht aus
+- Sicherheit: serverseitige Sitzungen (__Host-Cookie, Ablauf nach Inaktivität), CSRF-Token und Herkunftsprüfung, strenge Content-Security-Policy, Passwortrichtlinie mit Leak-Prüfung, Ratenbegrenzung, Passwort vergessen per E-Mail-Link, geprüfte Profilbilder ohne Metadaten, Sicherheitsprotokoll, Datenauskunft und Anonymisierung beim Löschen; Details in SECURITY.md
+- Datenschutzhinweise als Vorlage (datenschutz.html), zum Ausfüllen vor dem Echtbetrieb
 - PDF-Export zum Drucken: Terminplan (Gantt) und/oder Organigramm, je eine Seite im Querformat; beim Terminplan Auswahl der Spalten, des Zeitraums und der Vorgänge; das Organigramm mit Fotos, Projektleitung, Teams, Unterteams und „Noch ohne Team“
 - Vorgänge, Untervorgänge und Meilensteine per Ziehen und Ablegen verschieben (Tastatur: Griff fokussieren, Pfeil hoch/runter); Löschen im Detailfenster
 - Änderungsprotokoll: jede Änderung mit Person und Zeit, als Eintrag im Verlauf des Vorgangs; von anderen geänderte Vorgänge werden markiert, bis man sie öffnet; Administratoren sehen das gesamte Protokoll und wer zuletzt bearbeitet hat
@@ -58,12 +60,14 @@ Die Website lädt nichts von fremden Servern: keine Google Fonts, der PDF-Bauste
    - `SESSION_SECRET`: mindestens 32 zufällige Zeichen, z. B. aus `openssl rand -base64 48`
    - `SETUP_KEY`: ein selbst gewählter Einrichtungsschlüssel (mind. 8 Zeichen)
    - `CRON_SECRET`: mindestens 16 zufällige Zeichen, schützt den täglichen Erinnerungs-Job
-   - E-Mail (für Erinnerungen und Tickets), siehe nächster Abschnitt
+   - E-Mail (für Erinnerungen, Tickets und „Passwort vergessen“), siehe nächster Abschnitt; `APP_URL` mit der Adresse der Website, damit Links in Mails stimmen
+   - optional `PWNED_CHECK=off`: neue Passwörter nicht gegen Have I Been Pwned prüfen
 4. **Deploy** auslösen (oder erneut deployen, nachdem die Variablen gesetzt sind).
-5. Die Seite öffnen. Beim ersten Aufruf erscheint die **Einrichtung**: `SETUP_KEY` eingeben und den ersten Administrator anlegen.
+5. Die Seite öffnen. Beim ersten Aufruf erscheint die **Einrichtung**: `SETUP_KEY` eingeben und den ersten Administrator anlegen (Passwort mindestens 12 Zeichen).
 6. Unter **Verwaltung** die Kollegen anlegen:
    - *Bearbeiten*: Pläne ansehen und ändern
    - *Nur lesen*: Pläne ansehen und exportieren
+   - *Nur Gantt ansehen*: nur den Terminplan als Gantt-Diagramm
    - *Administrator*: zusätzlich Benutzer, Sicherung und Versionsverlauf
 
 Die Funktionen laufen in der Region Frankfurt (`fra1`, siehe `vercel.json`).

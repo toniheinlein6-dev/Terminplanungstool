@@ -4,7 +4,18 @@
   window.NO_LOCAL = true; window.WEB_DOWNLOAD = true;
   let me = null;
   const api = (a, opt) => fetch('api/tp?a=' + a, Object.assign({ credentials: 'same-origin', cache: 'no-store' }, opt));
-  const post = (a, body) => api(a, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-TP': '1' }, body: JSON.stringify(body || {}) });
+  // CSRF-Token der Sitzung: kommt mit „me“ und der Anmeldung, geht als X-CSRF mit jeder Änderung mit
+  let csrf = '';
+  const takeCsrf = j => { if (j && j.csrf) csrf = j.csrf; return j; };
+  async function post(a, body) {
+    const go = () => api(a, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-TP': '1', 'X-CSRF': csrf }, body: JSON.stringify(body || {}) });
+    let r = await go();
+    if (r.status === 403) {   // Token abgelaufen (z. B. neue Sitzung in anderem Tab): neu holen und einmal wiederholen
+      const j = await r.clone().json().catch(() => ({}));
+      if (j.error === 'csrf') { try { const m = await api('me'); if (m.ok) takeCsrf(await m.json()); } catch (e) { } r = await go(); }
+    }
+    return r;
+  }
 
   // Auge neben Passwortfeldern: Eingabe sichtbar machen und wieder verbergen
   const EYE = 'M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z';
@@ -19,30 +30,73 @@
       inp.__hide = () => set(false); set(false); w.appendChild(b);
     });
   }
+  const FORM = 'background:var(--panel,#fff);color:var(--ink,#1c2a25);border:1px solid var(--line,#d5ddd9);border-radius:12px;padding:24px;width:min(360px,100%);display:flex;flex-direction:column;gap:10px;box-sizing:border-box';
+  const INP = 'width:100%;box-sizing:border-box;margin-top:4px';
+  const BTN = 'background:var(--accent,#2f5d50);color:#fff;border-color:transparent';
+  function overlay(html) {
+    const o = document.createElement('div');
+    o.style.cssText = 'position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:var(--bg,#f1f4f2);padding:16px';
+    o.innerHTML = html; document.body.appendChild(o); pwEyes(o); return o;
+  }
   function loginOverlay() {
     return new Promise(resolve => {
-      const o = document.createElement('div');
-      o.style.cssText = 'position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:var(--bg,#f1f4f2);padding:16px';
-      o.innerHTML = '<form style="background:var(--panel,#fff);color:var(--ink,#1c2a25);border:1px solid var(--line,#d5ddd9);border-radius:12px;padding:24px;width:min(360px,100%);display:flex;flex-direction:column;gap:10px;box-sizing:border-box">' +
-        '<h2 style="margin:0 0 6px;font-size:18px">Terminplaner</h2><label style="font-size:12px">Name<input id="lgN" class="in" autocomplete="username" required style="width:100%;box-sizing:border-box;margin-top:4px"></label>' +
-        '<label style="font-size:12px">Passwort<input id="lgP" class="in" type="password" autocomplete="current-password" required style="width:100%;box-sizing:border-box;margin-top:4px"></label>' +
-        '<div id="lgE" style="color:#b3392b;font-size:13px;min-height:18px"></div><button class="btn" style="background:var(--accent,#2f5d50);color:#fff;border-color:transparent">Anmelden</button></form>';
-      document.body.appendChild(o); pwEyes(o);
-      const f = o.querySelector('form'), e = o.querySelector('#lgE'); o.querySelector('#lgN').focus();
+      const o = overlay('<form style="' + FORM + '" id="lgF">' +
+        '<h2 style="margin:0 0 6px;font-size:18px">Terminplaner</h2><label style="font-size:12px">Name<input id="lgN" class="in" autocomplete="username" required maxlength="80" style="' + INP + '"></label>' +
+        '<label style="font-size:12px">Passwort<input id="lgP" class="in" type="password" autocomplete="current-password" required maxlength="256" style="' + INP + '"></label>' +
+        '<div id="lgE" style="color:#b3392b;font-size:13px;min-height:18px" role="alert"></div><button class="btn" style="' + BTN + '">Anmelden</button>' +
+        '<button type="button" class="linkb" id="lgForgot" style="align-self:flex-start;font-size:12.5px">Passwort vergessen?</button>' +
+        '<a href="datenschutz.html" style="font-size:12px;color:var(--muted,#5f6f68)">Datenschutz</a></form>' +
+        '<form style="' + FORM + '" id="fgF" hidden><h2 style="margin:0 0 6px;font-size:18px">Passwort vergessen</h2>' +
+        '<p style="margin:0;font-size:13px">Gib deinen Namen oder deine E-Mail-Adresse ein. Ist im Konto eine E-Mail-Adresse hinterlegt, bekommst du einen Link zum Festlegen eines neuen Passworts.</p>' +
+        '<label style="font-size:12px">Name oder E-Mail-Adresse<input id="fgN" class="in" autocomplete="username" required maxlength="200" style="' + INP + '"></label>' +
+        '<div id="fgM" style="font-size:13px;min-height:18px" role="status"></div><button class="btn" style="' + BTN + '">Link anfordern</button>' +
+        '<button type="button" class="linkb" id="fgBack" style="align-self:flex-start;font-size:12.5px">Zurück zur Anmeldung</button></form>');
+      const f = o.querySelector('#lgF'), e = o.querySelector('#lgE'), fg = o.querySelector('#fgF'); o.querySelector('#lgN').focus();
+      o.querySelector('#lgForgot').addEventListener('click', () => { f.hidden = true; fg.hidden = false; o.querySelector('#fgN').value = o.querySelector('#lgN').value; o.querySelector('#fgN').focus(); });
+      o.querySelector('#fgBack').addEventListener('click', () => { fg.hidden = true; f.hidden = false; o.querySelector('#lgN').focus(); });
+      fg.addEventListener('submit', async ev => {
+        ev.preventDefault(); const m = o.querySelector('#fgM');
+        try { const r = await post('reset_request', { name: o.querySelector('#fgN').value }); const j = await r.json(); m.textContent = r.ok ? j.message : (j.error || 'Anfrage fehlgeschlagen'); }
+        catch (x) { m.textContent = 'Server nicht erreichbar'; }
+      });
       f.addEventListener('submit', async ev => {
         ev.preventDefault(); e.textContent = '';
         try {
           const r = await post('login', { name: o.querySelector('#lgN').value, password: o.querySelector('#lgP').value }); const j = await r.json();
           if (!r.ok) { e.textContent = j.error || 'Anmeldung fehlgeschlagen'; return; }
-          me = j.user; o.remove(); resolve();
+          takeCsrf(j); me = j.user; o.remove(); resolve();
+        } catch (x) { e.textContent = 'Server nicht erreichbar'; }
+      });
+    });
+  }
+  // Link aus der E-Mail „Passwort vergessen“: #reset=<Token>; das Token wird sofort aus Adresse und Verlauf entfernt
+  function resetOverlay(token) {
+    return new Promise(resolve => {
+      const o = overlay('<form style="' + FORM + '"><h2 style="margin:0 0 6px;font-size:18px">Neues Passwort festlegen</h2>' +
+        '<label style="font-size:12px">Neues Passwort (mindestens 12 Zeichen)<input id="rsP" class="in" type="password" autocomplete="new-password" required minlength="12" maxlength="256" style="' + INP + '"></label>' +
+        '<label style="font-size:12px">Neues Passwort wiederholen<input id="rsP2" class="in" type="password" autocomplete="new-password" required minlength="12" maxlength="256" style="' + INP + '"></label>' +
+        '<div id="rsE" style="font-size:13px;min-height:18px" role="alert"></div><button class="btn" style="' + BTN + '">Passwort speichern</button>' +
+        '<button type="button" class="linkb" id="rsSkip" style="align-self:flex-start;font-size:12.5px">Abbrechen</button></form>');
+      const e = o.querySelector('#rsE'); o.querySelector('#rsP').focus();
+      o.querySelector('#rsSkip').addEventListener('click', () => { o.remove(); resolve(); });
+      o.querySelector('form').addEventListener('submit', async ev => {
+        ev.preventDefault(); e.style.color = '#b3392b';
+        const a = o.querySelector('#rsP').value, b = o.querySelector('#rsP2').value;
+        if (a !== b) { e.textContent = 'Die beiden Passwörter stimmen nicht überein.'; return; }
+        try {
+          const r = await post('reset_confirm', { token, password: a }); const j = await r.json();
+          if (!r.ok) { e.textContent = j.error || 'Speichern fehlgeschlagen'; return; }
+          o.remove(); resolve();
         } catch (x) { e.textContent = 'Server nicht erreichbar'; }
       });
     });
   }
   async function ensureLogin() {
+    const rm = /^#reset=([A-Za-z0-9_-]{40,60})$/.exec(location.hash || '');
+    if (rm) { history.replaceState(null, '', location.pathname + location.search); await resetOverlay(rm[1]); }
     let r;
     try { r = await api('me'); } catch (e) { throw new Error('Server nicht erreichbar'); }
-    if (r.ok) { me = (await r.json()).user; return; }
+    if (r.ok) { me = takeCsrf(await r.json()).user; return; }
     if (r.status === 401) {
       try { const s = await (await api('setup_state')).json(); if (s.needsSetup) { location.href = 'setup.html'; return new Promise(() => { }); } } catch (e) { }
       await loginOverlay(); return;
@@ -77,7 +131,7 @@
     } catch (e) { }
   }
   async function refreshMe() {
-    try { const r = await api('me'); if (r.ok) { const j = await r.json(); me = j.user; openTickets = j.openTickets || 0; paintMenuButton(); } } catch (e) { }
+    try { const r = await api('me'); if (r.ok) { const j = takeCsrf(await r.json()); me = j.user; openTickets = j.openTickets || 0; paintMenuButton(); } } catch (e) { }
   }
 
   /* ---------- Kommentare ---------- */
@@ -123,6 +177,7 @@
       (me.role === 'gantt' ? '' : '<button type="button" role="menuitem" data-m="ticket">Idee oder Problem melden</button>') +
       (me.role === 'admin' ? '<button type="button" role="menuitem" data-m="admin">Verwaltung</button>' : '') +
       (isStandalone() ? '' : '<button type="button" role="menuitem" data-m="install">Als App installieren</button>') +
+      '<button type="button" role="menuitem" data-m="privacy">Datenschutz</button>' +
       '<button type="button" role="menuitem" data-m="logout">Abmelden</button></div>';
     anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
     const btn = wrap.querySelector('#userBtn'), menu = wrap.querySelector('#userMenu');
@@ -147,7 +202,13 @@
       else if (m === 'ticket') ticketDialog();
       else if (m === 'admin') location.href = 'admin.html';
       else if (m === 'install') installApp();
-      else if (m === 'logout') { try { await post('logout'); } catch (x) { } location.reload(); }
+      else if (m === 'privacy') window.open('datenschutz.html', '_blank', 'noopener');
+      else if (m === 'logout') {
+        try { await post('logout'); } catch (x) { }
+        // Zwischengespeicherte Seiten der App (Service Worker) entfernen, damit auf geteilten Geräten nichts liegen bleibt
+        try { if (window.caches) for (const k of await caches.keys()) await caches.delete(k); } catch (x) { }
+        location.reload();
+      }
     });
     paintMenuButton();
   }
@@ -193,19 +254,29 @@
     let avatar = me.avatar || null, avatarChanged = false;
     const d = dialog('Mein Profil', '<div class="prof">' +
       '<div><h3>Profilbild</h3><div class="avrow"><span id="pAv"></span><div class="btns"><label class="btn" for="pFile">Bild wählen</label><input id="pFile" type="file" accept="image/*" hidden><button class="btn" type="button" id="pAvDel">Entfernen</button></div></div><p class="hint">Das Bild wird quadratisch zugeschnitten und verkleinert.</p></div>' +
-      '<div><h3>E-Mail und Erinnerungen</h3><label class="pf">E-Mail-Adresse<input id="pMail" class="in" type="email" autocomplete="email" value="' + esc(me.email) + '"></label>' +
+      '<div><h3>E-Mail und Erinnerungen</h3><label class="pf">E-Mail-Adresse<input id="pMail" class="in" type="email" autocomplete="email" maxlength="200" value="' + esc(me.email) + '"></label>' +
+      '<label class="pf" id="pMailPwL" hidden>Aktuelles Passwort (zur Bestätigung der neuen Adresse)<input id="pMailPw" class="in" type="password" autocomplete="current-password"></label>' +
       '<label class="chk"><input type="checkbox" id="pRemind"' + (me.remind ? ' checked' : '') + '> Erinnerung per E-Mail 2 Tage vor dem Ende meiner Vorgänge und Aufgaben</label>' +
       '<label class="chk"><input type="checkbox" id="pWeekly"' + (me.weekly !== false ? ' checked' : '') + '> Wochenübersicht jeden Montag (meine Vorgänge und Aufgaben der Woche)</label>' +
       '<p class="hint">Erinnert wird an Vorgänge, denen du als Benutzer zugeordnet bist.</p>' +
       '<div class="btns"><button class="btn primary" type="button" id="pSave">Profil speichern</button><span id="pMsg" class="msg"></span></div></div>' +
       '<div><h3>Passwort ändern</h3><label class="pf">Bisheriges Passwort<input id="pOld" class="in" type="password" autocomplete="current-password"></label>' +
-      '<label class="pf">Neues Passwort (mindestens 8 Zeichen)<input id="pNew" class="in" type="password" autocomplete="new-password"></label>' +
+      '<label class="pf">Neues Passwort (mindestens 12 Zeichen, gern ein ganzer Satz)<input id="pNew" class="in" type="password" autocomplete="new-password" minlength="12" maxlength="256"></label>' +
       '<label class="pf">Neues Passwort wiederholen<input id="pNew2" class="in" type="password" autocomplete="new-password"></label>' +
       '<div class="btns"><button class="btn" type="button" id="pPw">Passwort ändern</button><span id="pwMsg" class="msg"></span></div>' +
-      '<p class="hint">Nach der Änderung wirst du auf anderen Geräten abgemeldet.</p></div></div>');
+      '<p class="hint">Nach der Änderung wirst du auf anderen Geräten abgemeldet.</p></div>' +
+      '<div><h3>Meine Daten</h3><div class="btns"><button class="btn" type="button" id="pData">Meine Daten herunterladen</button><span id="dMsg" class="msg"></span></div>' +
+      '<p class="hint">Alles, was der Terminplaner zu deinem Konto speichert: Profil, Zuordnungen, Kommentare, Tickets und Änderungen (JSON-Datei). <a href="datenschutz.html" target="_blank" rel="noopener">Datenschutzhinweise</a></p></div></div>');
     const $d = id => d.el.querySelector('#' + id);
     pwEyes(d.el);
     const paint = () => { $d('pAv').innerHTML = avatarHtml(me.name, avatar, 'big'); $d('pAvDel').disabled = !avatar; };
+    const mailPw = () => { $d('pMailPwL').hidden = !me.email || $d('pMail').value.trim().toLowerCase() === String(me.email).toLowerCase(); };
+    $d('pMail').addEventListener('input', mailPw);
+    $d('pData').addEventListener('click', async () => {
+      const r = await api('my_data'); if (!r.ok) { const j = await r.json().catch(() => ({})); say('dMsg', j.error || 'Nicht möglich', true); return; }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = 'meine-daten-terminplaner.json';
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); say('dMsg', 'Heruntergeladen.');
+    });
     const say = (id, t, bad) => { const m = $d(id); m.textContent = t; m.classList.toggle('bad', !!bad); };
     paint();
     $d('pFile').addEventListener('change', async e => {
@@ -215,17 +286,18 @@
     });
     $d('pAvDel').addEventListener('click', () => { avatar = null; avatarChanged = true; paint(); say('pMsg', 'Bild entfernt, bitte speichern.'); });
     $d('pSave').addEventListener('click', async () => {
-      const body = { email: $d('pMail').value.trim(), remind: $d('pRemind').checked, weekly: $d('pWeekly').checked }; if (avatarChanged) body.avatar = avatar;
+      const body = { email: $d('pMail').value.trim(), remind: $d('pRemind').checked, weekly: $d('pWeekly').checked, password: $d('pMailPw').value }; if (avatarChanged) body.avatar = avatar;
       const r = await post('profile_save', body); const j = await r.json().catch(() => ({}));
       if (!r.ok) { say('pMsg', j.error || 'Speichern fehlgeschlagen', true); return; }
-      avatarChanged = false; say('pMsg', 'Gespeichert.'); await refreshMe(); teamKey = ''; loadTeam();
+      avatarChanged = false; say('pMsg', 'Gespeichert.'); $d('pMailPw').value = ''; await refreshMe(); mailPw(); teamKey = ''; loadTeam();
     });
     $d('pPw').addEventListener('click', async () => {
       const o = $d('pOld').value, n = $d('pNew').value, n2 = $d('pNew2').value;
-      if (n.length < 8) { say('pwMsg', 'Das neue Passwort braucht mindestens 8 Zeichen.', true); return; }
+      if (n.length < 12) { say('pwMsg', 'Das neue Passwort braucht mindestens 12 Zeichen.', true); return; }
       if (n !== n2) { say('pwMsg', 'Die beiden neuen Passwörter stimmen nicht überein.', true); return; }
       const r = await post('password', { old: o, password: n }); const j = await r.json().catch(() => ({}));
       if (!r.ok) { say('pwMsg', j.error || 'Ändern fehlgeschlagen', true); return; }
+      takeCsrf(j);
       ['pOld', 'pNew', 'pNew2'].forEach(k => { const x = $d(k); x.value = ''; if (x.__hide) x.__hide(); }); say('pwMsg', 'Passwort geändert.');
     });
   }
