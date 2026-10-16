@@ -37,11 +37,11 @@ function demoPlan() {
       { id: 2, title: 'Termin für Konzeptbesprechung finden', desc: '', who: 'Person B, Person C', due: '', prio: 'normal', done: false, row: 3, by: '', created: '2026-10-12' }
     ],
     org: [
-      { id: 1, kind: 'person', name: 'Person A', role: 'Projektleitung', uid: '', photo: '', parent: '', color: '' },
-      { id: 2, kind: 'team', name: 'Planung', role: 'Entwurf und Tragwerk', uid: '', photo: '', parent: 1, color: '#2f6fb2' },
-      { id: 3, kind: 'team', name: 'Ausführung', role: 'Arbeitsvorbereitung und Montage', uid: '', photo: '', parent: 1, color: '#b0612a' },
-      { id: 4, kind: 'person', name: 'Person B', role: 'Tragwerksplanung', uid: '', photo: '', parent: 2, color: '' },
-      { id: 5, kind: 'person', name: 'Person C', role: 'Arbeitsvorbereitung', uid: '', photo: '', parent: 3, color: '' }
+      { id: 1, kind: 'person', name: 'Person A', role: 'Projektleitung', uid: '', photo: '', parent: '', color: '', also: [] },
+      { id: 2, kind: 'team', name: 'Planung', role: 'Entwurf und Tragwerk', uid: '', photo: '', parent: 1, color: '#2f6fb2', also: [] },
+      { id: 3, kind: 'team', name: 'Ausführung', role: 'Arbeitsvorbereitung und Montage', uid: '', photo: '', parent: 1, color: '#b0612a', also: [] },
+      { id: 4, kind: 'person', name: 'Person B', role: 'Tragwerksplanung', uid: '', photo: '', parent: 2, color: '', also: [{ team: 3, role: 'Statische Beratung' }] },
+      { id: 5, kind: 'person', name: 'Person C', role: 'Arbeitsvorbereitung', uid: '', photo: '', parent: 3, color: '', also: [] }
     ]
   };
 }
@@ -99,7 +99,10 @@ function sanitize(p) {
     let id = Number(n.id); if (!Number.isInteger(id) || id < 1 || oseen.has(id)) id = omax + 1; oseen.add(id); omax = Math.max(omax, id);
     const par = Number(n.parent);
     s.org.push({ id, kind: n.kind === 'team' ? 'team' : 'person', name: String(n.name || '').slice(0, 80), role: String(n.role || '').slice(0, 80),
-      uid: /^[1-9]\d{0,9}$/.test(String(n.uid || '')) ? String(n.uid) : '', photo: okPhoto(n.photo), parent: n.parent !== '' && n.parent != null && Number.isInteger(par) && par > 0 && par !== id ? par : '', color: okColor(n.color) });
+      uid: /^[1-9]\d{0,9}$/.test(String(n.uid || '')) ? String(n.uid) : '', photo: okPhoto(n.photo), parent: n.parent !== '' && n.parent != null && Number.isInteger(par) && par > 0 && par !== id ? par : '', color: okColor(n.color),
+      // Zweitmitgliedschaften: weitere Teams mit optional eigener Rolle
+      also: n.kind === 'team' ? [] : (Array.isArray(n.also) ? n.also : []).slice(0, 20).map(a => ({ team: Number(a && a.team), role: String((a && a.role) || '').slice(0, 80) }))
+        .filter((a, k, arr) => Number.isInteger(a.team) && a.team > 0 && a.team !== id && arr.findIndex(x => x.team === a.team) === k) });
   });
   if (p.example) s.example = true;
   return s;

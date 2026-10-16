@@ -58,3 +58,13 @@ test('Organigramm: Bereinigung und Abgleich', () => {
   assert.deepEqual(out.org.map(n => n.id), [1, 2, 300001]);
   assert.equal(out.org[0].name, 'Projektleitung'); assert.equal(out.org[1].role, 'Statik');
 });
+
+test('Organigramm: Zweitmitgliedschaften werden bereinigt', () => {
+  const run = app();
+  const s = run('sanitize(' + JSON.stringify({ rows: [], org: [
+    { id: 1, kind: 'team', name: 'T', also: [{ team: 2 }] },
+    { id: 2, kind: 'person', name: 'P', parent: 1, also: [{ team: 3, role: 'Statik' }, { team: 3, role: 'doppelt' }, { team: 2 }, { team: 'x' }, null] },
+    { id: 3, kind: 'team', name: 'U' }] }) + ')');
+  assert.deepEqual(s.org[0].also, []);
+  assert.deepEqual(s.org[1].also, [{ team: 3, role: 'Statik' }]);
+});
