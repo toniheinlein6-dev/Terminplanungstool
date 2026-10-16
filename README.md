@@ -11,9 +11,10 @@ Gantt-Terminplaner für die gemeinsame Projektplanung im Team.
 - Wochenübersicht per E-Mail jeden Montag: Vorgänge und Aufgaben der Woche, Überfälliges und offene Aufgaben ohne Termin (im Profil abschaltbar)
 - Darstellung umschaltbar: automatisch, Desktop oder Mobil (je Gerät gespeichert)
 - Als App installierbar (PWA): auf dem Handy über „Zum Home-Bildschirm“ bzw. „App installieren“, startet im Vollbild mit eigenem Symbol; mobil mit Navigationsleiste am unteren Rand
+- Am Handy und Tablet voll bedienbar: Kanban-Karten, Organigramm, Zeilen und Gantt-Balken lassen sich per Finger ziehen (Kanban und Organigramm: lange drücken, dann ziehen); Organigramm mobil untereinander mit eingerückten Unterteams
 - Termine im Detailfenster über Start + Ende, Start + Dauer oder Ende + Dauer eingeben; neue Vorgänge öffnen gleich die Detailmaske
 - Balken im Gantt-Diagramm ziehen: verschieben (Start), rechtes Ende (Dauer), linkes Ende (Start bei gleichem Ende); Nachfolger passen sich an
-- Organigramm (Ansicht „Team“): Projektleitung nebeneinander, darunter Teams und Unterteams mit Teamleitung und untereinander gelisteten Teammitgliedern; Personen mit Bild, Name und Rolle, auch in mehreren Teams (Hauptteam, Rolle je Team); per Ziehen zuordnen
+- Organigramm (Ansicht „Team“): Projektleitung nebeneinander, darunter Teams und Unterteams mit Teamleitung und untereinander gelisteten Teammitgliedern; Personen mit Bild, Name und Rolle, auch in mehreren Teams (Hauptteam, Rolle je Team); per Ziehen zuordnen (zusätzlich zuordnen mit Strg/Alt oder dem Schalter „Zusätzlich zuordnen“)
 - Eigene Farben je Vorgang (Detailfenster), sichtbar in Gantt, Liste, Kanban, Kalender und PDF
 - Spalten je Person ein- und ausblenden und in der Breite anpassen; Untervorgänge je Sammelvorgang ein- und ausklappen
 - PDF-Export mit Auswahl der Spalten, des Zeitraums und der Vorgänge

@@ -3,7 +3,7 @@
 // Personen: { id, kind: 'person', name, role, uid (Benutzerkonto), photo, pl (Projektleitung), teams: [{ team, lead, role }] }
 // Personen gehören nur zu Teams (nie zu Personen); die erste Mitgliedschaft ist das Hauptteam.
 const ORG_COLORS = ['#3d7e5e', '#2f6fb2', '#8a5cb8', '#b0612a', '#2a8c8c', '#a33f6d', '#5f6f2a'];
-let orgDlg = null, orgDrag = null;
+let orgDlg = null, orgDrag = null, orgAddMode = false;   // orgAddMode: beim Ziehen zusätzlich zuordnen statt verschieben (Ersatz für Strg, z. B. am Handy)
 
 function orgNodes() { if (!Array.isArray(state.org)) state.org = []; return state.org; }
 function orgById(id) { return orgNodes().find(n => n.id === id) || null; }
@@ -71,7 +71,8 @@ function renderOrg() {
   const canImport = hasUserDirectory() ? assigneeTeam().some(u => !orgPeople().some(n => String(n.uid) === String(u.id))) : (state.people || []).some(p => !orgPeople().some(n => orgName(n).toLowerCase() === String(p).toLowerCase()));
   let h = '<div class="orgbar">' + (ro ? '' : '<button type="button" class="btn primary" data-padd="none">+ Person</button><button type="button" class="btn" data-tadd="">+ Team</button>' +
     (canImport ? '<button type="button" class="btn" id="orgImport" title="Alle noch fehlenden Teammitglieder anlegen">Teammitglieder übernehmen</button>' : '')) +
-    '<span class="spacer"></span><span class="hint">' + (ro ? '' : 'Personen in Projektleitung, Teamleitung oder Teammitglieder ziehen · mit Strg (Mac: Alt) zusätzlich zuordnen') + '</span></div>';
+    (ro ? '' : '<button type="button" class="btn' + (orgAddMode ? ' on' : '') + '" id="orgAddMode" aria-pressed="' + orgAddMode + '" title="Eingeschaltet: Personen werden beim Ziehen zusätzlich zugeordnet und bleiben im bisherigen Team">' + (orgAddMode ? '✓ ' : '') + 'Zusätzlich zuordnen</button>') +
+    '<span class="spacer"></span><span class="hint">' + (ro ? '' : (orgAddMode ? 'Ziehen ordnet zusätzlich zu – die Person bleibt im bisherigen Team' : 'Personen in Projektleitung, Teamleitung oder Teammitglieder ziehen') + (isTouchUI() ? ' · zum Ziehen lange drücken' : '')) + '</span></div>';
   if (!orgNodes().length) {
     h += '<div class="empty"><b>Noch kein Organigramm.</b><br>Lege Teams an und ordne die Personen als Projektleitung, Teamleitung oder Teammitglied zu.' + (canImport && !ro ? ' Mit „Teammitglieder übernehmen“ geht es am schnellsten.' : '') + '</div>';
     box.innerHTML = h; return;
@@ -245,6 +246,7 @@ function initOrg() {
     const ta = e.target.closest('[data-tadd]'); if (ta) { const n = newOrgNode('team', { parent: ta.dataset.tadd === '' ? '' : Number(ta.dataset.tadd) }); if (n) { orgChanged(true); openOrg(n.id, true); } return; }
     const te = e.target.closest('[data-tedit]'); if (te) { openOrg(+te.dataset.tedit); return; }
     const rm = e.target.closest('[data-orm]'); if (rm) { const k = rm.dataset.orm.indexOf(':'), p = orgById(Number(rm.dataset.orm.slice(0, k))); if (p) { orgRemoveFrom(p, rm.dataset.orm.slice(k + 1)); orgChanged(true); } return; }
+    if (e.target.closest('#orgAddMode')) { orgAddMode = !orgAddMode; renderOrg(); return; }
     if (e.target.id === 'orgImport') {
       if (hasUserDirectory()) assigneeTeam().forEach(u => { if (!orgPeople().some(n => String(n.uid) === String(u.id))) newOrgNode('person', { uid: String(u.id), name: u.name }); });
       else (state.people || []).forEach(p => { if (!orgPeople().some(n => orgName(n).toLowerCase() === String(p).toLowerCase())) newOrgNode('person', { name: String(p) }); });
@@ -254,7 +256,7 @@ function initOrg() {
     const th = e.target.closest('.oth'); if (th && !e.target.closest('button')) openOrg(+th.closest('[data-tid]').dataset.tid);
   });
   // Ziehen: Personen in Projektleitung, Teamleitung, Teammitglieder oder „Noch ohne Team“; Teams auf Teams (Unterteam) oder die Projektleitung
-  const copyKey = e => e.ctrlKey || e.altKey || e.metaKey;
+  const copyKey = e => orgAddMode || e.ctrlKey || e.altKey || e.metaKey;
   box.addEventListener('dragstart', e => {
     if (readOnly) return;
     const p = e.target.closest('[data-pid]'), t = e.target.closest('[data-tdrag]');

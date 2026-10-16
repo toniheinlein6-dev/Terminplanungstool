@@ -873,7 +873,7 @@ function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Ma
 function boot() {
   applyTheme(); applyDisplay();
   initViews();
-  initCols(); initBarDrag(); if (typeof initOrg === 'function') initOrg();
+  initCols(); initBarDrag(); if (typeof initOrg === 'function') initOrg(); initTouchDnD();
   initDrag();
   initTasks();
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (typeof u.zoom2 === 'number') zoom = Math.max(0, Math.min(ZMAX, u.zoom2)); if (u.leftw) document.documentElement.style.setProperty('--leftw', u.leftw + 'px'); } catch (e) { }
