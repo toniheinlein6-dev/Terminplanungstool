@@ -10,6 +10,9 @@ Gantt-Terminplaner für die gemeinsame Projektplanung im Team.
 - Rubrik „Aufgaben“: To-dos anlegen, mehreren Teammitgliedern zuweisen, Termin, Priorität und Bezug zu einem Vorgang; neu Zugewiesene bekommen eine E-Mail, zwei Tage vor dem Termin eine Erinnerung
 - Wochenübersicht per E-Mail jeden Montag: Vorgänge und Aufgaben der Woche, Überfälliges und offene Aufgaben ohne Termin (im Profil abschaltbar)
 - Darstellung umschaltbar: automatisch, Desktop oder Mobil (je Gerät gespeichert)
+- Termine direkt in der Tabelle eingeben über Start + Ende, Start + Dauer oder Ende + Dauer; neue Vorgänge öffnen gleich die Detailmaske
+- Spalten je Person ein- und ausblenden und in der Breite anpassen; Untervorgänge je Sammelvorgang ein- und ausklappen
+- PDF-Export mit Auswahl der Spalten, des Zeitraums und der Vorgänge
 - Vorgänge, Untervorgänge und Meilensteine per Ziehen und Ablegen verschieben (Tastatur: Griff fokussieren, Pfeil hoch/runter); Löschen im Detailfenster
 - Änderungsprotokoll: jede Änderung mit Person und Zeit, als Eintrag im Verlauf des Vorgangs; von anderen geänderte Vorgänge werden markiert, bis man sie öffnet; Administratoren sehen das gesamte Protokoll und wer zuletzt bearbeitet hat
 - Detailfenster je Vorgang mit Beschreibung und Kommentaren; @-Erwähnungen benachrichtigen per E-Mail (optional zusätzlich in einem Teams-Kanal)

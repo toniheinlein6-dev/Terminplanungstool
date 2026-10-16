@@ -592,4 +592,41 @@ body.dragmode { user-select: none; -webkit-user-select: none; }
 .cm.chg-e .cmb { background: transparent; border: 1px dashed var(--line); color: var(--muted); font-size: 12.5px; }
 .cm .chgi { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--today-bg); color: var(--today); font-size: 12px; }
 .cm .chga { font-size: 11px; color: var(--today); }
+
+/* Einklappen */
+.row .nm .fold { position: absolute; left: 0; top: 3px; width: 22px; z-index: 1; }
+.row.sum .nm input { padding-left: 22px; }
+.ib.fold svg { transition: transform .12s; }
+.ib.fold.closed svg { transform: rotate(-90deg); }
+.row.sum.folded-hint { }
+/* Start/Ende als Datumsfelder */
+.row .dc input { font-family: var(--font-num); font-size: 12px; padding-right: 2px; }
+.row.sum .dc input:disabled { opacity: 1; color: var(--ink); font-weight: 600; }
+.row .dc input[data-f="E"]:disabled { opacity: .7; }
+.row.err .dc input { color: var(--warn); }
+/* Spaltenkopf: Breite ziehen, Menü */
+.hrow > div { position: relative; }
+.hrow > div:first-child { display: flex; align-items: center; gap: 0; padding: 0 2px; overflow: visible; }
+.colrs { position: absolute; right: 0; top: 0; bottom: 0; width: 7px; cursor: col-resize; z-index: 2; touch-action: none; }
+.colrs:hover, body.colresize .colrs:active { background: linear-gradient(90deg, transparent 4px, var(--accent) 4px, var(--accent) 6px, transparent 6px); }
+body.colresize, body.colresize * { cursor: col-resize !important; user-select: none; }
+#colBtn.on { color: var(--accent); }
+.colmenu { position: fixed; z-index: 30; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 28px rgba(0,0,0,.18); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; width: 240px; font-size: 13px; }
+.colmenu .cmh { margin: 0 0 4px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.colmenu .btns { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+.colmenu .hint { margin: 4px 0 0; font-size: 11.5px; color: var(--muted); }
+/* Termineingabe-Umschalter */
+.datewrap { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.datewrap .seg button { padding: 4px 9px; font-size: 12px; }
+html.m .datewrap .dmlbl { display: none; }
+
+/* PDF-Auswahl */
+.panel.pdfdlg { width: min(620px, 100%); }
+.pdfdlg h3 { margin: 0 0 6px; }
+.pcols { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 2px 12px; }
+.prange { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+.pdfdlg .pf { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.pquick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.pdfdlg .btns .msg.bad { color: var(--warn); }
+.pdfdlg > div > .chk { display: flex; margin: 3px 0; }
 </style>

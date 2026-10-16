@@ -592,6 +592,43 @@ body.dragmode { user-select: none; -webkit-user-select: none; }
 .cm.chg-e .cmb { background: transparent; border: 1px dashed var(--line); color: var(--muted); font-size: 12.5px; }
 .cm .chgi { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--today-bg); color: var(--today); font-size: 12px; }
 .cm .chga { font-size: 11px; color: var(--today); }
+
+/* Einklappen */
+.row .nm .fold { position: absolute; left: 0; top: 3px; width: 22px; z-index: 1; }
+.row.sum .nm input { padding-left: 22px; }
+.ib.fold svg { transition: transform .12s; }
+.ib.fold.closed svg { transform: rotate(-90deg); }
+.row.sum.folded-hint { }
+/* Start/Ende als Datumsfelder */
+.row .dc input { font-family: var(--font-num); font-size: 12px; padding-right: 2px; }
+.row.sum .dc input:disabled { opacity: 1; color: var(--ink); font-weight: 600; }
+.row .dc input[data-f="E"]:disabled { opacity: .7; }
+.row.err .dc input { color: var(--warn); }
+/* Spaltenkopf: Breite ziehen, Menü */
+.hrow > div { position: relative; }
+.hrow > div:first-child { display: flex; align-items: center; gap: 0; padding: 0 2px; overflow: visible; }
+.colrs { position: absolute; right: 0; top: 0; bottom: 0; width: 7px; cursor: col-resize; z-index: 2; touch-action: none; }
+.colrs:hover, body.colresize .colrs:active { background: linear-gradient(90deg, transparent 4px, var(--accent) 4px, var(--accent) 6px, transparent 6px); }
+body.colresize, body.colresize * { cursor: col-resize !important; user-select: none; }
+#colBtn.on { color: var(--accent); }
+.colmenu { position: fixed; z-index: 30; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 28px rgba(0,0,0,.18); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; width: 240px; font-size: 13px; }
+.colmenu .cmh { margin: 0 0 4px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.colmenu .btns { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+.colmenu .hint { margin: 4px 0 0; font-size: 11.5px; color: var(--muted); }
+/* Termineingabe-Umschalter */
+.datewrap { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.datewrap .seg button { padding: 4px 9px; font-size: 12px; }
+html.m .datewrap .dmlbl { display: none; }
+
+/* PDF-Auswahl */
+.panel.pdfdlg { width: min(620px, 100%); }
+.pdfdlg h3 { margin: 0 0 6px; }
+.pcols { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 2px 12px; }
+.prange { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+.pdfdlg .pf { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.pquick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.pdfdlg .btns .msg.bad { color: var(--warn); }
+.pdfdlg > div > .chk { display: flex; margin: 3px 0; }
 </style>
 
 <header class="top">
@@ -639,6 +676,7 @@ body.dragmode { user-select: none; -webkit-user-select: none; }
     <button type="button" role="tab" data-tab="table" aria-pressed="true">Tabelle</button>
     <button type="button" role="tab" data-tab="chart" aria-pressed="false">Diagramm</button>
   </div>
+  <span class="datewrap" id="dateWrap"><span class="dmlbl" id="lblDate">Termine über</span><span class="seg sm" id="segDate" role="group" aria-labelledby="lblDate"><button type="button" data-v="se" title="Start und Ende eingeben, Dauer wird berechnet">Start + Ende</button><button type="button" data-v="sd" title="Start und Dauer eingeben, Ende wird berechnet">Start + Dauer</button><button type="button" data-v="ed" title="Ende und Dauer eingeben, Start wird berechnet">Ende + Dauer</button></span></span>
   <span class="filter-summary" id="filterSummary" aria-live="polite" hidden></span>
   <span class="spacer"></span>
   <button class="btn chgall" id="chgAll" type="button" hidden></button>
@@ -990,7 +1028,7 @@ let dl = null, uid = null, userNs = null, roomNs = null;
 const base = new Map(), srv = new Map();
 
 function icon(n) {
-  const p = { up: 'M4 10l4-4 4 4', down: 'M4 6l4 4 4-4', sub: 'M4 3v6a2 2 0 0 0 2 2h6M9 8l3 3-3 3', del: 'M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8', det: 'M3 3.5h10v7H7.5L4.5 13v-2.5H3z', drag: 'M6 3.5h.01M10 3.5h.01M6 8h.01M10 8h.01M6 12.5h.01M10 12.5h.01' }[n];
+  const p = { up: 'M4 10l4-4 4 4', down: 'M4 6l4 4 4-4', sub: 'M4 3v6a2 2 0 0 0 2 2h6M9 8l3 3-3 3', del: 'M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8', det: 'M3 3.5h10v7H7.5L4.5 13v-2.5H3z', drag: 'M6 3.5h.01M10 3.5h.01M6 8h.01M10 8h.01M6 12.5h.01M10 12.5h.01', cols: 'M2.5 3.5h11v9h-11zM6.3 3.5v9M9.8 3.5v9', fold: 'M5 6.5l3 3 3-3', foldin: 'M4.5 2.5l3.5 3 3.5-3M4.5 13.5l3.5-3 3.5 3', foldout: 'M4.5 5.5l3.5-3 3.5 3M4.5 10.5l3.5 3 3.5-3' }[n];
   const sw = n === 'drag' ? '2.6' : '1.6';
   return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + p + '"/></svg>';
 }
@@ -1003,7 +1041,7 @@ function rowHTML(r, i) {
     '<button class="ib" data-a="sub" title="Untervorgang darunter einfügen" aria-label="Untervorgang einfügen">' + icon('sub') + '</button></div>' +
     '<div class="num">' + r.id + '</div><div class="num" data-c="psp"></div>' +
     '<div><select data-f="type" aria-label="Typ">' + Object.keys(TYPES).map(k => opt(k, TYPES[k], r.type)).join('') + '</select></div>' +
-    '<div class="nm"><input data-f="name" type="text" value="' + esc(r.name) + '" aria-label="Bezeichnung" autocomplete="off"><button class="ib det" data-a="det" type="button" title="Details, Beschreibung und Kommentare" aria-label="Details öffnen">' + icon('det') + '<span class="cnt" data-c="cnt"></span></button></div>' +
+    '<div class="nm"><button class="ib fold" data-a="fold" type="button" hidden aria-label="Untervorgänge ein- oder ausklappen">' + icon('fold') + '</button><input data-f="name" type="text" value="' + esc(r.name) + '" aria-label="Bezeichnung" autocomplete="off"><button class="ib det" data-a="det" type="button" title="Details, Beschreibung und Kommentare" aria-label="Details öffnen">' + icon('det') + '<span class="cnt" data-c="cnt"></span></button></div>' +
     '<div class="who-cell">' + assigneeCell(r, i) + '</div>' +
     '<div><select data-f="pct" aria-label="Fortschritt in Prozent">' + PCTS.map(p => '<option value="' + p + '"' + (p === (r.pct || 0) ? ' selected' : '') + '>' + p + ' %</option>').join('') + '</select></div>' +
     '<div><select data-f="pred" aria-label="Vorgänger"></select></div>' +
@@ -1011,7 +1049,7 @@ function rowHTML(r, i) {
     '<div><input data-f="lag" type="number" step="1" value="' + esc(r.lag) + '" aria-label="Versatz in Tagen"></div>' +
     '<div><input data-f="fixed" type="date" value="' + esc(r.fixed) + '" aria-label="Fester Start"></div>' +
     '<div><input data-f="dur" type="number" min="0" step="1" value="' + esc(r.dur) + '" aria-label="Dauer" placeholder="1"></div>' +
-    '<div class="calc" data-c="start"></div><div class="calc" data-c="end"></div></div>';
+    '<div class="dc"><input data-f="S" type="date" aria-label="Start"></div><div class="dc"><input data-f="E" type="date" aria-label="Ende"></div></div>';
 }
 function predOptions(i) {
   const cur = state.rows[i].pred;
@@ -1022,7 +1060,7 @@ function predOptions(i) {
 // Eine gerade bearbeitete Zeile bleibt bis zum Verlassen der Tabelle sichtbar,
 // auch wenn der neue Name oder die Zuordnung nicht mehr zum Filter passt.
 function ganttRowIndices() {
-  const indices = visibleRowIndices();
+  const indices = typeof foldFilter === 'function' ? foldFilter(visibleRowIndices()) : visibleRowIndices();
   const i = filterEditId == null ? -1 : state.rows.findIndex(r => r.id === filterEditId);
   if (i >= 0 && state.rows[i] && !indices.includes(i)) {
     indices.push(i);
@@ -1064,9 +1102,17 @@ function updateComputed() {
     if (whoCell && hasUserDirectory()) { const html = assigneeCell(r, i); if (whoCell.innerHTML !== html) whoCell.innerHTML = html; }
     el.querySelectorAll('input, select').forEach(control => { control.disabled = readOnly; });
     el.querySelector('[data-c="psp"]').textContent = sched.psp[i];
-    const st = el.querySelector('[data-c="start"]'), en = el.querySelector('[data-c="end"]');
-    st.textContent = fmt(o.S); en.textContent = fmt(o.E);
-    st.title = en.title = o.err ? 'Zirkelbezug: der Vorgänger hängt selbst von dieser Zeile ab' : '';
+    // Start und Ende direkt eingeben (Sammelvorgänge: nur Anzeige)
+    const st = el.querySelector('[data-f="S"]'), en = el.querySelector('[data-f="E"]'), act = document.activeElement;
+    if (st !== act) st.value = toISO(o.S); if (en !== act) en.value = toISO(o.E);
+    const di = el.querySelector('[data-f="dur"]'), fi = el.querySelector('[data-f="fixed"]');
+    if (di !== act && di.value !== String(r.dur ?? '')) di.value = r.dur ?? '';
+    if (fi !== act && fi.value !== String(r.fixed || '')) fi.value = r.fixed || '';
+    st.disabled = readOnly || o.summary; en.disabled = readOnly || o.summary || r.type === 'meilenstein';
+    const tip = d => o.err ? 'Zirkelbezug: der Vorgänger hängt selbst von dieser Zeile ab' : o.summary ? fmt(d) + ' – ergibt sich aus den Untervorgängen' : fmt(d);
+    st.title = tip(o.S); en.title = tip(o.E);
+    const fb = el.querySelector('[data-a="fold"]');
+    if (fb) { fb.hidden = !o.summary; if (o.summary) { const f = isFolded(r.id); fb.classList.toggle('closed', f); fb.setAttribute('aria-expanded', String(!f)); fb.title = (f ? 'Ausklappen: ' : 'Einklappen: ') + sched.kids[i].length + ' Untervorgänge'; } }
     ['pred', 'rel', 'lag', 'fixed', 'dur'].forEach(f => { const c = el.querySelector('[data-f="' + f + '"]'); c.disabled = readOnly || o.summary || (f === 'dur' && r.type === 'meilenstein'); });
     el.querySelector('[data-a="sub"]').style.visibility = r.type === 'meilenstein' ? 'hidden' : '';
     const ps = el.querySelector('[data-f="pct"]');
@@ -1205,6 +1251,7 @@ function renderFilteredViews(force = false) {
   renderView();
   const indices = ganttRowIndices();
   renderLeft(force, indices); updateComputed(); renderChart(indices); syncHeaderScroll();
+  if (typeof paintFoldAll === 'function') paintFoldAll();
   refreshAssigneePicker();
 }
 function refresh() { sched = schedule(state); renderFilteredViews(); }
@@ -1224,6 +1271,7 @@ function renderAll() {
   $('lines').checked = !!state.lines;
   $('banner').hidden = !state.example;
   refreshPeopleList();
+  if (typeof applyCols === 'function') applyCols(true);
   sched = schedule(state); renderFilteredViews(true);
 }
 function changed(force) {
@@ -1252,9 +1300,10 @@ function select(i) {
 
 function onInput(e) {
   if (readOnly) return;
-  const t = e.target, f = t.dataset.f; if (!f) return;
+  const t = e.target, f = t.dataset.f; if (!f || f === 'S' || f === 'E') return;   // Start/Ende: erst beim Übernehmen (change)
   const i = rowIdx(t), r = state.rows[i]; if (!r) return;
   filterEditId = r.id;
+  if (f === 'dur' && dateMode() === 'ed') { const v = parseInt(t.value, 10); if (v >= 1) { applyDate(i, 'D', v, 'ed'); refresh(); changed(false); } return; }
   if (f === 'type') { r.type = t.value; changedFirst(); structural('.row[data-i="' + i + '"] [data-f="type"]'); return; }
   if (f === 'pred') r.pred = t.value === '' ? '' : Number(t.value);
   else if (f === 'lag') r.lag = t.value === '' ? '' : String(parseInt(t.value, 10) || 0);
@@ -1274,9 +1323,12 @@ function addRow(type, at) {
     if (type === 'untervorgang') { let v = -1; state.rows.forEach((x, k) => { if (x.type === 'vorgang') v = k; }); if (v >= 0) { idx = v + 1; while (idx < state.rows.length && state.rows[idx].type === 'untervorgang') idx++; } }
   }
   state.rows.splice(idx, 0, r);
+  sched = schedule(state); if (typeof unfoldFor === 'function') unfoldFor(idx);   // neuer Untervorgang in eingeklappter Gruppe
   structural('.row[data-i="' + idx + '"] [data-f="name"]');
   const el = $('rowsL').querySelector('.row[data-i="' + idx + '"]'); if (el) el.scrollIntoView({ block: 'nearest' });
   select(idx);
+  // Gleich die Detailmaske für Bezeichnung, Termine, Verantwortliche und Beschreibung öffnen
+  if (typeof openDetails === 'function') openDetails(idx);
 }
 function groupEnd(i) { let e = i; if (state.rows[i].type === 'vorgang') while (e + 1 < state.rows.length && state.rows[e + 1].type === 'untervorgang') e++; return e; }
 function groupStart(i) { if (state.rows[i].type === 'untervorgang') { let k = i; while (k > 0 && state.rows[k].type === 'untervorgang') k--; return state.rows[k].type === 'vorgang' ? k : i; } return i; }
@@ -1379,6 +1431,7 @@ function deleteRow(i) {
 function onClick(e) {
   const b = e.target.closest('[data-a]'); if (!b) return;
   const i = rowIdx(b), a = b.dataset.a;
+  if (a === 'fold') { toggleFold(i); return; }
   if (a === 'sub') addRow('untervorgang', state.rows[i].type === 'vorgang' ? groupEnd(i) + 1 : i + 1);
   else if (a === 'det') openDetails(i);
 }
@@ -1483,7 +1536,7 @@ async function initStore() {
   renderAll(); setStatus('local', 'Nur in diesem Browser gespeichert');
   if (window.SP && window.SP.connect) {
     let col = null; try { col = await window.SP.connect(window.TEAMS_CFG || {}, (k, t) => setStatus(k, t)); } catch (e) { setStatus('error', 'Anmeldung fehlgeschlagen: ' + ((e && e.message) || e)); showLogin(); return; }
-    uid = col.uid; if (col.readOnly) lockReadOnly(false); attach(col, pick, null); return;
+    uid = col.uid; prefsForUser(); if (col.readOnly) lockReadOnly(false); attach(col, pick, null); return;
   }
   let cl = null; try { cl = window.claude && window.claude.use ? window.claude : null; } catch (e) { }
   if (!cl) return;
@@ -1491,6 +1544,7 @@ async function initStore() {
   let db = null; try { db = await cl.use('db'); } catch (e) { db = null; }
   if (!db) return;
   try { userNs = await cl.use('user'); if (userNs) uid = await userNs.id(); } catch (e) { userNs = null; }
+  prefsForUser();
   try { await teamInit(); } catch (e) { }
   try { attach(db.collection('plans'), pick, cl); } catch (e) { dbc = null; setStatus('local', 'Nur in diesem Browser gespeichert'); }
 }
@@ -1715,13 +1769,23 @@ function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Ma
 function boot() {
   applyTheme(); applyDisplay();
   initViews();
+  initCols(); initDateMode();
   initDrag();
   initTasks();
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (typeof u.zoom2 === 'number') zoom = Math.max(0, Math.min(ZMAX, u.zoom2)); if (u.leftw) document.documentElement.style.setProperty('--leftw', u.leftw + 'px'); } catch (e) { }
   link($('bodyL'), $('bodyR')); link($('bodyR'), $('bodyL'));
   const rl = $('rowsL');
   rl.addEventListener('input', onInput); rl.addEventListener('click', onClick);
-  rl.addEventListener('change', e => { if (e.target.dataset.f === 'name') refreshPredOptions(); });
+  rl.addEventListener('change', e => {
+    const f = e.target.dataset.f;
+    if (f === 'name') refreshPredOptions();
+    if ((f === 'S' || f === 'E') && !readOnly) {
+      const i = rowIdx(e.target), v = parseISO(e.target.value); if (i < 0) return;
+      const err = v == null ? 'Bitte ein gültiges Datum eingeben.' : applyDate(i, f, v, dateMode());
+      if (err) { toast(err); e.target.value = toISO(f === 'S' ? sched.out[i].S : sched.out[i].E); return; }
+      filterEditId = state.rows[i].id; refresh(); changed(true);
+    }
+  });
   rl.addEventListener('focusin', e => { const i = rowIdx(e.target); if (i >= 0) select(i); });
   rl.addEventListener('focusout', e => {
     if (rl.contains(e.relatedTarget) || $('peoplePicker').contains(e.relatedTarget)) return;
@@ -1909,6 +1973,7 @@ function setView(v) {
   view = v; saveUi({ view: v });
   $('segView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
   $('board').hidden = v !== 'gantt'; $('tabs').hidden = v !== 'gantt';
+  if ($('dateWrap')) $('dateWrap').hidden = v !== 'gantt';
   document.querySelector('.foot').dataset.v = v;   // Legende nur im Gantt, Umschalter immer
   $('vList').hidden = v !== 'list'; $('vKanban').hidden = v !== 'kanban'; $('vCal').hidden = v !== 'cal';
   if ($('vTasks')) $('vTasks').hidden = v !== 'tasks';
@@ -1926,6 +1991,7 @@ function renderView() {
   paintChangeChip();
 }
 function gotoRow(i) {
+  if (typeof unfoldFor === 'function' && unfoldFor(i)) renderFilteredViews(true);
   setView('gantt'); select(i);
   const el = $('rowsL').querySelector('.row[data-i="' + i + '"]');
   if (el) { el.scrollIntoView({ block: 'center' }); const f = el.querySelector('[data-f="name"]'); if (f) f.focus({ preventScroll: true }); }
@@ -2158,7 +2224,7 @@ function initViews() {
     go(e);
   });
   $('vCal').addEventListener('change', e => { if (e.target.id === 'calSum') { calSum = e.target.checked; renderCal(); } });
-  $('pdfBtn').addEventListener('click', exportPdf);
+  $('pdfBtn').addEventListener('click', () => openPdfDialog());
   setView(view);
 }
 
@@ -2530,6 +2596,151 @@ window.__deepLink = async () => {
   const k = rowById(Number(m[2])); if (k < 0) return;
   setView('gantt'); select(k); openDetails(k);
 };
+
+/* ---------- Gantt-Tabelle: Spalten je Person, Einklappen, Termineingabe ---------- */
+// Einstellungen gelten je Person (Benutzerkennung) und Gerät.
+function prefKey(base) { return base + ':' + (typeof uid !== 'undefined' && uid ? uid : 'lokal'); }
+function loadPref(base, def) { try { const v = JSON.parse(localStorage.getItem(prefKey(base)) || 'null'); return v && typeof v === 'object' ? v : def; } catch (e) { return def; } }
+function savePref(base, v) { try { localStorage.setItem(prefKey(base), JSON.stringify(v)); } catch (e) { } }
+
+/* Spalten: Reihenfolge wie in rowHTML; [Schlüssel, Bezeichnung, Standardbreite, immer sichtbar] */
+const COLS = [['acts', '', 52, true], ['nr', 'Nr', 34], ['psp', 'PSP', 42], ['type', 'Typ', 134], ['name', 'Vorgang', 220, true], ['who', 'Verantwortlich', 112],
+  ['pct', 'Fortschritt', 80], ['pred', 'Vorgänger', 150], ['rel', 'Beziehung', 62], ['lag', 'Versatz', 58], ['fixed', 'Fester Start', 130], ['dur', 'Dauer', 56],
+  ['S', 'Start', 124], ['E', 'Ende', 124]];
+let colPref = null, colKey = '';
+function colPrefs() { if (!colPref || colKey !== prefKey('tp-cols-v1')) { colKey = prefKey('tp-cols-v1'); colPref = loadPref('tp-cols-v1', {}); colPref.w = colPref.w || {}; colPref.hide = Array.isArray(colPref.hide) ? colPref.hide : []; } return colPref; }
+const colW = c => Math.max(28, Math.min(640, Number(colPrefs().w[c[0]]) || c[2]));
+function applyCols(reload) {
+  if (reload) colPref = null;
+  const p = colPrefs(), hide = new Set(p.hide);
+  const vis = COLS.filter(c => c[3] || !hide.has(c[0]));
+  let css = '#paneL .grid{grid-template-columns:' + vis.map(c => colW(c) + 'px').join(' ') + ';width:' + vis.reduce((s, c) => s + colW(c), 0) + 'px}';
+  COLS.forEach((c, k) => { if (!c[3] && hide.has(c[0])) css += '#paneL .grid>:nth-child(' + (k + 1) + '){display:none}'; });
+  let st = document.getElementById('colStyle');
+  if (!st) { st = document.createElement('style'); st.id = 'colStyle'; document.head.appendChild(st); }
+  st.textContent = css;
+  const b = $('colBtn'); if (b) b.classList.toggle('on', !!(p.hide.length || Object.keys(p.w).length));
+}
+function colMenuHtml() {
+  const p = colPrefs(), hide = new Set(p.hide);
+  return '<p class="cmh">Spalten anzeigen</p>' + COLS.filter(c => !c[3]).map(c => '<label class="chk"><input type="checkbox" data-col="' + c[0] + '"' + (hide.has(c[0]) ? '' : ' checked') + '> ' + esc(c[1]) + '</label>').join('') +
+    '<div class="btns"><button type="button" class="btn sm" data-colact="all">Alle anzeigen</button><button type="button" class="btn sm" data-colact="width">Breiten zurücksetzen</button></div>' +
+    '<p class="hint">Breite ändern: Spaltenrand im Kopf ziehen, Doppelklick setzt zurück. Die Einstellung gilt nur für dich.</p>';
+}
+function initCols() {
+  const head = $('hrowL'); if (!head) return;
+  const cells = [...head.children];
+  cells[0].innerHTML = '<button class="ib" id="foldAll" type="button"></button><button class="ib" id="colBtn" type="button" title="Spalten ein- und ausblenden" aria-haspopup="true" aria-expanded="false">' + icon('cols') + '</button>';
+  cells.forEach((cell, k) => { if (k > 0 && COLS[k]) { const h = document.createElement('span'); h.className = 'colrs'; h.dataset.col = COLS[k][0]; h.title = 'Breite ändern (Doppelklick: Standard)'; cell.appendChild(h); } });
+  // Breite ziehen
+  let d = null;
+  head.addEventListener('pointerdown', e => {
+    const h = e.target.closest('.colrs'); if (!h) return;
+    e.preventDefault(); const c = COLS.find(x => x[0] === h.dataset.col);
+    d = { c, x: e.clientX, w: colW(c), pid: e.pointerId }; try { h.setPointerCapture(e.pointerId); } catch (x) { }
+    document.body.classList.add('colresize');
+  });
+  head.addEventListener('pointermove', e => { if (!d || e.pointerId !== d.pid) return; colPrefs().w[d.c[0]] = Math.round(Math.max(28, d.w + e.clientX - d.x)); applyCols(); });
+  const up = e => { if (!d || e.pointerId !== d.pid) return; d = null; document.body.classList.remove('colresize'); savePref('tp-cols-v1', colPrefs()); };
+  head.addEventListener('pointerup', up); head.addEventListener('pointercancel', up);
+  head.addEventListener('dblclick', e => { const h = e.target.closest('.colrs'); if (!h) return; delete colPrefs().w[h.dataset.col]; savePref('tp-cols-v1', colPrefs()); applyCols(); });
+  // Spaltenmenü
+  const menu = document.createElement('div'); menu.className = 'colmenu'; menu.id = 'colMenu'; menu.hidden = true; menu.setAttribute('role', 'dialog'); menu.setAttribute('aria-label', 'Spalten');
+  document.body.appendChild(menu);
+  const btn = $('colBtn');
+  const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (!menu.hidden) { close(); return; }
+    menu.innerHTML = colMenuHtml(); menu.hidden = false; btn.setAttribute('aria-expanded', 'true');
+    const r = btn.getBoundingClientRect(); menu.style.left = Math.max(8, Math.min(r.left, innerWidth - menu.offsetWidth - 8)) + 'px'; menu.style.top = (r.bottom + 6) + 'px';
+    const f = menu.querySelector('input'); if (f) f.focus();
+  });
+  menu.addEventListener('change', e => {
+    const k = e.target.dataset.col; if (!k) return; const p = colPrefs();
+    p.hide = p.hide.filter(x => x !== k); if (!e.target.checked) p.hide.push(k);
+    savePref('tp-cols-v1', p); applyCols();
+  });
+  menu.addEventListener('click', e => {
+    const a = e.target.dataset.colact; if (!a) return; const p = colPrefs();
+    if (a === 'all') p.hide = []; else p.w = {};
+    savePref('tp-cols-v1', p); applyCols(); menu.innerHTML = colMenuHtml();
+  });
+  document.addEventListener('click', e => { if (!menu.hidden && !menu.contains(e.target) && e.target !== btn) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { close(); btn.focus(); } });
+  $('foldAll').addEventListener('click', () => {
+    const sums = state.rows.map((r, i) => i).filter(i => sched.out[i] && sched.out[i].summary);
+    const anyOpen = sums.some(i => !folds().has(state.rows[i].id));
+    sums.forEach(i => { if (anyOpen) folds().add(state.rows[i].id); else folds().delete(state.rows[i].id); });
+    saveFolds(); renderFilteredViews(true);
+  });
+  applyCols();
+}
+
+/* Einklappen der Untervorgänge (je Person und Projekt) */
+let foldSet = null, foldProj = null;
+function folds() {
+  const k = prefKey('tp-fold-v1') + '|' + curId;
+  if (!foldSet || foldProj !== k) { foldProj = k; foldSet = new Set((loadPref('tp-fold-v1', {})[curId] || []).map(Number)); }
+  return foldSet;
+}
+function saveFolds() { const all = loadPref('tp-fold-v1', {}); all[curId] = [...folds()]; savePref('tp-fold-v1', all); }
+function isFolded(id) { return folds().has(id); }
+function filtersActive() { return !!(fQ || fWho || fSt !== 'all'); }
+// Untervorgänge eingeklappter Sammelvorgänge ausblenden (bei aktivem Filter bleiben Treffer sichtbar)
+function foldFilter(indices) {
+  if (!sched || filtersActive()) return indices;
+  return indices.filter(i => { const p = sched.parent[i]; return !(p >= 0 && state.rows[p] && folds().has(state.rows[p].id)); });
+}
+function toggleFold(i) { const id = state.rows[i].id, s = folds(); if (s.has(id)) s.delete(id); else s.add(id); saveFolds(); renderFilteredViews(true); }
+function unfoldFor(i) {
+  const p = sched && sched.parent[i];
+  if (p >= 0 && state.rows[p] && folds().has(state.rows[p].id)) { folds().delete(state.rows[p].id); saveFolds(); return true; }
+  return false;
+}
+function paintFoldAll() {
+  const b = $('foldAll'); if (!b || !sched) return;
+  const sums = state.rows.filter((r, i) => sched.out[i] && sched.out[i].summary);
+  const anyOpen = sums.some(r => !folds().has(r.id));
+  b.hidden = !sums.length; b.innerHTML = icon(anyOpen ? 'foldin' : 'foldout');
+  b.title = anyOpen ? 'Alle Untervorgänge einklappen' : 'Alle Untervorgänge ausklappen';
+}
+
+// Sobald die Person bekannt ist: ihre Spalten und eingeklappten Gruppen anwenden
+function prefsForUser() { applyCols(true); if (sched) renderFilteredViews(true); }
+
+/* Termineingabe: Start + Ende, Start + Dauer oder Ende + Dauer (gemeinsam mit dem Detailfenster) */
+// which: 'S' Start, 'E' Ende, 'D' Dauer; v: Tageszahl bzw. Dauer. Liefert eine Fehlermeldung oder null.
+function applyDate(i, which, v, mode) {
+  const r = state.rows[i], o = sched && sched.out[i];
+  if (!r || !o || o.summary || readOnly) return 'Termine von Sammelvorgängen ergeben sich aus den Untervorgängen.';
+  const ms = r.type === 'meilenstein';
+  if (which === 'S') {
+    if (mode === 'se' && !ms) {
+      if (v > o.E) return 'Der Start liegt nach dem Ende. Verschiebe zuerst das Ende.';
+      r.dur = String(Math.max(1, spanDays(v, o.E)));
+    }
+    r.fixed = toISO(v);
+  } else if (which === 'E') {
+    if (ms) { r.fixed = toISO(v); return null; }
+    if (mode === 'ed') r.fixed = toISO(startFor(v, o.dur));
+    else { if (v < o.S) return 'Das Ende liegt vor dem Start. Verschiebe zuerst den Start.'; r.dur = String(Math.max(1, spanDays(o.S, v))); }
+  } else if (which === 'D') {
+    const d = Math.max(1, v);
+    if (mode === 'ed') r.fixed = toISO(startFor(o.E, d));
+    r.dur = String(d);
+  }
+  return null;
+}
+function paintDateMode() {
+  const seg = $('segDate'); if (!seg) return;
+  const m = dateMode(); seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === m)));
+}
+function initDateMode() {
+  const seg = $('segDate'); if (!seg) return;
+  seg.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; saveUi({ dmode: b.dataset.v }); paintDateMode(); });
+  paintDateMode();
+}
 
 /* ---------- Aufgaben: eigene Rubrik für To-dos mit Zuständigen, Termin und Priorität ---------- */
 // Aufgaben gehören zum Projekt (state.tasks) und werden mit dem Plan gespeichert und abgeglichen.
@@ -2992,12 +3203,12 @@ function loadJsPdf() {
 // Standardschrift im PDF kennt nur Westeuropäisch (WinAnsi)
 const pt = s => String(s ?? '').replace(/→/g, '->').replace(/[^\x20-\x7e\xa0-\xff–—„“”‚‘’•…€]/g, '');
 
-async function exportPdf() {
+async function exportPdf(opt) {
   if (!state.rows.length) { toast('Der Plan ist noch leer'); return; }
   const btn = $('pdfBtn'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'PDF wird erstellt …';
   try {
     const JsPDF = await loadJsPdf();
-    const buf = buildPdf(JsPDF);
+    const buf = buildPdf(JsPDF, opt);
     await offerBin('terminplan-' + slug() + '.pdf', buf);
   } catch (e) { toast((e && e.message) || 'PDF konnte nicht erstellt werden'); }
   btn.disabled = false; btn.textContent = old;
@@ -3011,30 +3222,43 @@ async function offerBin(name, buf) {
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
-function buildPdf(JsPDF) {
-  const rows = state.rows.map(row => ({ ...row, who: assigneeNames(row) })), N = rows.length, o = sched.out, today = todayDn();
+function buildPdf(JsPDF, opt) {
+  opt = opt || pdfOptions();
+  const rows = state.rows.map(row => ({ ...row, who: assigneeNames(row) })), o = sched.out, today = todayDn();
   const M = 28, RH = 16, HH = 36, step = state.raster === 'weeks' ? 7 : 1;
+  // Zeilen: alle oder wie in der Ansicht; optional ohne Erledigte; optional nur im Zeitraum
+  const from = parseISO(opt.from), to = parseISO(opt.to);
+  let idx = opt.view ? ganttRowIndices() : state.rows.map((_, i) => i);
+  if (!opt.done) idx = idx.filter(i => o[i].summary || !isDone(i));
+  if (opt.onlyRange && (from != null || to != null)) idx = idx.filter(i => (to == null || o[i].S <= to) && (from == null || o[i].E >= from));
+  // Sammelvorgänge ohne verbleibende Untervorgänge entfallen, wenn ihre Untervorgänge herausgefiltert wurden
+  idx = idx.filter(i => !o[i].summary || idx.some(k => sched.parent[k] === i) || (opt.view && isFolded(state.rows[i].id)));
+  if (!idx.length) throw new Error('Für diese Auswahl gibt es keine Vorgänge.');
+  const pos = new Map(idx.map((i, k) => [i, k])), N = idx.length, sel = idx.map(i => rows[i]);
   // Spalten ab Nr; leere Spalten (Versatz, Fester Start …) entfallen
-  const anyPred = o.some(x => x.pred >= 0), anyLag = rows.some(r => parseInt(r.lag, 10)), anyFixed = rows.some(r => r.fixed);
+  const anyPred = idx.some(i => o[i].pred >= 0), anyLag = sel.some(r => parseInt(r.lag, 10)), anyFixed = sel.some(r => r.fixed);
+  const want = k => k === 'name' || !opt.cols || opt.cols.includes(k === 'rel' ? 'pred' : k);
   const cols = [
     { k: 'nr', t: 'Nr', w: 22, a: 'center', mono: true },
     { k: 'psp', t: 'PSP', w: 26, a: 'center', mono: true },
     { k: 'type', t: 'Typ', w: 64 },
-    { k: 'name', t: 'Vorgang', w: Math.min(190, Math.max(110, 22 + Math.max(...rows.map(r => (r.name || '').length)) * 4.1)) },
-    { k: 'who', t: 'Verantw.', w: Math.min(110, Math.max(56, 12 + Math.max(0, ...rows.map(r => (r.who || '').length)) * 4.1)) },
-    anyPred && { k: 'pred', t: 'Vorgänger', w: 96 },
-    anyPred && { k: 'rel', t: 'Bez.', w: 24, a: 'center' },
-    anyLag && { k: 'lag', t: 'Versatz', w: 38, a: 'center', mono: true },
-    anyFixed && { k: 'fixed', t: 'Fester Start', w: 52, mono: true },
+    { k: 'name', t: 'Vorgang', w: Math.min(190, Math.max(110, 22 + Math.max(...sel.map(r => (r.name || '').length)) * 4.1)) },
+    { k: 'who', t: 'Verantw.', w: Math.min(110, Math.max(56, 12 + Math.max(0, ...sel.map(r => (r.who || '').length)) * 4.1)) },
+    (anyPred || opt.cols) && { k: 'pred', t: 'Vorgänger', w: 96 },
+    (anyPred || opt.cols) && { k: 'rel', t: 'Bez.', w: 24, a: 'center' },
+    (anyLag || opt.cols) && { k: 'lag', t: 'Versatz', w: 38, a: 'center', mono: true },
+    (anyFixed || opt.cols) && { k: 'fixed', t: 'Fester Start', w: 52, mono: true },
     { k: 'dur', t: 'Dauer', w: 32, a: 'center', mono: true },
-    rows.some((r, i) => progOf(i) > 0) && { k: 'pct', t: 'Fortschr.', w: 50, a: 'center', mono: true },
+    (idx.some(i => progOf(i) > 0) || opt.cols) && { k: 'pct', t: 'Fortschr.', w: 50, a: 'center', mono: true },
     { k: 'S', t: 'Start', w: 56, mono: true },
     { k: 'E', t: 'Ende', w: 56, mono: true }
-  ].filter(Boolean);
+  ].filter(c => c && want(c.k));
   const TW = cols.reduce((s, c) => s + c.w, 0);
-  // Zeitraum: vom Projektstart bis zum letzten Termin, ohne leere Reserve
-  let minS = sched.P, maxE = sched.P; o.forEach(x => { if (x.S < minS) minS = x.S; if (x.E > maxE) maxE = x.E; });
-  const first = mondayOf(minS), last = step === 7 ? mondayOf(maxE) + 13 : mondayOf(maxE) + 6;
+  // Zeitraum: gewählt, sonst vom Projektstart bis zum letzten Termin, ohne leere Reserve
+  let minS = from == null ? sched.P : Infinity, maxE = -Infinity; idx.forEach(i => { const x = o[i]; if (x.S < minS) minS = x.S; if (x.E > maxE) maxE = x.E; });
+  if (from != null) minS = from; if (to != null) maxE = to; if (maxE < minS) maxE = minS;
+  const first = step === 7 || from == null ? mondayOf(minS) : minS;
+  const last = to != null ? (step === 7 ? mondayOf(to) + 6 : to) : (step === 7 ? mondayOf(maxE) + 13 : mondayOf(maxE) + 6);
   const nCols = Math.ceil((last - first + 1) / step);
   let colW = step === 7 ? 26 : 13;
   colW = Math.min(step === 7 ? 60 : 28, Math.max(colW, TW / nCols));   // Zeitachse mindestens so breit wie die Tabelle
@@ -3057,7 +3281,8 @@ function buildPdf(JsPDF) {
   // Titel
   font('helvetica', 'bold', 15, PC.ink); txt(state.name || 'Terminplan', M, M + 10);
   font('helvetica', 'normal', 8, PC.muted);
-  txt('Projektstart ' + fmt(sched.P) + '   ·   Projektende ' + fmt(maxE) + '   ·   Dauer in ' + (sched.work ? 'Arbeitstagen' : 'Kalendertagen') +
+  let projEnd = sched.P; o.forEach(x => { if (x.E > projEnd) projEnd = x.E; });
+  txt((from != null || to != null ? 'Zeitraum ' + fmt(first) + ' bis ' + fmt(last) + '   ·   ' : '') + 'Projektstart ' + fmt(sched.P) + '   ·   Projektende ' + fmt(projEnd) + '   ·   Dauer in ' + (sched.work ? 'Arbeitstagen' : 'Kalendertagen') +
     '   ·   Raster ' + (step === 7 ? 'Wochen' : 'Tage') + '   ·   Stand ' + fmtLong(today), M, M + 27);
 
   // Hintergrund Zeitachse: Wochenenden, Feiertage, heute
@@ -3069,7 +3294,7 @@ function buildPdf(JsPDF) {
     if (c) { fill(c, x, B, colW, N * RH); if (k === todayCol || c === PC.holiday) fill(c, x, T + 22, colW, HH - 22); }
   } else if (todayCol >= 0 && todayCol < nCols) { fill(PC.todayBg, X0 + todayCol * colW, B, colW, N * RH); fill(PC.todayBg, X0 + todayCol * colW, T + 12, colW, HH - 12); }
   // Sammelzeilen in der Tabelle hinterlegen
-  rows.forEach((r, i) => { if (o[i].summary) fill(PC.sumrow, M, B + i * RH, TW, RH); });
+  idx.forEach((i, k) => { if (o[i].summary) fill(PC.sumrow, M, B + k * RH, TW, RH); });
 
   // Kopf der Tabelle
   font('helvetica', 'bold', 6.3, PC.muted);
@@ -3126,8 +3351,8 @@ function buildPdf(JsPDF) {
   if (todayCol >= 0 && todayCol < nCols) { const tx = X(today) + (step === 7 ? colW / 14 : colW / 2); line(PC.today, 0.8, tx, B, tx, B + N * RH, [3, 2]); }
 
   // Tabelleninhalt
-  rows.forEach((r, i) => {
-    const y = B + i * RH + RH / 2, x2 = o[i], sub = r.type === 'untervorgang' && sched.parent[i] >= 0, pi = x2.pred;
+  idx.forEach((i, k) => {
+    const r = rows[i], y = B + k * RH + RH / 2, x2 = o[i], sub = r.type === 'untervorgang' && sched.parent[i] >= 0, pi = x2.pred;
     cols.forEach(col => {
       let v = '', bold = false, colr = PC.ink;
       switch (col.k) {
@@ -3158,13 +3383,15 @@ function buildPdf(JsPDF) {
   });
 
   // Abhängigkeiten
-  const cy = i => B + i * RH + RH / 2;
+  const cy = i => B + pos.get(i) * RH + RH / 2;
+  // Diagramm auf den gewählten Zeitraum begrenzen
+  doc.saveGraphicsState(); doc.rect(X0, B, CW, N * RH, null); doc.clip(); doc.discardPath();
   const isMs = i => rows[i].type === 'meilenstein';
   const msX = i => X(o[i].S + 0.5);
   const ax = (i, end) => isMs(i) ? msX(i) + (end ? 5 : -5) : (end ? X(o[i].E + 1) : X(o[i].S));
-  if (state.lines) {
+  if (opt.lines) {
     o.forEach((x2, i) => {
-      if (x2.pred < 0 || x2.err) return;
+      if (x2.pred < 0 || x2.err || !pos.has(i) || !pos.has(x2.pred)) return;
       const rel = rows[i].rel, p = x2.pred;
       const x1 = ax(p, !(rel === 'AA' || rel === 'AE')), y1 = cy(p);
       const e = (rel === 'EE' || rel === 'AE') ? -1 : 1, xe = ax(i, e === -1), y2 = cy(i);
@@ -3177,8 +3404,8 @@ function buildPdf(JsPDF) {
     });
   }
   // Balken
-  rows.forEach((r, i) => {
-    const x2 = o[i], y = cy(i);
+  idx.forEach(i => {
+    const r = rows[i], x2 = o[i], y = cy(i);
     font('helvetica', 'normal', 6.4, PC.muted);
     if (r.type === 'meilenstein') {
       const mx = msX(i), s = 4.6; doc.setFillColor(PC.ms);
@@ -3203,7 +3430,9 @@ function buildPdf(JsPDF) {
     }
   });
 
+  doc.restoreGraphicsState();
   // Legende
+  if (opt.legend === false) return doc.output('arraybuffer');
   const ly = B + N * RH + 18; let lx = M;
   const sw = (draw, label) => { draw(lx, ly); font('helvetica', 'normal', 7, PC.muted); txt(label, lx + 16, ly); lx += 22 + doc.getTextWidth(label) + 10; };
   sw((x, y) => { doc.setFillColor(PC.sum); doc.rect(x, y - 2.5, 12, 4, 'F'); }, 'Sammelvorgang');
@@ -3216,6 +3445,60 @@ function buildPdf(JsPDF) {
   font('helvetica', 'normal', 6.6, PC.muted);
   txt('EA Ende-Anfang  ·  AA Anfang-Anfang  ·  EE Ende-Ende  ·  AE Anfang-Ende', M + TW + CW, ly, { align: 'right' });
   return doc.output('arraybuffer');
+}
+
+/* ---------- Auswahl vor dem Export ---------- */
+const PDF_COLS = [['nr', 'Nr'], ['psp', 'PSP'], ['type', 'Typ'], ['who', 'Verantwortlich'], ['pct', 'Fortschritt'], ['pred', 'Vorgänger und Beziehung'], ['lag', 'Versatz'], ['fixed', 'Fester Start'], ['dur', 'Dauer'], ['S', 'Start'], ['E', 'Ende']];
+function pdfOptions() {
+  let u = {}; try { u = JSON.parse(localStorage.getItem(LS_UI) || '{}').pdf || {}; } catch (e) { }
+  return { cols: Array.isArray(u.cols) ? u.cols : null, view: !!u.view, done: u.done !== false, onlyRange: u.onlyRange !== false, lines: u.lines ?? !!state.lines, legend: u.legend !== false, from: '', to: '' };
+}
+function openPdfDialog() {
+  if (!state.rows.length) { toast('Der Plan ist noch leer'); return; }
+  const op = pdfOptions(), today = todayDn();
+  const defCols = PDF_COLS.map(c => c[0]).filter(k => !['lag', 'fixed'].includes(k) || state.rows.some(r => k === 'lag' ? parseInt(r.lag, 10) : r.fixed));
+  const on = k => (op.cols || defCols).includes(k);
+  let minS = sched.P, maxE = sched.P; sched.out.forEach(x => { if (x.S < minS) minS = x.S; if (x.E > maxE) maxE = x.E; });
+  const s = document.createElement('div'); s.className = 'scrim'; s.id = 'pdfScrim';
+  const ck = (id, t, c) => '<label class="chk"><input type="checkbox" id="' + id + '"' + (c ? ' checked' : '') + '> ' + t + '</label>';
+  s.innerHTML = '<div class="panel pdfdlg" role="dialog" aria-modal="true" aria-labelledby="pdfT">' +
+    '<div class="head"><h2 id="pdfT">PDF exportieren</h2><button class="btn" type="button" data-x>Abbrechen</button></div>' +
+    '<div><h3>Spalten der Tabelle</h3><div class="pcols">' + PDF_COLS.map(([k, t]) => '<label class="chk"><input type="checkbox" data-pc="' + k + '"' + (on(k) ? ' checked' : '') + '> ' + t + '</label>').join('') + '</div>' +
+    '<p class="hint">„Vorgang“ und das Balkendiagramm sind immer enthalten.</p></div>' +
+    '<div><h3>Zeitraum</h3><div class="prange"><label class="pf">Von<input class="in" type="date" id="pFrom"></label><label class="pf">Bis<input class="in" type="date" id="pTo"></label></div>' +
+    '<div class="pquick"><button type="button" class="btn sm" data-q="all">Gesamtes Projekt</button><button type="button" class="btn sm" data-q="4w">Ab heute 4 Wochen</button><button type="button" class="btn sm" data-q="3m">Ab heute 3 Monate</button><button type="button" class="btn sm" data-q="mon">Dieser Monat</button><button type="button" class="btn sm" data-q="next">Nächster Monat</button></div>' +
+    ck('pOnly', 'Nur Vorgänge, die in den Zeitraum fallen', op.onlyRange) + '<p class="hint">Leer lassen für das gesamte Projekt (' + fmt(minS) + ' bis ' + fmt(maxE) + ').</p></div>' +
+    '<div><h3>Vorgänge</h3><label class="chk"><input type="radio" name="pv" value="all"' + (op.view ? '' : ' checked') + '> Alle Vorgänge</label>' +
+    '<label class="chk"><input type="radio" name="pv" value="view"' + (op.view ? ' checked' : '') + '> Wie in der Ansicht (aktive Filter, eingeklappte Untervorgänge)</label>' +
+    ck('pDone', 'Erledigte Vorgänge einschließen', op.done) + '</div>' +
+    '<div><h3>Weitere Inhalte</h3>' + ck('pLines', 'Abhängigkeitslinien', op.lines) + ck('pLegend', 'Legende', op.legend) + '</div>' +
+    '<div class="btns"><span class="msg" id="pMsg"></span><span class="spacer"></span><button class="btn primary" type="button" id="pGo">PDF erstellen</button></div></div>';
+  document.body.appendChild(s);
+  const q = x => s.querySelector(x), close = () => { s.remove(); document.removeEventListener('keydown', key); $('pdfBtn').focus(); };
+  const key = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', key);
+  s.addEventListener('click', e => { if (e.target === s || e.target.closest('[data-x]')) close(); });
+  q('.pquick').addEventListener('click', e => {
+    const b = e.target.closest('[data-q]'); if (!b) return; const t = ymd(today);
+    let a = '', z = '';
+    if (b.dataset.q === '4w') { a = toISO(today); z = toISO(today + 27); }
+    else if (b.dataset.q === '3m') { a = toISO(today); z = toISO(dn(t.y, t.m + 3, t.d) - 1); }
+    else if (b.dataset.q === 'mon') { a = toISO(dn(t.y, t.m, 1)); z = toISO(dn(t.m === 12 ? t.y + 1 : t.y, t.m % 12 + 1, 1) - 1); }
+    else if (b.dataset.q === 'next') { const ny = t.m === 12 ? t.y + 1 : t.y, nm = t.m % 12 + 1; a = toISO(dn(ny, nm, 1)); z = toISO(dn(nm === 12 ? ny + 1 : ny, nm % 12 + 1, 1) - 1); }
+    q('#pFrom').value = a; q('#pTo').value = z;
+  });
+  q('#pGo').addEventListener('click', async () => {
+    const opt = {
+      cols: [...s.querySelectorAll('[data-pc]')].filter(x => x.checked).map(x => x.dataset.pc),
+      view: q('input[name="pv"]:checked').value === 'view', done: q('#pDone').checked, onlyRange: q('#pOnly').checked,
+      lines: q('#pLines').checked, legend: q('#pLegend').checked, from: q('#pFrom').value, to: q('#pTo').value
+    };
+    const f = parseISO(opt.from), t = parseISO(opt.to);
+    if (f != null && t != null && t < f) { q('#pMsg').textContent = 'Das Ende des Zeitraums liegt vor dem Anfang.'; q('#pMsg').classList.add('bad'); return; }
+    saveUi({ pdf: { cols: opt.cols, view: opt.view, done: opt.done, onlyRange: opt.onlyRange, lines: opt.lines, legend: opt.legend } });
+    close(); await exportPdf(opt);
+  });
+  q('#pGo').focus();
 }
 
 boot();

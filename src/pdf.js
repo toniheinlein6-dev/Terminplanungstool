@@ -22,12 +22,12 @@ function loadJsPdf() {
 // Standardschrift im PDF kennt nur Westeuropäisch (WinAnsi)
 const pt = s => String(s ?? '').replace(/→/g, '->').replace(/[^\x20-\x7e\xa0-\xff–—„“”‚‘’•…€]/g, '');
 
-async function exportPdf() {
+async function exportPdf(opt) {
   if (!state.rows.length) { toast('Der Plan ist noch leer'); return; }
   const btn = $('pdfBtn'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'PDF wird erstellt …';
   try {
     const JsPDF = await loadJsPdf();
-    const buf = buildPdf(JsPDF);
+    const buf = buildPdf(JsPDF, opt);
     await offerBin('terminplan-' + slug() + '.pdf', buf);
   } catch (e) { toast((e && e.message) || 'PDF konnte nicht erstellt werden'); }
   btn.disabled = false; btn.textContent = old;
@@ -41,30 +41,43 @@ async function offerBin(name, buf) {
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
-function buildPdf(JsPDF) {
-  const rows = state.rows.map(row => ({ ...row, who: assigneeNames(row) })), N = rows.length, o = sched.out, today = todayDn();
+function buildPdf(JsPDF, opt) {
+  opt = opt || pdfOptions();
+  const rows = state.rows.map(row => ({ ...row, who: assigneeNames(row) })), o = sched.out, today = todayDn();
   const M = 28, RH = 16, HH = 36, step = state.raster === 'weeks' ? 7 : 1;
+  // Zeilen: alle oder wie in der Ansicht; optional ohne Erledigte; optional nur im Zeitraum
+  const from = parseISO(opt.from), to = parseISO(opt.to);
+  let idx = opt.view ? ganttRowIndices() : state.rows.map((_, i) => i);
+  if (!opt.done) idx = idx.filter(i => o[i].summary || !isDone(i));
+  if (opt.onlyRange && (from != null || to != null)) idx = idx.filter(i => (to == null || o[i].S <= to) && (from == null || o[i].E >= from));
+  // Sammelvorgänge ohne verbleibende Untervorgänge entfallen, wenn ihre Untervorgänge herausgefiltert wurden
+  idx = idx.filter(i => !o[i].summary || idx.some(k => sched.parent[k] === i) || (opt.view && isFolded(state.rows[i].id)));
+  if (!idx.length) throw new Error('Für diese Auswahl gibt es keine Vorgänge.');
+  const pos = new Map(idx.map((i, k) => [i, k])), N = idx.length, sel = idx.map(i => rows[i]);
   // Spalten ab Nr; leere Spalten (Versatz, Fester Start …) entfallen
-  const anyPred = o.some(x => x.pred >= 0), anyLag = rows.some(r => parseInt(r.lag, 10)), anyFixed = rows.some(r => r.fixed);
+  const anyPred = idx.some(i => o[i].pred >= 0), anyLag = sel.some(r => parseInt(r.lag, 10)), anyFixed = sel.some(r => r.fixed);
+  const want = k => k === 'name' || !opt.cols || opt.cols.includes(k === 'rel' ? 'pred' : k);
   const cols = [
     { k: 'nr', t: 'Nr', w: 22, a: 'center', mono: true },
     { k: 'psp', t: 'PSP', w: 26, a: 'center', mono: true },
     { k: 'type', t: 'Typ', w: 64 },
-    { k: 'name', t: 'Vorgang', w: Math.min(190, Math.max(110, 22 + Math.max(...rows.map(r => (r.name || '').length)) * 4.1)) },
-    { k: 'who', t: 'Verantw.', w: Math.min(110, Math.max(56, 12 + Math.max(0, ...rows.map(r => (r.who || '').length)) * 4.1)) },
-    anyPred && { k: 'pred', t: 'Vorgänger', w: 96 },
-    anyPred && { k: 'rel', t: 'Bez.', w: 24, a: 'center' },
-    anyLag && { k: 'lag', t: 'Versatz', w: 38, a: 'center', mono: true },
-    anyFixed && { k: 'fixed', t: 'Fester Start', w: 52, mono: true },
+    { k: 'name', t: 'Vorgang', w: Math.min(190, Math.max(110, 22 + Math.max(...sel.map(r => (r.name || '').length)) * 4.1)) },
+    { k: 'who', t: 'Verantw.', w: Math.min(110, Math.max(56, 12 + Math.max(0, ...sel.map(r => (r.who || '').length)) * 4.1)) },
+    (anyPred || opt.cols) && { k: 'pred', t: 'Vorgänger', w: 96 },
+    (anyPred || opt.cols) && { k: 'rel', t: 'Bez.', w: 24, a: 'center' },
+    (anyLag || opt.cols) && { k: 'lag', t: 'Versatz', w: 38, a: 'center', mono: true },
+    (anyFixed || opt.cols) && { k: 'fixed', t: 'Fester Start', w: 52, mono: true },
     { k: 'dur', t: 'Dauer', w: 32, a: 'center', mono: true },
-    rows.some((r, i) => progOf(i) > 0) && { k: 'pct', t: 'Fortschr.', w: 50, a: 'center', mono: true },
+    (idx.some(i => progOf(i) > 0) || opt.cols) && { k: 'pct', t: 'Fortschr.', w: 50, a: 'center', mono: true },
     { k: 'S', t: 'Start', w: 56, mono: true },
     { k: 'E', t: 'Ende', w: 56, mono: true }
-  ].filter(Boolean);
+  ].filter(c => c && want(c.k));
   const TW = cols.reduce((s, c) => s + c.w, 0);
-  // Zeitraum: vom Projektstart bis zum letzten Termin, ohne leere Reserve
-  let minS = sched.P, maxE = sched.P; o.forEach(x => { if (x.S < minS) minS = x.S; if (x.E > maxE) maxE = x.E; });
-  const first = mondayOf(minS), last = step === 7 ? mondayOf(maxE) + 13 : mondayOf(maxE) + 6;
+  // Zeitraum: gewählt, sonst vom Projektstart bis zum letzten Termin, ohne leere Reserve
+  let minS = from == null ? sched.P : Infinity, maxE = -Infinity; idx.forEach(i => { const x = o[i]; if (x.S < minS) minS = x.S; if (x.E > maxE) maxE = x.E; });
+  if (from != null) minS = from; if (to != null) maxE = to; if (maxE < minS) maxE = minS;
+  const first = step === 7 || from == null ? mondayOf(minS) : minS;
+  const last = to != null ? (step === 7 ? mondayOf(to) + 6 : to) : (step === 7 ? mondayOf(maxE) + 13 : mondayOf(maxE) + 6);
   const nCols = Math.ceil((last - first + 1) / step);
   let colW = step === 7 ? 26 : 13;
   colW = Math.min(step === 7 ? 60 : 28, Math.max(colW, TW / nCols));   // Zeitachse mindestens so breit wie die Tabelle
@@ -87,7 +100,8 @@ function buildPdf(JsPDF) {
   // Titel
   font('helvetica', 'bold', 15, PC.ink); txt(state.name || 'Terminplan', M, M + 10);
   font('helvetica', 'normal', 8, PC.muted);
-  txt('Projektstart ' + fmt(sched.P) + '   ·   Projektende ' + fmt(maxE) + '   ·   Dauer in ' + (sched.work ? 'Arbeitstagen' : 'Kalendertagen') +
+  let projEnd = sched.P; o.forEach(x => { if (x.E > projEnd) projEnd = x.E; });
+  txt((from != null || to != null ? 'Zeitraum ' + fmt(first) + ' bis ' + fmt(last) + '   ·   ' : '') + 'Projektstart ' + fmt(sched.P) + '   ·   Projektende ' + fmt(projEnd) + '   ·   Dauer in ' + (sched.work ? 'Arbeitstagen' : 'Kalendertagen') +
     '   ·   Raster ' + (step === 7 ? 'Wochen' : 'Tage') + '   ·   Stand ' + fmtLong(today), M, M + 27);
 
   // Hintergrund Zeitachse: Wochenenden, Feiertage, heute
@@ -99,7 +113,7 @@ function buildPdf(JsPDF) {
     if (c) { fill(c, x, B, colW, N * RH); if (k === todayCol || c === PC.holiday) fill(c, x, T + 22, colW, HH - 22); }
   } else if (todayCol >= 0 && todayCol < nCols) { fill(PC.todayBg, X0 + todayCol * colW, B, colW, N * RH); fill(PC.todayBg, X0 + todayCol * colW, T + 12, colW, HH - 12); }
   // Sammelzeilen in der Tabelle hinterlegen
-  rows.forEach((r, i) => { if (o[i].summary) fill(PC.sumrow, M, B + i * RH, TW, RH); });
+  idx.forEach((i, k) => { if (o[i].summary) fill(PC.sumrow, M, B + k * RH, TW, RH); });
 
   // Kopf der Tabelle
   font('helvetica', 'bold', 6.3, PC.muted);
@@ -156,8 +170,8 @@ function buildPdf(JsPDF) {
   if (todayCol >= 0 && todayCol < nCols) { const tx = X(today) + (step === 7 ? colW / 14 : colW / 2); line(PC.today, 0.8, tx, B, tx, B + N * RH, [3, 2]); }
 
   // Tabelleninhalt
-  rows.forEach((r, i) => {
-    const y = B + i * RH + RH / 2, x2 = o[i], sub = r.type === 'untervorgang' && sched.parent[i] >= 0, pi = x2.pred;
+  idx.forEach((i, k) => {
+    const r = rows[i], y = B + k * RH + RH / 2, x2 = o[i], sub = r.type === 'untervorgang' && sched.parent[i] >= 0, pi = x2.pred;
     cols.forEach(col => {
       let v = '', bold = false, colr = PC.ink;
       switch (col.k) {
@@ -188,13 +202,15 @@ function buildPdf(JsPDF) {
   });
 
   // Abhängigkeiten
-  const cy = i => B + i * RH + RH / 2;
+  const cy = i => B + pos.get(i) * RH + RH / 2;
+  // Diagramm auf den gewählten Zeitraum begrenzen
+  doc.saveGraphicsState(); doc.rect(X0, B, CW, N * RH, null); doc.clip(); doc.discardPath();
   const isMs = i => rows[i].type === 'meilenstein';
   const msX = i => X(o[i].S + 0.5);
   const ax = (i, end) => isMs(i) ? msX(i) + (end ? 5 : -5) : (end ? X(o[i].E + 1) : X(o[i].S));
-  if (state.lines) {
+  if (opt.lines) {
     o.forEach((x2, i) => {
-      if (x2.pred < 0 || x2.err) return;
+      if (x2.pred < 0 || x2.err || !pos.has(i) || !pos.has(x2.pred)) return;
       const rel = rows[i].rel, p = x2.pred;
       const x1 = ax(p, !(rel === 'AA' || rel === 'AE')), y1 = cy(p);
       const e = (rel === 'EE' || rel === 'AE') ? -1 : 1, xe = ax(i, e === -1), y2 = cy(i);
@@ -207,8 +223,8 @@ function buildPdf(JsPDF) {
     });
   }
   // Balken
-  rows.forEach((r, i) => {
-    const x2 = o[i], y = cy(i);
+  idx.forEach(i => {
+    const r = rows[i], x2 = o[i], y = cy(i);
     font('helvetica', 'normal', 6.4, PC.muted);
     if (r.type === 'meilenstein') {
       const mx = msX(i), s = 4.6; doc.setFillColor(PC.ms);
@@ -233,7 +249,9 @@ function buildPdf(JsPDF) {
     }
   });
 
+  doc.restoreGraphicsState();
   // Legende
+  if (opt.legend === false) return doc.output('arraybuffer');
   const ly = B + N * RH + 18; let lx = M;
   const sw = (draw, label) => { draw(lx, ly); font('helvetica', 'normal', 7, PC.muted); txt(label, lx + 16, ly); lx += 22 + doc.getTextWidth(label) + 10; };
   sw((x, y) => { doc.setFillColor(PC.sum); doc.rect(x, y - 2.5, 12, 4, 'F'); }, 'Sammelvorgang');
@@ -246,4 +264,58 @@ function buildPdf(JsPDF) {
   font('helvetica', 'normal', 6.6, PC.muted);
   txt('EA Ende-Anfang  ·  AA Anfang-Anfang  ·  EE Ende-Ende  ·  AE Anfang-Ende', M + TW + CW, ly, { align: 'right' });
   return doc.output('arraybuffer');
+}
+
+/* ---------- Auswahl vor dem Export ---------- */
+const PDF_COLS = [['nr', 'Nr'], ['psp', 'PSP'], ['type', 'Typ'], ['who', 'Verantwortlich'], ['pct', 'Fortschritt'], ['pred', 'Vorgänger und Beziehung'], ['lag', 'Versatz'], ['fixed', 'Fester Start'], ['dur', 'Dauer'], ['S', 'Start'], ['E', 'Ende']];
+function pdfOptions() {
+  let u = {}; try { u = JSON.parse(localStorage.getItem(LS_UI) || '{}').pdf || {}; } catch (e) { }
+  return { cols: Array.isArray(u.cols) ? u.cols : null, view: !!u.view, done: u.done !== false, onlyRange: u.onlyRange !== false, lines: u.lines ?? !!state.lines, legend: u.legend !== false, from: '', to: '' };
+}
+function openPdfDialog() {
+  if (!state.rows.length) { toast('Der Plan ist noch leer'); return; }
+  const op = pdfOptions(), today = todayDn();
+  const defCols = PDF_COLS.map(c => c[0]).filter(k => !['lag', 'fixed'].includes(k) || state.rows.some(r => k === 'lag' ? parseInt(r.lag, 10) : r.fixed));
+  const on = k => (op.cols || defCols).includes(k);
+  let minS = sched.P, maxE = sched.P; sched.out.forEach(x => { if (x.S < minS) minS = x.S; if (x.E > maxE) maxE = x.E; });
+  const s = document.createElement('div'); s.className = 'scrim'; s.id = 'pdfScrim';
+  const ck = (id, t, c) => '<label class="chk"><input type="checkbox" id="' + id + '"' + (c ? ' checked' : '') + '> ' + t + '</label>';
+  s.innerHTML = '<div class="panel pdfdlg" role="dialog" aria-modal="true" aria-labelledby="pdfT">' +
+    '<div class="head"><h2 id="pdfT">PDF exportieren</h2><button class="btn" type="button" data-x>Abbrechen</button></div>' +
+    '<div><h3>Spalten der Tabelle</h3><div class="pcols">' + PDF_COLS.map(([k, t]) => '<label class="chk"><input type="checkbox" data-pc="' + k + '"' + (on(k) ? ' checked' : '') + '> ' + t + '</label>').join('') + '</div>' +
+    '<p class="hint">„Vorgang“ und das Balkendiagramm sind immer enthalten.</p></div>' +
+    '<div><h3>Zeitraum</h3><div class="prange"><label class="pf">Von<input class="in" type="date" id="pFrom"></label><label class="pf">Bis<input class="in" type="date" id="pTo"></label></div>' +
+    '<div class="pquick"><button type="button" class="btn sm" data-q="all">Gesamtes Projekt</button><button type="button" class="btn sm" data-q="4w">Ab heute 4 Wochen</button><button type="button" class="btn sm" data-q="3m">Ab heute 3 Monate</button><button type="button" class="btn sm" data-q="mon">Dieser Monat</button><button type="button" class="btn sm" data-q="next">Nächster Monat</button></div>' +
+    ck('pOnly', 'Nur Vorgänge, die in den Zeitraum fallen', op.onlyRange) + '<p class="hint">Leer lassen für das gesamte Projekt (' + fmt(minS) + ' bis ' + fmt(maxE) + ').</p></div>' +
+    '<div><h3>Vorgänge</h3><label class="chk"><input type="radio" name="pv" value="all"' + (op.view ? '' : ' checked') + '> Alle Vorgänge</label>' +
+    '<label class="chk"><input type="radio" name="pv" value="view"' + (op.view ? ' checked' : '') + '> Wie in der Ansicht (aktive Filter, eingeklappte Untervorgänge)</label>' +
+    ck('pDone', 'Erledigte Vorgänge einschließen', op.done) + '</div>' +
+    '<div><h3>Weitere Inhalte</h3>' + ck('pLines', 'Abhängigkeitslinien', op.lines) + ck('pLegend', 'Legende', op.legend) + '</div>' +
+    '<div class="btns"><span class="msg" id="pMsg"></span><span class="spacer"></span><button class="btn primary" type="button" id="pGo">PDF erstellen</button></div></div>';
+  document.body.appendChild(s);
+  const q = x => s.querySelector(x), close = () => { s.remove(); document.removeEventListener('keydown', key); $('pdfBtn').focus(); };
+  const key = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', key);
+  s.addEventListener('click', e => { if (e.target === s || e.target.closest('[data-x]')) close(); });
+  q('.pquick').addEventListener('click', e => {
+    const b = e.target.closest('[data-q]'); if (!b) return; const t = ymd(today);
+    let a = '', z = '';
+    if (b.dataset.q === '4w') { a = toISO(today); z = toISO(today + 27); }
+    else if (b.dataset.q === '3m') { a = toISO(today); z = toISO(dn(t.y, t.m + 3, t.d) - 1); }
+    else if (b.dataset.q === 'mon') { a = toISO(dn(t.y, t.m, 1)); z = toISO(dn(t.m === 12 ? t.y + 1 : t.y, t.m % 12 + 1, 1) - 1); }
+    else if (b.dataset.q === 'next') { const ny = t.m === 12 ? t.y + 1 : t.y, nm = t.m % 12 + 1; a = toISO(dn(ny, nm, 1)); z = toISO(dn(nm === 12 ? ny + 1 : ny, nm % 12 + 1, 1) - 1); }
+    q('#pFrom').value = a; q('#pTo').value = z;
+  });
+  q('#pGo').addEventListener('click', async () => {
+    const opt = {
+      cols: [...s.querySelectorAll('[data-pc]')].filter(x => x.checked).map(x => x.dataset.pc),
+      view: q('input[name="pv"]:checked').value === 'view', done: q('#pDone').checked, onlyRange: q('#pOnly').checked,
+      lines: q('#pLines').checked, legend: q('#pLegend').checked, from: q('#pFrom').value, to: q('#pTo').value
+    };
+    const f = parseISO(opt.from), t = parseISO(opt.to);
+    if (f != null && t != null && t < f) { q('#pMsg').textContent = 'Das Ende des Zeitraums liegt vor dem Anfang.'; q('#pMsg').classList.add('bad'); return; }
+    saveUi({ pdf: { cols: opt.cols, view: opt.view, done: opt.done, onlyRange: opt.onlyRange, lines: opt.lines, legend: opt.legend } });
+    close(); await exportPdf(opt);
+  });
+  q('#pGo').focus();
 }

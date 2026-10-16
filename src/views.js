@@ -119,6 +119,7 @@ function setView(v) {
   view = v; saveUi({ view: v });
   $('segView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
   $('board').hidden = v !== 'gantt'; $('tabs').hidden = v !== 'gantt';
+  if ($('dateWrap')) $('dateWrap').hidden = v !== 'gantt';
   document.querySelector('.foot').dataset.v = v;   // Legende nur im Gantt, Umschalter immer
   $('vList').hidden = v !== 'list'; $('vKanban').hidden = v !== 'kanban'; $('vCal').hidden = v !== 'cal';
   if ($('vTasks')) $('vTasks').hidden = v !== 'tasks';
@@ -136,6 +137,7 @@ function renderView() {
   paintChangeChip();
 }
 function gotoRow(i) {
+  if (typeof unfoldFor === 'function' && unfoldFor(i)) renderFilteredViews(true);
   setView('gantt'); select(i);
   const el = $('rowsL').querySelector('.row[data-i="' + i + '"]');
   if (el) { el.scrollIntoView({ block: 'center' }); const f = el.querySelector('[data-f="name"]'); if (f) f.focus({ preventScroll: true }); }
@@ -368,7 +370,7 @@ function initViews() {
     go(e);
   });
   $('vCal').addEventListener('change', e => { if (e.target.id === 'calSum') { calSum = e.target.checked; renderCal(); } });
-  $('pdfBtn').addEventListener('click', exportPdf);
+  $('pdfBtn').addEventListener('click', () => openPdfDialog());
   setView(view);
 }
 

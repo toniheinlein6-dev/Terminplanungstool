@@ -92,7 +92,7 @@ let dl = null, uid = null, userNs = null, roomNs = null;
 const base = new Map(), srv = new Map();
 
 function icon(n) {
-  const p = { up: 'M4 10l4-4 4 4', down: 'M4 6l4 4 4-4', sub: 'M4 3v6a2 2 0 0 0 2 2h6M9 8l3 3-3 3', del: 'M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8', det: 'M3 3.5h10v7H7.5L4.5 13v-2.5H3z', drag: 'M6 3.5h.01M10 3.5h.01M6 8h.01M10 8h.01M6 12.5h.01M10 12.5h.01' }[n];
+  const p = { up: 'M4 10l4-4 4 4', down: 'M4 6l4 4 4-4', sub: 'M4 3v6a2 2 0 0 0 2 2h6M9 8l3 3-3 3', del: 'M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8', det: 'M3 3.5h10v7H7.5L4.5 13v-2.5H3z', drag: 'M6 3.5h.01M10 3.5h.01M6 8h.01M10 8h.01M6 12.5h.01M10 12.5h.01', cols: 'M2.5 3.5h11v9h-11zM6.3 3.5v9M9.8 3.5v9', fold: 'M5 6.5l3 3 3-3', foldin: 'M4.5 2.5l3.5 3 3.5-3M4.5 13.5l3.5-3 3.5 3', foldout: 'M4.5 5.5l3.5-3 3.5 3M4.5 10.5l3.5 3 3.5-3' }[n];
   const sw = n === 'drag' ? '2.6' : '1.6';
   return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + p + '"/></svg>';
 }
@@ -105,7 +105,7 @@ function rowHTML(r, i) {
     '<button class="ib" data-a="sub" title="Untervorgang darunter einfügen" aria-label="Untervorgang einfügen">' + icon('sub') + '</button></div>' +
     '<div class="num">' + r.id + '</div><div class="num" data-c="psp"></div>' +
     '<div><select data-f="type" aria-label="Typ">' + Object.keys(TYPES).map(k => opt(k, TYPES[k], r.type)).join('') + '</select></div>' +
-    '<div class="nm"><input data-f="name" type="text" value="' + esc(r.name) + '" aria-label="Bezeichnung" autocomplete="off"><button class="ib det" data-a="det" type="button" title="Details, Beschreibung und Kommentare" aria-label="Details öffnen">' + icon('det') + '<span class="cnt" data-c="cnt"></span></button></div>' +
+    '<div class="nm"><button class="ib fold" data-a="fold" type="button" hidden aria-label="Untervorgänge ein- oder ausklappen">' + icon('fold') + '</button><input data-f="name" type="text" value="' + esc(r.name) + '" aria-label="Bezeichnung" autocomplete="off"><button class="ib det" data-a="det" type="button" title="Details, Beschreibung und Kommentare" aria-label="Details öffnen">' + icon('det') + '<span class="cnt" data-c="cnt"></span></button></div>' +
     '<div class="who-cell">' + assigneeCell(r, i) + '</div>' +
     '<div><select data-f="pct" aria-label="Fortschritt in Prozent">' + PCTS.map(p => '<option value="' + p + '"' + (p === (r.pct || 0) ? ' selected' : '') + '>' + p + ' %</option>').join('') + '</select></div>' +
     '<div><select data-f="pred" aria-label="Vorgänger"></select></div>' +
@@ -113,7 +113,7 @@ function rowHTML(r, i) {
     '<div><input data-f="lag" type="number" step="1" value="' + esc(r.lag) + '" aria-label="Versatz in Tagen"></div>' +
     '<div><input data-f="fixed" type="date" value="' + esc(r.fixed) + '" aria-label="Fester Start"></div>' +
     '<div><input data-f="dur" type="number" min="0" step="1" value="' + esc(r.dur) + '" aria-label="Dauer" placeholder="1"></div>' +
-    '<div class="calc" data-c="start"></div><div class="calc" data-c="end"></div></div>';
+    '<div class="dc"><input data-f="S" type="date" aria-label="Start"></div><div class="dc"><input data-f="E" type="date" aria-label="Ende"></div></div>';
 }
 function predOptions(i) {
   const cur = state.rows[i].pred;
@@ -124,7 +124,7 @@ function predOptions(i) {
 // Eine gerade bearbeitete Zeile bleibt bis zum Verlassen der Tabelle sichtbar,
 // auch wenn der neue Name oder die Zuordnung nicht mehr zum Filter passt.
 function ganttRowIndices() {
-  const indices = visibleRowIndices();
+  const indices = typeof foldFilter === 'function' ? foldFilter(visibleRowIndices()) : visibleRowIndices();
   const i = filterEditId == null ? -1 : state.rows.findIndex(r => r.id === filterEditId);
   if (i >= 0 && state.rows[i] && !indices.includes(i)) {
     indices.push(i);
@@ -166,9 +166,17 @@ function updateComputed() {
     if (whoCell && hasUserDirectory()) { const html = assigneeCell(r, i); if (whoCell.innerHTML !== html) whoCell.innerHTML = html; }
     el.querySelectorAll('input, select').forEach(control => { control.disabled = readOnly; });
     el.querySelector('[data-c="psp"]').textContent = sched.psp[i];
-    const st = el.querySelector('[data-c="start"]'), en = el.querySelector('[data-c="end"]');
-    st.textContent = fmt(o.S); en.textContent = fmt(o.E);
-    st.title = en.title = o.err ? 'Zirkelbezug: der Vorgänger hängt selbst von dieser Zeile ab' : '';
+    // Start und Ende direkt eingeben (Sammelvorgänge: nur Anzeige)
+    const st = el.querySelector('[data-f="S"]'), en = el.querySelector('[data-f="E"]'), act = document.activeElement;
+    if (st !== act) st.value = toISO(o.S); if (en !== act) en.value = toISO(o.E);
+    const di = el.querySelector('[data-f="dur"]'), fi = el.querySelector('[data-f="fixed"]');
+    if (di !== act && di.value !== String(r.dur ?? '')) di.value = r.dur ?? '';
+    if (fi !== act && fi.value !== String(r.fixed || '')) fi.value = r.fixed || '';
+    st.disabled = readOnly || o.summary; en.disabled = readOnly || o.summary || r.type === 'meilenstein';
+    const tip = d => o.err ? 'Zirkelbezug: der Vorgänger hängt selbst von dieser Zeile ab' : o.summary ? fmt(d) + ' – ergibt sich aus den Untervorgängen' : fmt(d);
+    st.title = tip(o.S); en.title = tip(o.E);
+    const fb = el.querySelector('[data-a="fold"]');
+    if (fb) { fb.hidden = !o.summary; if (o.summary) { const f = isFolded(r.id); fb.classList.toggle('closed', f); fb.setAttribute('aria-expanded', String(!f)); fb.title = (f ? 'Ausklappen: ' : 'Einklappen: ') + sched.kids[i].length + ' Untervorgänge'; } }
     ['pred', 'rel', 'lag', 'fixed', 'dur'].forEach(f => { const c = el.querySelector('[data-f="' + f + '"]'); c.disabled = readOnly || o.summary || (f === 'dur' && r.type === 'meilenstein'); });
     el.querySelector('[data-a="sub"]').style.visibility = r.type === 'meilenstein' ? 'hidden' : '';
     const ps = el.querySelector('[data-f="pct"]');
@@ -307,6 +315,7 @@ function renderFilteredViews(force = false) {
   renderView();
   const indices = ganttRowIndices();
   renderLeft(force, indices); updateComputed(); renderChart(indices); syncHeaderScroll();
+  if (typeof paintFoldAll === 'function') paintFoldAll();
   refreshAssigneePicker();
 }
 function refresh() { sched = schedule(state); renderFilteredViews(); }
@@ -326,6 +335,7 @@ function renderAll() {
   $('lines').checked = !!state.lines;
   $('banner').hidden = !state.example;
   refreshPeopleList();
+  if (typeof applyCols === 'function') applyCols(true);
   sched = schedule(state); renderFilteredViews(true);
 }
 function changed(force) {
@@ -354,9 +364,10 @@ function select(i) {
 
 function onInput(e) {
   if (readOnly) return;
-  const t = e.target, f = t.dataset.f; if (!f) return;
+  const t = e.target, f = t.dataset.f; if (!f || f === 'S' || f === 'E') return;   // Start/Ende: erst beim Übernehmen (change)
   const i = rowIdx(t), r = state.rows[i]; if (!r) return;
   filterEditId = r.id;
+  if (f === 'dur' && dateMode() === 'ed') { const v = parseInt(t.value, 10); if (v >= 1) { applyDate(i, 'D', v, 'ed'); refresh(); changed(false); } return; }
   if (f === 'type') { r.type = t.value; changedFirst(); structural('.row[data-i="' + i + '"] [data-f="type"]'); return; }
   if (f === 'pred') r.pred = t.value === '' ? '' : Number(t.value);
   else if (f === 'lag') r.lag = t.value === '' ? '' : String(parseInt(t.value, 10) || 0);
@@ -376,9 +387,12 @@ function addRow(type, at) {
     if (type === 'untervorgang') { let v = -1; state.rows.forEach((x, k) => { if (x.type === 'vorgang') v = k; }); if (v >= 0) { idx = v + 1; while (idx < state.rows.length && state.rows[idx].type === 'untervorgang') idx++; } }
   }
   state.rows.splice(idx, 0, r);
+  sched = schedule(state); if (typeof unfoldFor === 'function') unfoldFor(idx);   // neuer Untervorgang in eingeklappter Gruppe
   structural('.row[data-i="' + idx + '"] [data-f="name"]');
   const el = $('rowsL').querySelector('.row[data-i="' + idx + '"]'); if (el) el.scrollIntoView({ block: 'nearest' });
   select(idx);
+  // Gleich die Detailmaske für Bezeichnung, Termine, Verantwortliche und Beschreibung öffnen
+  if (typeof openDetails === 'function') openDetails(idx);
 }
 function groupEnd(i) { let e = i; if (state.rows[i].type === 'vorgang') while (e + 1 < state.rows.length && state.rows[e + 1].type === 'untervorgang') e++; return e; }
 function groupStart(i) { if (state.rows[i].type === 'untervorgang') { let k = i; while (k > 0 && state.rows[k].type === 'untervorgang') k--; return state.rows[k].type === 'vorgang' ? k : i; } return i; }
@@ -481,6 +495,7 @@ function deleteRow(i) {
 function onClick(e) {
   const b = e.target.closest('[data-a]'); if (!b) return;
   const i = rowIdx(b), a = b.dataset.a;
+  if (a === 'fold') { toggleFold(i); return; }
   if (a === 'sub') addRow('untervorgang', state.rows[i].type === 'vorgang' ? groupEnd(i) + 1 : i + 1);
   else if (a === 'det') openDetails(i);
 }
@@ -585,7 +600,7 @@ async function initStore() {
   renderAll(); setStatus('local', 'Nur in diesem Browser gespeichert');
   if (window.SP && window.SP.connect) {
     let col = null; try { col = await window.SP.connect(window.TEAMS_CFG || {}, (k, t) => setStatus(k, t)); } catch (e) { setStatus('error', 'Anmeldung fehlgeschlagen: ' + ((e && e.message) || e)); showLogin(); return; }
-    uid = col.uid; if (col.readOnly) lockReadOnly(false); attach(col, pick, null); return;
+    uid = col.uid; prefsForUser(); if (col.readOnly) lockReadOnly(false); attach(col, pick, null); return;
   }
   let cl = null; try { cl = window.claude && window.claude.use ? window.claude : null; } catch (e) { }
   if (!cl) return;
@@ -593,6 +608,7 @@ async function initStore() {
   let db = null; try { db = await cl.use('db'); } catch (e) { db = null; }
   if (!db) return;
   try { userNs = await cl.use('user'); if (userNs) uid = await userNs.id(); } catch (e) { userNs = null; }
+  prefsForUser();
   try { await teamInit(); } catch (e) { }
   try { attach(db.collection('plans'), pick, cl); } catch (e) { dbc = null; setStatus('local', 'Nur in diesem Browser gespeichert'); }
 }
@@ -817,13 +833,23 @@ function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Ma
 function boot() {
   applyTheme(); applyDisplay();
   initViews();
+  initCols(); initDateMode();
   initDrag();
   initTasks();
   try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); if (typeof u.zoom2 === 'number') zoom = Math.max(0, Math.min(ZMAX, u.zoom2)); if (u.leftw) document.documentElement.style.setProperty('--leftw', u.leftw + 'px'); } catch (e) { }
   link($('bodyL'), $('bodyR')); link($('bodyR'), $('bodyL'));
   const rl = $('rowsL');
   rl.addEventListener('input', onInput); rl.addEventListener('click', onClick);
-  rl.addEventListener('change', e => { if (e.target.dataset.f === 'name') refreshPredOptions(); });
+  rl.addEventListener('change', e => {
+    const f = e.target.dataset.f;
+    if (f === 'name') refreshPredOptions();
+    if ((f === 'S' || f === 'E') && !readOnly) {
+      const i = rowIdx(e.target), v = parseISO(e.target.value); if (i < 0) return;
+      const err = v == null ? 'Bitte ein gültiges Datum eingeben.' : applyDate(i, f, v, dateMode());
+      if (err) { toast(err); e.target.value = toISO(f === 'S' ? sched.out[i].S : sched.out[i].E); return; }
+      filterEditId = state.rows[i].id; refresh(); changed(true);
+    }
+  });
   rl.addEventListener('focusin', e => { const i = rowIdx(e.target); if (i >= 0) select(i); });
   rl.addEventListener('focusout', e => {
     if (rl.contains(e.relatedTarget) || $('peoplePicker').contains(e.relatedTarget)) return;
