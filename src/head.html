@@ -655,37 +655,57 @@ body.bardrag, body.bardrag * { cursor: grabbing !important; user-select: none; -
 .org ul ul::before, .org li > ul::before { content: ""; position: absolute; top: 0; left: 50%; height: 22px; border-left: 2px solid var(--line); }
 .org > li { padding-top: 0; }
 .org > li::before, .org > li::after { display: none; }
-.onode { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 10px; width: 168px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; cursor: pointer; }
-.onode:hover, .onode:focus-within { border-color: var(--accent); }
-.onode.team { border-top: 5px solid var(--tc); padding-top: 9px; background: color-mix(in srgb, var(--tc) 7%, var(--surface)); }
-.onode .oth { display: flex; align-items: center; gap: 6px; justify-content: center; }
-.onode .otn { font-weight: 700; color: var(--tc); filter: brightness(.85); }
 .oav { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: none; }
 .oav.ini { display: grid; place-items: center; color: #fff; font-weight: 600; font-size: 19px; letter-spacing: .02em; }
 .oav.sm { width: 24px; height: 24px; font-size: 10px; }
 .oav.lg { width: 84px; height: 84px; font-size: 28px; }
-.oname { font-weight: 600; margin-top: 4px; overflow-wrap: anywhere; }
-.orole { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
-.ometa { font-size: 11.5px; color: var(--muted); }
-.oload { all: unset; font-size: 11.5px; color: var(--accent); cursor: pointer; margin-top: 2px; }
-.oload:hover, .oload:focus-visible { text-decoration: underline; }
-.oacts { position: absolute; top: 4px; right: 4px; display: flex; gap: 0; opacity: 0; transition: opacity .12s; background: var(--surface); border-radius: 6px; }
-.onode:hover .oacts, .onode:focus-within .oacts { opacity: 1; }
-@media (hover: none) { .oacts { opacity: 1; position: static; margin-top: 4px; } }
-.onode.drag { opacity: .4; }
-.onode.over, .orgroot.over { outline: 2px dashed var(--accent); outline-offset: 3px; }
-.orgroot { display: none; margin: 18px auto 0; max-width: 320px; text-align: center; font-size: 12px; color: var(--muted); border: 1.5px dashed var(--line); border-radius: 8px; padding: 10px; }
-.odragging .orgroot { display: block; }
 .orgdlg .orow { display: flex; align-items: center; gap: 14px; }
 .orgdlg #oKind { align-self: flex-start; }
-html.m .onode { width: 140px; }
 
-.onode.sec { border-style: dashed; background: transparent; }
-.onode.sec .oav { opacity: .85; }
-.osec { font-size: 11px; color: var(--muted); font-style: italic; }
-.oalso { font-size: 11px; color: var(--muted); }
-.onode .orm { position: absolute; top: 4px; right: 4px; font-size: 15px; }
 .oalsolist { display: flex; flex-direction: column; gap: 6px; }
 .oarow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 24px; gap: 8px; align-items: center; }
 .oarow .oat { font-size: 13px; color: var(--ink); overflow-wrap: anywhere; }
+
+/* Organigramm: Projektleitung, Teams mit Teamleitung und Mitgliedern */
+.obox { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px 12px; min-width: 220px; max-width: 300px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.obox.plbox { max-width: none; min-width: 240px; border-top: 5px solid var(--ink); }
+.obox.team { border-top: 5px solid var(--tc); background: color-mix(in srgb, var(--tc) 6%, var(--surface)); }
+.obox.nobox { margin: 22px auto 0; max-width: 720px; border-style: dashed; background: transparent; }
+.oth { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.oth .otn { font-weight: 700; color: var(--tc); filter: brightness(.85); flex: 1; overflow-wrap: anywhere; }
+.oth[draggable="true"] { cursor: grab; }
+.otd { font-size: 12px; color: var(--muted); margin-top: -4px; }
+.olabel { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.plbox > .olabel { text-align: center; color: var(--ink); }
+.ozone { display: flex; flex-direction: column; gap: 6px; border-radius: 8px; padding: 4px; margin: 0 -4px; }
+.ozone.tl { border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.ocards { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.ocard { position: relative; width: 128px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding: 10px 8px 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); cursor: pointer; }
+.ocard:hover, .orow2:hover { border-color: var(--accent); }
+.ocard .oav { width: 52px; height: 52px; font-size: 18px; margin-bottom: 4px; }
+.oname { font-weight: 600; font-size: 13px; overflow-wrap: anywhere; }
+.orole { font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; }
+.osec { font-size: 10.5px; color: var(--muted); font-style: italic; }
+.org ul.omembers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; justify-content: flex-start; gap: 4px; }
+.org ul.omembers::before { display: none !important; }
+.org .omembers li { padding: 0; }
+.org .omembers li::before, .org .omembers li::after { display: none; }
+.orow2 { position: relative; display: flex !important; flex-direction: row !important; align-items: center !important; gap: 8px; padding: 5px 26px 5px 6px !important; border: 1px solid transparent; border-radius: 7px; background: var(--surface); cursor: pointer; }
+.orow2 .oav { width: 30px; height: 30px; font-size: 11px; }
+.omt { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.omt b { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.omt span { font-size: 11.5px; color: var(--muted); }
+.omt em { font-size: 10.5px; color: var(--muted); }
+.oempty { font-size: 12px; color: var(--muted); border: 1.5px dashed var(--line); border-radius: 7px; padding: 8px; text-align: center; }
+.obox .orm { position: absolute; top: 3px; right: 3px; opacity: 0; font-size: 15px; }
+.ocard:hover .orm, .orow2:hover .orm, .orm:focus-visible { opacity: 1; }
+@media (hover: none) { .obox .orm { opacity: .7; } }
+.oadd { display: flex; gap: 6px; flex-wrap: wrap; }
+.odragging [data-drop], .odragging .obox.team, .odragging .plbox { transition: background .1s; }
+.ozone.over, .obox.over { background: var(--accent-soft); outline: 2px dashed var(--accent); outline-offset: 1px; }
+.ocard.drag, .orow2.drag, .oth.drag { opacity: .4; }
+.oarow.t3 { grid-template-columns: minmax(0, 1fr) 130px minmax(0, 1.1fr) 24px; }
+.oat em { font-style: normal; color: var(--muted); font-size: 11.5px; }
+html.m .obox { min-width: 180px; }
+html.m .ocard { width: 120px; }
 </style>

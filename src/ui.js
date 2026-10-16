@@ -37,11 +37,11 @@ function demoPlan() {
       { id: 2, title: 'Termin für Konzeptbesprechung finden', desc: '', who: 'Person B, Person C', due: '', prio: 'normal', done: false, row: 3, by: '', created: '2026-10-12' }
     ],
     org: [
-      { id: 1, kind: 'person', name: 'Person A', role: 'Projektleitung', uid: '', photo: '', parent: '', color: '', also: [] },
-      { id: 2, kind: 'team', name: 'Planung', role: 'Entwurf und Tragwerk', uid: '', photo: '', parent: 1, color: '#2f6fb2', also: [] },
-      { id: 3, kind: 'team', name: 'Ausführung', role: 'Arbeitsvorbereitung und Montage', uid: '', photo: '', parent: 1, color: '#b0612a', also: [] },
-      { id: 4, kind: 'person', name: 'Person B', role: 'Tragwerksplanung', uid: '', photo: '', parent: 2, color: '', also: [{ team: 3, role: 'Statische Beratung' }] },
-      { id: 5, kind: 'person', name: 'Person C', role: 'Arbeitsvorbereitung', uid: '', photo: '', parent: 3, color: '', also: [] }
+      { id: 1, kind: 'person', name: 'Person A', role: 'Projektleitung', uid: '', photo: '', pl: true, teams: [] },
+      { id: 2, kind: 'team', name: 'Planung', role: 'Entwurf und Tragwerk', color: '#2f6fb2', parent: '' },
+      { id: 3, kind: 'team', name: 'Ausführung', role: 'Arbeitsvorbereitung und Montage', color: '#b0612a', parent: '' },
+      { id: 4, kind: 'person', name: 'Person B', role: 'Tragwerksplanung', uid: '', photo: '', pl: false, teams: [{ team: 2, lead: true, role: '' }, { team: 3, lead: false, role: 'Statische Beratung' }] },
+      { id: 5, kind: 'person', name: 'Person C', role: 'Arbeitsvorbereitung', uid: '', photo: '', pl: false, teams: [{ team: 3, lead: true, role: '' }] }
     ]
   };
 }
@@ -91,18 +91,31 @@ function sanitize(p) {
       ...(Array.isArray(t.assignees) ? { assignees: sanitizeAssignees(t.assignees) } : {}) });
   });
   s.nextTaskId = Math.max(tmax + 1, Number.isInteger(Number(p.nextTaskId)) ? Number(p.nextTaskId) : 1);
-  // Organigramm
+  // Organigramm: Teams (optional mit übergeordnetem Team) und Personen (Projektleitung, Mitgliedschaften in Teams)
+  // Ältere Stände (Personen unter Personen, „parent“/„also“) werden in Team-Mitgliedschaften umgewandelt.
   const okPhoto = v => typeof v === 'string' && v.length <= 90000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(v) ? v : '';
+  const str80 = v => String(v || '').slice(0, 80);
+  const rawOrg = (Array.isArray(p.org) ? p.org : []).slice(0, 300).filter(n => n && typeof n === 'object');
+  const kindOf = new Map(), parentOf = new Map();
+  rawOrg.forEach(n => { const k = Number(n.id); if (!kindOf.has(k)) { kindOf.set(k, n.kind === 'team' ? 'team' : 'person'); parentOf.set(k, n.parent); } });
+  const isTeam = v => v !== '' && v != null && kindOf.get(Number(v)) === 'team';
+  const legacyTeam = (v, d) => v === '' || v == null || d > 50 ? null : isTeam(v) ? Number(v) : legacyTeam(parentOf.get(Number(v)), d + 1);
   let omax = 0; const oseen = new Set();
-  (Array.isArray(p.org) ? p.org : []).slice(0, 300).forEach(n => {
-    if (!n || typeof n !== 'object') return;
+  rawOrg.forEach(n => {
     let id = Number(n.id); if (!Number.isInteger(id) || id < 1 || oseen.has(id)) id = omax + 1; oseen.add(id); omax = Math.max(omax, id);
-    const par = Number(n.parent);
-    s.org.push({ id, kind: n.kind === 'team' ? 'team' : 'person', name: String(n.name || '').slice(0, 80), role: String(n.role || '').slice(0, 80),
-      uid: /^[1-9]\d{0,9}$/.test(String(n.uid || '')) ? String(n.uid) : '', photo: okPhoto(n.photo), parent: n.parent !== '' && n.parent != null && Number.isInteger(par) && par > 0 && par !== id ? par : '', color: okColor(n.color),
-      // Zweitmitgliedschaften: weitere Teams mit optional eigener Rolle
-      also: n.kind === 'team' ? [] : (Array.isArray(n.also) ? n.also : []).slice(0, 20).map(a => ({ team: Number(a && a.team), role: String((a && a.role) || '').slice(0, 80) }))
-        .filter((a, k, arr) => Number.isInteger(a.team) && a.team > 0 && a.team !== id && arr.findIndex(x => x.team === a.team) === k) });
+    if (n.kind === 'team') {
+      s.org.push({ id, kind: 'team', name: str80(n.name), role: str80(n.role), color: okColor(n.color), parent: isTeam(n.parent) && Number(n.parent) !== id ? Number(n.parent) : '' });
+      return;
+    }
+    let teams;
+    if (Array.isArray(n.teams)) teams = n.teams.map(t => ({ team: Number(t && t.team), lead: !!(t && t.lead), role: str80(t && t.role) }));
+    else {
+      teams = []; const lt = legacyTeam(n.parent, 0); if (lt) teams.push({ team: lt, lead: false, role: '' });
+      (Array.isArray(n.also) ? n.also : []).forEach(a => { if (a && isTeam(a.team)) teams.push({ team: Number(a.team), lead: false, role: str80(a.role) }); });
+    }
+    teams = teams.filter((t, k, arr) => isTeam(t.team) && arr.findIndex(x => x.team === t.team) === k).slice(0, 20);
+    const pl = 'pl' in n ? !!n.pl : (n.parent === '' || n.parent == null) && !teams.length;
+    s.org.push({ id, kind: 'person', name: str80(n.name), role: str80(n.role), uid: /^[1-9]\d{0,9}$/.test(String(n.uid || '')) ? String(n.uid) : '', photo: okPhoto(n.photo), pl, teams });
   });
   if (p.example) s.example = true;
   return s;
