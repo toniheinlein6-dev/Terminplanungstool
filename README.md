@@ -8,6 +8,7 @@ Gantt-Terminplaner für die gemeinsame Projektplanung im Team.
 - Verantwortliche aus den Benutzerkonten suchen und per Häkchen zuordnen; mehrere Personen als Initialen mit vollständigen Namen beim Darüberfahren anzeigen
 - Fortschritt je Untervorgang in 10-%-Schritten; ein Vorgang ist erst bei 100 %, wenn alle Untervorgänge erledigt sind, das Projekt erst, wenn alle Vorgänge 100 % haben; Fortschrittsbalken in allen Ansichten
 - Rubrik „Aufgaben“: To-dos anlegen, mehreren Teammitgliedern zuweisen, Termin, Priorität und Bezug zu einem Vorgang; neu Zugewiesene bekommen eine E-Mail, zwei Tage vor dem Termin eine Erinnerung
+- Wochenübersicht per E-Mail jeden Montag: Vorgänge und Aufgaben der Woche, Überfälliges und offene Aufgaben ohne Termin (im Profil abschaltbar)
 - Darstellung umschaltbar: automatisch, Desktop oder Mobil (je Gerät gespeichert)
 - Detailfenster je Vorgang mit Beschreibung und Kommentaren; @-Erwähnungen benachrichtigen per E-Mail (optional zusätzlich in einem Teams-Kanal)
 - Abhängigkeiten Ende-Anfang, Anfang-Anfang, Ende-Ende, Anfang-Ende mit Versatz, grafisch als Pfeile

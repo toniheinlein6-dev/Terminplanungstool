@@ -159,7 +159,8 @@
     const d = dialog('Mein Profil', '<div class="prof">' +
       '<div><h3>Profilbild</h3><div class="avrow"><span id="pAv"></span><div class="btns"><label class="btn" for="pFile">Bild wählen</label><input id="pFile" type="file" accept="image/*" hidden><button class="btn" type="button" id="pAvDel">Entfernen</button></div></div><p class="hint">Das Bild wird quadratisch zugeschnitten und verkleinert.</p></div>' +
       '<div><h3>E-Mail und Erinnerungen</h3><label class="pf">E-Mail-Adresse<input id="pMail" class="in" type="email" autocomplete="email" value="' + esc(me.email) + '"></label>' +
-      '<label class="chk"><input type="checkbox" id="pRemind"' + (me.remind ? ' checked' : '') + '> Erinnerung per E-Mail 2 Tage vor dem Ende meiner Vorgänge</label>' +
+      '<label class="chk"><input type="checkbox" id="pRemind"' + (me.remind ? ' checked' : '') + '> Erinnerung per E-Mail 2 Tage vor dem Ende meiner Vorgänge und Aufgaben</label>' +
+      '<label class="chk"><input type="checkbox" id="pWeekly"' + (me.weekly !== false ? ' checked' : '') + '> Wochenübersicht jeden Montag (meine Vorgänge und Aufgaben der Woche)</label>' +
       '<p class="hint">Erinnert wird an Vorgänge, denen du als Benutzer zugeordnet bist.</p>' +
       '<div class="btns"><button class="btn primary" type="button" id="pSave">Profil speichern</button><span id="pMsg" class="msg"></span></div></div>' +
       '<div><h3>Passwort ändern</h3><label class="pf">Bisheriges Passwort<input id="pOld" class="in" type="password" autocomplete="current-password"></label>' +
@@ -178,7 +179,7 @@
     });
     $d('pAvDel').addEventListener('click', () => { avatar = null; avatarChanged = true; paint(); say('pMsg', 'Bild entfernt, bitte speichern.'); });
     $d('pSave').addEventListener('click', async () => {
-      const body = { email: $d('pMail').value.trim(), remind: $d('pRemind').checked }; if (avatarChanged) body.avatar = avatar;
+      const body = { email: $d('pMail').value.trim(), remind: $d('pRemind').checked, weekly: $d('pWeekly').checked }; if (avatarChanged) body.avatar = avatar;
       const r = await post('profile_save', body); const j = await r.json().catch(() => ({}));
       if (!r.ok) { say('pMsg', j.error || 'Speichern fehlgeschlagen', true); return; }
       avatarChanged = false; say('pMsg', 'Gespeichert.'); await refreshMe(); teamKey = ''; loadTeam();

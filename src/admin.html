@@ -34,6 +34,8 @@ button{cursor:pointer}button.pri{background:var(--accent);color:#fff;border-colo
 <section><h2>E-Mail und Erinnerungen</h2>
  <div id="mailInfo">Wird geladen …</div>
  <div class="row" style="margin-top:10px"><button id="mtest">Testmail an mich senden</button><button id="mrun">Erinnerungen jetzt prüfen und senden</button></div>
+ <div class="row" style="margin-top:6px"><button id="wprev">Wochenübersicht als Vorschau an mich</button><button id="wrun">Wochenübersicht jetzt an alle senden</button></div>
+ <p class="hint">Die Wochenübersicht geht automatisch jeden Montag früh an alle, die eine E-Mail-Adresse hinterlegt und sie im Profil nicht abgeschaltet haben. Jede Person bekommt sie pro Woche nur einmal.</p>
  <p class="hint">Täglich um 7 Uhr verschickt der Terminplaner Erinnerungen für Vorgänge, die in den nächsten 2 Tagen enden und noch nicht erledigt sind. Zugeordnet wird über die Spalte „Verantwortlich“: Dort muss genau der Benutzername stehen (mehrere Namen durch Komma trennen). Die Person braucht eine E-Mail-Adresse und eingeschaltete Erinnerungen (Mein Profil).</p></section>
 <section><h2>Sicherung</h2>
  <div class="row"><button class="pri" id="exp">Alle Projekte sichern (Download)</button><label>Sicherung einspielen: <input type="file" id="imp" accept=".json,application/json"></label></div>
@@ -133,12 +135,19 @@ async function mail() {
     '<br>Tägliche Erinnerung: ' + (m.cron ? '<span class="ok">aktiv</span>' : '<span class="err">CRON_SECRET fehlt</span>') +
     '<br>Teams-Nachricht bei @-Erwähnungen: ' + (m.teams ? '<span class="ok">aktiv</span>' : 'nicht eingerichtet (optional, TEAMS_WEBHOOK_URL)') + (m.appUrl ? ' · Link in Mails: ' + esc(m.appUrl) : '') +
     (m.upcoming.length ? '<br>Fällig in den nächsten 2 Tagen:<ul class="up">' + m.upcoming.map(u => '<li>' + esc(u.user) + ': ' + esc(u.project) + ' – ' + esc(u.name) + ' (' + new Date(u.end + 'T12:00:00Z').toLocaleDateString('de-DE') + ')</li>').join('') + '</ul>' : '<br>Derzeit endet in den nächsten 2 Tagen kein zugeordneter Vorgang.');
-  $('mtest').disabled = $('mrun').disabled = !m.configured;
+  $('mtest').disabled = $('mrun').disabled = $('wprev').disabled = $('wrun').disabled = !m.configured;
 }
 $('mtest').onclick = async () => { const r = await post('mail_test'); const j = await r.json(); say(r.ok ? 'Testmail an ' + j.to + ' gesendet.' : j.error, !r.ok); };
 $('mrun').onclick = async () => {
   const r = await post('reminders_run'); const j = await r.json();
   say(r.ok ? (j.sent ? j.sent + ' Erinnerungsmail(s) mit ' + j.items + ' Vorgang/Vorgängen verschickt.' : 'Keine neuen Erinnerungen fällig (bereits verschickte werden nicht wiederholt).') + (j.errors && j.errors.length ? ' Fehler: ' + j.errors.join('; ') : '') : (j.error || 'Fehlgeschlagen'), !r.ok || (j.errors && j.errors.length));
+};
+$('wprev').onclick = async () => { const r = await post('weekly_run', { preview: true }); const j = await r.json(); say(r.ok && j.ok ? 'Vorschau an ' + j.to + ' gesendet.' : (j.reason || j.error || 'Fehlgeschlagen'), !(r.ok && j.ok)); };
+$('wrun').onclick = async () => {
+  const b = $('wrun'); if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Wirklich an alle senden?'; return; }
+  b.dataset.sure = ''; b.textContent = 'Wochenübersicht jetzt an alle senden';
+  const r = await post('weekly_run', {}); const j = await r.json();
+  say(r.ok ? (j.sent ? j.sent + ' Wochenübersicht(en) verschickt.' : 'Keine neuen Übersichten (wer diese Woche schon eine bekommen hat oder nichts zu tun hat, bekommt keine).') + (j.errors && j.errors.length ? ' Fehler: ' + j.errors.join('; ') : '') : (j.error || j.reason || 'Fehlgeschlagen'), !r.ok);
 };
 users(); projects(); tickets(); mail();
 </script>
