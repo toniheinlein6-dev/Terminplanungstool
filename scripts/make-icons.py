@@ -15,13 +15,13 @@ def icon(size, maskable=False, rounded=True, S=4):
     k = area / max(logo.size); lw, lh = int(logo.width * k), int(logo.height * k)
     lg = logo.resize((lw, lh), Image.LANCZOS)
     base.alpha_composite(lg, ((N - lw) // 2, (N - lh) // 2))
-    # Terminbalken davor: dunkelgrün mit weißem Rand
-    s = (0.70 if maskable else 1.0)
-    c = N / 2
+    # Terminbalken davor, unten rechts am Bildrand: dunkelgrün mit weißem Rand
+    # (maskable: innerhalb der sicheren Zone, die beim runden Zuschnitt sichtbar bleibt)
+    g, gx, gy = (0.46, 0.665, 0.665) if maskable else (0.62, 0.735, 0.775)
     bars = [(-0.31, -0.23, 0.07, -0.14), (-0.15, -0.045, 0.31, 0.045), (-0.21, 0.14, 0.10, 0.23)]
     for x0, y0, x1, y1 in bars:
-        box = [c + x0 * N * s, c + y0 * N * s, c + x1 * N * s, c + y1 * N * s]
-        h = box[3] - box[1]; rim = h * 0.18
+        box = [N * (gx + x0 * g), N * (gy + y0 * g), N * (gx + x1 * g), N * (gy + y1 * g)]
+        h = box[3] - box[1]; rim = h * 0.2
         d.rounded_rectangle([box[0] - rim, box[1] - rim, box[2] + rim, box[3] + rim], radius=(h + 2 * rim) / 2, fill=(255, 255, 255, 255))
         d.rounded_rectangle(box, radius=h / 2, fill=GREEN)
     return base.resize((size, size), Image.LANCZOS)
