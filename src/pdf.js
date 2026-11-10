@@ -27,14 +27,14 @@ const pt = s => String(s ?? '').replace(/→/g, '->').replace(/[^\x20-\x7e\xa0-\
 async function exportPdf(opt) {
   opt = opt || pdfOptions();
   if (opt.plan !== false && !state.rows.length && !opt.org) { toast('Der Plan ist noch leer'); return; }
-  const btn = $('pdfBtn'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'PDF wird erstellt …';
+  const btn = $('pdfBtn'); btn.disabled = true; btn.classList.add('busy'); btn.setAttribute('aria-busy', 'true'); toast('PDF wird erstellt …');
   try {
     const JsPDF = await loadJsPdf();
     if (opt.org) opt.photos = await orgPhotoMap();
     const buf = buildPdf(JsPDF, opt);
     await offerBin((opt.plan === false ? 'organigramm-' : 'terminplan-') + slug() + '.pdf', buf);
   } catch (e) { toast((e && e.message) || 'PDF konnte nicht erstellt werden'); }
-  btn.disabled = false; btn.textContent = old;
+  btn.disabled = false; btn.classList.remove('busy'); btn.removeAttribute('aria-busy');
 }
 async function offerBin(name, buf) {
   if (dl) {

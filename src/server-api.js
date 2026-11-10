@@ -18,7 +18,7 @@
   }
 
   const pwEyes = window.tpPasswordEyes;
-  const FORM = 'background:var(--panel,#fff);color:var(--ink,#1c2a25);border:1px solid var(--line,#d5ddd9);border-radius:12px;padding:24px;width:min(360px,100%);display:flex;flex-direction:column;gap:10px;box-sizing:border-box';
+  const FORM = 'background:var(--surface,#fff);color:var(--ink,#1e2620);border:1px solid var(--line,#e3e7e0);box-shadow:var(--shadow,0 10px 32px rgba(20,30,22,.16));border-radius:12px;padding:24px;width:min(360px,100%);display:flex;flex-direction:column;gap:10px;box-sizing:border-box';
   const INP = 'width:100%;box-sizing:border-box;margin-top:4px';
   const BTN = 'background:var(--accent,#2f5d50);color:#fff;border-color:transparent';
   function overlay(html) {
@@ -157,7 +157,7 @@
     b.innerHTML = avatarHtml(me.name, (m && m.avatar) || me.avatar) + '<span class="un">' + esc(me.name) + '</span>' + (openTickets && me.role === 'admin' ? '<span class="badge" title="Offene Tickets">' + openTickets + '</span>' : '') + '<span class="caret" aria-hidden="true">▾</span>';
   }
   function chrome() {
-    const anchor = document.getElementById('openPanel'); if (!anchor || document.getElementById('userBtn')) return;
+    const anchor = document.getElementById('mbarUser') || document.getElementById('openPanel'); if (!anchor || document.getElementById('userBtn')) return;
     const wrap = document.createElement('div'); wrap.className = 'umenu-wrap';
     wrap.innerHTML = '<button class="btn userbtn" id="userBtn" type="button" aria-haspopup="menu" aria-expanded="false"></button>' +
       '<div class="umenu" id="userMenu" role="menu" hidden>' +
@@ -167,7 +167,7 @@
       (isStandalone() ? '' : '<button type="button" role="menuitem" data-m="install">Als App installieren</button>') +
       '<button type="button" role="menuitem" data-m="privacy">Datenschutz</button>' +
       '<button type="button" role="menuitem" data-m="logout">Abmelden</button></div>';
-    anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
+    if (anchor.id === 'mbarUser') anchor.appendChild(wrap); else anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
     const btn = wrap.querySelector('#userBtn'), menu = wrap.querySelector('#userMenu');
     const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
     const positionMenu = () => {

@@ -1,64 +1,27 @@
 <title>Gantt Terminplaner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300..900&display=swap" rel="stylesheet">
 <style>
-/* Aufbau: Kopfleiste mit Einstellungen, darunter links die Vorgangstabelle und rechts die Zeitachse.
-   Beide Seiten teilen Zeilenhöhe und vertikalen Scroll, damit jede Zeile ihrem Balken entspricht. */
+/* Aufbau wie im Kapazitätsplaner: Menüleiste oben, links die Projektliste, rechts Kopf, Kennzahlen, Werkzeugleiste,
+   darunter links die Vorgangstabelle und rechts die Zeitachse. Beide Seiten teilen Zeilenhöhe und vertikalen Scroll. */
 :root {
-  --bg: #f1f4f2;
-  --surface: #ffffff;
-  --ink: #16231d;
-  --muted: #5a6a62;
-  --line: #d3dbd6;
-  --grid: #e4e9e6;
-  --hdr: #e6ece8;
-  --accent: #26664b; --accent-2: #7cc29c;
-  --accent-ink: #ffffff;
-  --accent-soft: #dcebe3;
-  --sumrow: #e9f0ec;
-  --sel: #e3efe8;
-  --bar-sum: #1d3b2e;
-  --bar-task: #3d7e5e;
-  --bar-sub: #94c4aa;
-  --bar-ms: #d4861b;
-  --link: #b23a2b;
-  --today: #1f6feb;
-  --today-bg: #e2ecfb;
-  --weekend: #eaeeec;
-  --holiday: #f3dcd8;
-  --warn: #b23a2b;
-  --on-task: #ffffff;
-  --on-sub: #16231d;
-  --st-arbeit-bg: #fbe8c8;
-  --st-arbeit: #7a4a06;
-  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-num: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --bg: #f3f5f0; --surface: #ffffff; --pop: #ffffff; --ink: #1e2620; --muted: #646e67; --line: #e3e7e0; --grid: #eff2ec; --hdr: #f3f5f1; --hover: #e2e8df; --accent: #1f7a2a; --accent-2: #8fcf98; --accent-ink: #ffffff; --accent-soft: #e6f3e7; --sumrow: #f3f5f1; --sel: #e6f3e7; --bar-sum: #4f5b53; --bar-task: #3d8a4f; --bar-sub: #a9d6b1; --bar-ms: #e0902b; --link: #7d8a81; --today: #2f6fdb; --today-bg: #e2ecfb; --weekend: #f6f8f4; --holiday: #f6e6e2; --warn: #b23a2b; --on-task: #ffffff; --on-sub: #1e2620; --st-arbeit-bg: #fbe8c8; --st-arbeit: #7a4a06; --shadow: 0 10px 32px rgba(20, 30, 22, .16);
+  --font-ui: "Figtree Variable", Figtree, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-num: var(--font-ui);
+  --r-card: 12px; --r-ctl: 8px;
   --rowh: 34px;
   --headh: 72px;
   --leftw: 56%;
+  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #111916; --surface: #18221d; --ink: #e5eee9; --muted: #92a39a; --line: #2c3a33; --grid: #232f29;
-    --hdr: #1d2924; --accent: #5db58d; --accent-2: #1f5a40; --accent-ink: #0d1f17; --accent-soft: #23372d; --sumrow: #1c2923; --sel: #223329;
-    --bar-sum: #a9d9c0; --bar-task: #55a57c; --bar-sub: #2f6a50; --bar-ms: #e3a23a; --link: #ea7968;
-    --today: #6aa6ff; --today-bg: #1e2c44; --weekend: #1d2823; --holiday: #3b2724; --warn: #ea7968;
-    --on-task: #0d1f17; --on-sub: #e5eee9; --st-arbeit-bg: #4a3512; --st-arbeit: #f3c77e;
-    color-scheme: dark;
-  }
+  :root:not([data-theme="light"]) { --bg: #121613; --surface: #1a201c; --pop: #232a25; --ink: #e6ece7; --muted: #98a39b; --line: #2c352f; --grid: #242c27; --hdr: #212823; --hover: #2b342e; --accent: #4cc95a; --accent-2: #1f5a2a; --accent-ink: #0d1a10; --accent-soft: #223326; --sumrow: #212823; --sel: #223326; --bar-sum: #c9d3cc; --bar-task: #4fae62; --bar-sub: #2f6a3c; --bar-ms: #e3a23a; --link: #7f8c83; --today: #6aa6ff; --today-bg: #1e2c44; --weekend: #1e2520; --holiday: #3b2724; --warn: #ea7968; --on-task: #0d1a10; --on-sub: #e6ece7; --st-arbeit-bg: #4a3512; --st-arbeit: #f3c77e; --shadow: 0 10px 32px rgba(0, 0, 0, .5); color-scheme: dark; }
 }
-:root[data-theme="dark"] {
-  --bg: #111916; --surface: #18221d; --ink: #e5eee9; --muted: #92a39a; --line: #2c3a33; --grid: #232f29;
-  --hdr: #1d2924; --accent: #5db58d; --accent-2: #1f5a40; --accent-ink: #0d1f17; --accent-soft: #23372d; --sumrow: #1c2923; --sel: #223329;
-  --bar-sum: #a9d9c0; --bar-task: #55a57c; --bar-sub: #2f6a50; --bar-ms: #e3a23a; --link: #ea7968;
-  --today: #6aa6ff; --today-bg: #1e2c44; --weekend: #1d2823; --holiday: #3b2724; --warn: #ea7968;
-    --on-task: #0d1f17; --on-sub: #e5eee9; --st-arbeit-bg: #4a3512; --st-arbeit: #f3c77e;
-  color-scheme: dark;
-}
+:root[data-theme="dark"] { --bg: #121613; --surface: #1a201c; --pop: #232a25; --ink: #e6ece7; --muted: #98a39b; --line: #2c352f; --grid: #242c27; --hdr: #212823; --hover: #2b342e; --accent: #4cc95a; --accent-2: #1f5a2a; --accent-ink: #0d1a10; --accent-soft: #223326; --sumrow: #212823; --sel: #223326; --bar-sum: #c9d3cc; --bar-task: #4fae62; --bar-sub: #2f6a3c; --bar-ms: #e3a23a; --link: #7f8c83; --today: #6aa6ff; --today-bg: #1e2c44; --weekend: #1e2520; --holiday: #3b2724; --warn: #ea7968; --on-task: #0d1a10; --on-sub: #e6ece7; --st-arbeit-bg: #4a3512; --st-arbeit: #f3c77e; --shadow: 0 10px 32px rgba(0, 0, 0, .5); color-scheme: dark; }
 /* Eigene Farbwahl (Auto / Hell / Dunkel) hat Vorrang vor System und Umgebung */
-:root[data-tp-theme="light"] { --bg: #f1f4f2; --surface: #ffffff; --ink: #16231d; --muted: #5a6a62; --line: #d3dbd6; --grid: #e4e9e6; --hdr: #e6ece8; --accent: #26664b; --accent-2: #7cc29c; --accent-ink: #ffffff; --accent-soft: #dcebe3; --sumrow: #e9f0ec; --sel: #e3efe8; --bar-sum: #1d3b2e; --bar-task: #3d7e5e; --bar-sub: #94c4aa; --bar-ms: #d4861b; --link: #b23a2b; --today: #1f6feb; --today-bg: #e2ecfb; --weekend: #eaeeec; --holiday: #f3dcd8; --warn: #b23a2b; --on-task: #ffffff; --on-sub: #16231d; --st-arbeit-bg: #fbe8c8; --st-arbeit: #7a4a06; color-scheme: light; }
-:root[data-tp-theme="dark"] { --bg: #111916; --surface: #18221d; --ink: #e5eee9; --muted: #92a39a; --line: #2c3a33; --grid: #232f29; --hdr: #1d2924; --accent: #5db58d; --accent-2: #1f5a40; --accent-ink: #0d1f17; --accent-soft: #23372d; --sumrow: #1c2923; --sel: #223329; --bar-sum: #a9d9c0; --bar-task: #55a57c; --bar-sub: #2f6a50; --bar-ms: #e3a23a; --link: #ea7968; --today: #6aa6ff; --today-bg: #1e2c44; --weekend: #1d2823; --holiday: #3b2724; --warn: #ea7968; --on-task: #0d1f17; --on-sub: #e5eee9; --st-arbeit-bg: #4a3512; --st-arbeit: #f3c77e; color-scheme: dark; }
+:root[data-tp-theme="light"] { --bg: #f3f5f0; --surface: #ffffff; --pop: #ffffff; --ink: #1e2620; --muted: #646e67; --line: #e3e7e0; --grid: #eff2ec; --hdr: #f3f5f1; --hover: #e2e8df; --accent: #1f7a2a; --accent-2: #8fcf98; --accent-ink: #ffffff; --accent-soft: #e6f3e7; --sumrow: #f3f5f1; --sel: #e6f3e7; --bar-sum: #4f5b53; --bar-task: #3d8a4f; --bar-sub: #a9d6b1; --bar-ms: #e0902b; --link: #7d8a81; --today: #2f6fdb; --today-bg: #e2ecfb; --weekend: #f6f8f4; --holiday: #f6e6e2; --warn: #b23a2b; --on-task: #ffffff; --on-sub: #1e2620; --st-arbeit-bg: #fbe8c8; --st-arbeit: #7a4a06; --shadow: 0 10px 32px rgba(20, 30, 22, .16); color-scheme: light; }
+:root[data-tp-theme="dark"] { --bg: #121613; --surface: #1a201c; --pop: #232a25; --ink: #e6ece7; --muted: #98a39b; --line: #2c352f; --grid: #242c27; --hdr: #212823; --hover: #2b342e; --accent: #4cc95a; --accent-2: #1f5a2a; --accent-ink: #0d1a10; --accent-soft: #223326; --sumrow: #212823; --sel: #223326; --bar-sum: #c9d3cc; --bar-task: #4fae62; --bar-sub: #2f6a3c; --bar-ms: #e3a23a; --link: #7f8c83; --today: #6aa6ff; --today-bg: #1e2c44; --weekend: #1e2520; --holiday: #3b2724; --warn: #ea7968; --on-task: #0d1a10; --on-sub: #e6ece7; --st-arbeit-bg: #4a3512; --st-arbeit: #f3c77e; --shadow: 0 10px 32px rgba(0, 0, 0, .5); color-scheme: dark; }
 html, body { height: 100%; }
 body {
   background: var(--bg); color: var(--ink); font: 14px/1.4 var(--font-ui);
@@ -353,7 +316,7 @@ h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; whit
 .team p { margin: 0 0 6px; font-size: 13.5px; }
 .team ol { margin: 0 0 6px; padding-left: 20px; font-size: 13.5px; display: flex; flex-direction: column; gap: 2px; }
 .ro-banner { background: var(--today-bg); }
-body.ro #addV, body.ro #addU, body.ro #addM, body.ro #newProj, body.ro #undo, body.ro #banner, body.ro .kadd, body.ro .lmb, body.ro .mv, body.ro .editonly { display: none !important; }
+body.ro #addV, body.ro #addU, body.ro #addM, body.ro #newProj, body.ro #undo, body.ro #gtool > .sep, body.ro #banner, body.ro .kadd, body.ro .lmb, body.ro .mv, body.ro .editonly { display: none !important; }
 body.ro .settings, body.ro #pname, body.ro .stsel, body.ro .kcol .dot, body.ro .lname { pointer-events: none; }
 body.ro .card { cursor: default; }
 body.ro .row .acts { visibility: hidden; }   /* Platz behalten, sonst verrutschen die Spalten */
@@ -619,10 +582,11 @@ body.colresize, body.colresize * { cursor: col-resize !important; user-select: n
 .panel.pdfdlg { width: min(620px, 100%); }
 .pdfdlg h3 { margin: 0 0 6px; }
 /* Zugang „Nur Gantt“ */
-html.gonly #segView, html.gonly #openPanel, html.gonly #chgAll { display: none !important; }
+html.gonly #segView, html.gonly #openPanel, html.gonly #editProj, html.gonly #chgAll, html.gonly #kpiTasks { display: none !important; }
+html.gonly .kpi { pointer-events: none; }
 html.gonly .row [data-a="det"] { visibility: hidden; }
 html.gonly .row .predm { pointer-events: none; border-style: solid; border-color: transparent; }
-html.m.gonly body { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+html.m.gonly .work { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 /* Feiertage: Vorschau je Jahr */
 details.holprev { margin: 6px 0 2px; font-size: 13px; }
 details.holprev summary { cursor: pointer; color: var(--accent); }
@@ -763,7 +727,7 @@ html.m #segView button[aria-pressed="true"] { color: var(--accent); background: 
 html.m #segView .vicon { display: block; }
 html.m #segView .vlbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; position: relative; }
 html.m #segView .tkbadge { position: absolute; top: -26px; right: -2px; margin: 0; min-width: 16px; line-height: 16px; font-size: 10px; }
-html.m body { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+html.m .work { padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
 html.m .foot { padding-bottom: 6px; }
 
 /* Ziehen per Finger */
@@ -772,36 +736,251 @@ html.m .foot { padding-bottom: 6px; }
 html.tdrag, html.tdrag body { overscroll-behavior: none; }
 html.tdrag [draggable="true"].drag, html.tdrag .odrag { opacity: .35; }
 #orgAddMode.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+/* =====================================================================
+   Optik des Kapazitätsplaners: Menüleiste, Projektliste links, Projektkopf mit großem Titel,
+   Kennzahlen als Karten, Werkzeugleiste mit Symbolknöpfen, runde Segmentschalter mit grüner Auswahl.
+   ===================================================================== */
+body { padding: 0; gap: 0; font: 13.5px/1.4 var(--font-ui); font-variant-numeric: tabular-nums; }
+svg text { font-variant-numeric: tabular-nums; }
+.shell { flex: 1 1 0; min-height: 0; display: flex; position: relative; }
+.work { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; }
+h1, h2, h3 { margin: 0; }
+kbd { font: inherit; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+
+/* Bedienelemente */
+.in { border-radius: var(--r-ctl); }
+.btn { border-radius: var(--r-ctl); }
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn:disabled { opacity: .4; }
+.seg { display: inline-flex; gap: 2px; padding: 2px; border: 0; border-radius: 999px; background: var(--hover); flex: none; overflow: visible; }
+.seg button { border: 0; background: transparent; padding: 3px 12px; border-radius: 999px; cursor: pointer; color: var(--ink); }
+.seg button + button { border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 500; }
+.seg button:disabled { opacity: .35; cursor: default; }
+.seg button[aria-pressed="true"] .tkbadge { background: var(--accent-ink); color: var(--accent); }
+.tb { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; border: 0; background: transparent; border-radius: var(--r-ctl); color: var(--ink); cursor: pointer; padding: 0; flex: none; position: relative; }
+.tb:hover:not(:disabled) { background: var(--hover); }
+.tb:disabled { opacity: .3; cursor: default; }
+.tb[aria-pressed="true"], .tb.active, .tb[aria-expanded="true"], .chkb:has(input:checked) { background: var(--accent-soft); color: var(--accent); }
+.tb.busy { animation: tp-pulse 1s ease-in-out infinite; }
+@keyframes tp-pulse { 50% { opacity: .35; } }
+.chkb input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.chkb:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pill { font-size: 12px; padding: 1px 9px; border-radius: 10px; background: var(--hover); color: var(--ink); white-space: nowrap; flex: none; }
+.pill.st-run, .pill.st-done { background: var(--accent-soft); color: var(--accent); }
+.pill.st-plan { background: var(--today-bg); color: var(--today); }
+.pill.st-late { background: var(--holiday); color: var(--warn); }
+.banner { border-radius: var(--r-card); padding: 10px 12px; }
+.ro-banner { background: var(--today-bg); }
+
+/* Menüleiste */
+.mbar { flex: none; height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 14px; background: var(--surface); border-bottom: 1px solid var(--line); position: relative; z-index: 15; }
+.mbar-name { font-weight: 700; letter-spacing: -.01em; margin-right: 6px; white-space: nowrap; }
+.mbar-menus { display: flex; gap: 1px; min-width: 0; }
+.mb-top { position: relative; flex: none; }
+.mb-top > button { border: 0; background: transparent; padding: 3px 9px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.mb-top > button:hover, .mb-top > button.on { background: var(--hover); }
+.mb-list { position: fixed; z-index: 45; min-width: 270px; max-width: calc(100vw - 16px); overflow: auto; padding: 5px; background: var(--pop); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); display: flex; flex-direction: column; }
+.mb-list hr { border: 0; border-top: 1px solid var(--line); margin: 4px 6px; width: calc(100% - 12px); flex: none; }
+.mb-list button { display: flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 4px 8px 4px 4px; border-radius: 6px; cursor: pointer; text-align: left; flex: none; }
+.mb-list button:hover:not(.off), .mb-list button:focus-visible { background: var(--accent); color: var(--accent-ink); outline: none; }
+.mb-list button:hover:not(.off) kbd, .mb-list button:focus-visible kbd { color: inherit; }
+.mb-list button.off { color: var(--muted); opacity: .6; cursor: default; }
+.mb-chk { width: 16px; display: inline-grid; place-items: center; flex: none; }
+.mb-l { flex: 1 1 auto; white-space: nowrap; }
+.mb-list kbd { margin-left: 18px; }
+.mbar .status { padding: 0; max-width: 360px; min-width: 0; }
+.mbar .status #statusTxt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mbar .online, .mbar .last { padding: 0; }
+.mbar .chip { width: 22px; height: 22px; }
+.mbar-user:empty { display: none; }
+.mbar .userbtn { border: 0; background: transparent; padding: 2px 8px 2px 3px; min-height: 28px; font-size: 13px; }
+.mbar .userbtn:hover { background: var(--hover); }
+.umenu { background: var(--pop); border-radius: var(--r-card); box-shadow: var(--shadow); padding: 5px; }
+.umenu button { padding: 6px 10px; font-size: 13.5px; }
+.umenu button:hover, .umenu button:focus-visible { background: var(--accent); color: var(--accent-ink); }
+
+/* Projektliste */
+.side { flex: none; width: 236px; display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; background: var(--surface); border-right: 1px solid var(--line); min-height: 0; }
+html.noside .side { display: none; }
+.side-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 4px 8px; font-size: 12px; font-weight: 600; color: var(--muted); flex: none; }
+.side-head .tb { width: 26px; height: 26px; color: var(--muted); }
+.side-list { flex: 1 1 0; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 1px; padding-bottom: 8px; }
+.side-item { width: 100%; display: flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 5px 8px 5px 12px; border-radius: var(--r-ctl); cursor: pointer; text-align: left; flex: none; }
+.side-item:hover { background: var(--hover); }
+.side-item[aria-current] { background: var(--sel); color: var(--accent); font-weight: 600; }
+.side-n { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-link { display: flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 6px 8px; border-radius: var(--r-ctl); cursor: pointer; text-align: left; flex: none; }
+.side-link:hover { background: var(--hover); }
+
+/* Projektkopf */
+.head { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.head-t { min-width: 0; display: flex; flex-direction: column; }
+.head { flex-wrap: nowrap; }
+.head-t { flex: 1 1 auto; }
+.head > .spacer { display: none; }
+@media (max-width: 1000px) { .head { flex-wrap: wrap; } }
+.head-name { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.title-in { field-sizing: content; min-width: 120px; max-width: min(520px, 46vw); font-size: 20px; font-weight: 600; letter-spacing: -.01em; background: transparent; border: 1px solid transparent; border-radius: var(--r-ctl); padding: 0 6px; margin-left: -7px; height: 32px; }
+.title-in:hover { border-color: var(--line); }
+.title-in:focus { background: var(--surface); border-color: var(--accent); outline: none; }
+.head-meta { margin: 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.head-name .tb { width: 26px; height: 26px; color: var(--muted); }
+.projsel-m { display: none; }
+.seg.views button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 13px; }
+.head .seg.views { margin-right: 4px; }
+.filter-toggle { width: 30px; min-height: 0; padding: 0; font-size: inherit; color: var(--ink); border: 0; }
+.filter-toggle.active { border: 0; }
+.filter-toggle .filter-count { position: absolute; top: -3px; right: -4px; }
+.btn.chgall { padding: 4px 10px; background: var(--today-bg); color: var(--today); border-color: transparent; }
+
+/* Kennzahlen */
+.kpis { flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.kpis:has(#kpiTasks[hidden]) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.kpi { position: relative; display: flex; flex-direction: column; align-items: stretch; text-align: left; padding: 7px 12px 9px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden; min-width: 0; color: inherit; font: inherit; }
+button.kpi { cursor: pointer; }
+button.kpi:hover { border-color: var(--muted); }
+.kpi.on { border-color: var(--warn); }
+.kpi-l { font-size: 12px; color: var(--muted); }
+.kpi b { font-size: 17px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi.bad b, .kpi.bad small { color: var(--warn); }
+.kpi-line { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--grid); display: block; }
+.kpi-line i { display: block; height: 100%; background: var(--accent); }
+
+/* Werkzeugleiste */
+.toolbar { display: flex; flex-wrap: wrap; gap: 2px; align-items: center; flex: none; }
+.toolbar .btn { padding: 4px 12px 4px 9px; margin-right: 4px; }
+.toolbar .sep { width: 1px; height: 18px; background: var(--line); margin: 0 6px; }
+.toolbar .settings { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.toolbar .seg { margin-right: 6px; }
+.zoom { display: inline-flex; align-items: center; }
+.zoom .zl { border: 0; background: transparent; cursor: pointer; font-size: 12px; color: var(--muted); min-width: 46px; padding: 4px 2px; border-radius: 6px; }
+.zoom .zl:hover { background: var(--hover); color: var(--ink); }
+.tabs.seg { margin-left: 6px; }
+#gtool[hidden] { display: none; }
+
+/* Arbeitsfläche, Ansichten und Dialoge */
+.board, .vw, .vfilters { border-radius: var(--r-card); }
+.foot { padding: 0 2px; }
+.panel { border-radius: var(--r-card); box-shadow: var(--shadow); }
+.panel h3 { text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 600; }
+.fld > span, .fld > label { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.pset { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-end; }
+.scrim { background: rgba(10, 16, 12, .45); }
+.toast { border-radius: var(--r-card); box-shadow: var(--shadow); }
+.panel.info { width: min(560px, 100%); }
+.keys { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 24px; }
+.keys div { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--grid); }
+.keys dt { min-width: 0; }
+.keys dd { margin: 0; }
+.panel.info p { margin: 0; max-width: 60ch; }
+
+/* Schmalere Bildschirme am Desktop */
+@media (max-width: 1280px) {
+  .side { width: 200px; }
+  .seg.views button { padding-inline: 10px; }
+  .mbar .last { display: none; }
+}
+@media (max-width: 1100px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kpis:has(#kpiTasks[hidden]) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* Touch: größere Tippflächen, 16 px in Eingabefeldern (kein automatisches Zoomen in iOS) */
+@media (pointer: coarse) {
+  .tb { width: 38px; height: 38px; }
+  .btn, .seg button { min-height: 36px; }
+  .in, .panel textarea { font-size: 16px; }
+  .row input, .row select { font-size: 14.5px; }
+  .mb-list button { padding: 9px 10px 9px 6px; }
+}
+
+/* Mobil: Menüleiste waagerecht scrollbar, Projektwahl im Kopf statt Liste, Kennzahlen zweispaltig */
+html.m .side { display: none; }
+html.m .mbar { position: sticky; top: 0; gap: 6px; padding: 0 6px; }
+html.m .mbar-name, html.m .mbar .last { display: none; }
+html.m .mbar-menus { overflow-x: auto; scrollbar-width: none; flex: 1 1 auto; }
+html.m .mbar-menus::-webkit-scrollbar { display: none; }
+html.m .mbar .spacer { display: none; }
+html.m .mbar .status #statusTxt { display: none; }
+html.m .mbar .userbtn .un, html.m .mbar .userbtn .caret { display: none; }
+html.m .mb-list { min-width: 0; }
+html.m .work { padding: 10px 12px; }
+html.m .head { gap: 8px; }
+html.m .head-t { flex: 1 1 100%; gap: 4px; }
+html.m .projsel-m { display: block; width: 100%; font-weight: 500; }
+html.m .title-in { max-width: none; flex: 1 1 auto; min-width: 0; font-size: 19px; }
+html.m .head .spacer { display: none; }
+html.m .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+html.m .kpi b { font-size: 15px; }
+html.m .shell { flex: 1 0 auto; }
+html.m:has(.vw:not([hidden])) .shell { min-height: 0; }
+html.m #segView .tkbadge { top: -24px; }
+html.m #segView button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
+html.m .scrim { padding: 0; place-items: end stretch; z-index: 30; }
+html.m #detScrim, html.m #tkScrim { place-items: end stretch; padding-top: 0; }
+html.m .scrim > .panel { width: 100%; max-height: 92dvh; border-radius: 14px 14px 0 0; padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+html.m .toast { left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); width: max-content; }
+html.mf .mb-list { max-width: 464px; }
+
+/* Beschriftungen in normaler Schreibweise wie im Kapazitätsplaner */
+.hrow, .lst th, .olabel, .tkg h3, .cwd div, .kadd label, .lfld, .colmenu .cmh, .filter-field label, .people-picker-search label { text-transform: none; letter-spacing: 0; }
+.hrow { font-size: 12px; font-weight: 500; color: var(--muted); }
+.tabs.seg { display: none; }
+html.m .tabs.seg { display: inline-flex; margin-left: auto; }
+html.m #projSel { width: 100%; }
+html.m .head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; column-gap: 2px; }
+html.m .head-t { display: contents; }
+html.m .projsel-m { grid-column: 1 / -1; margin-bottom: 4px; }
+html.m .head-name { grid-column: 1; }
+html.m .head-meta { grid-column: 1 / -1; grid-row: 3; }
+html.m .toolbar .spacer { display: none; }
+html.m .toolbar .settings { flex-basis: 100%; margin-top: 4px; }
+html.m .mb-list kbd { display: none; }
+html.m .kpi { padding: 6px 10px 8px; }
+html.m .kpi small { display: none; }
+html.m #gtool > .sep { display: none; }
+html.m #addV { padding: 0; width: 44px; justify-content: center; }
+html.m #addV span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+html.m .tabs.seg button { padding-inline: 10px; }
+@media (prefers-reduced-motion: no-preference) {
+  html.m .scrim > .panel { animation: tp-sheet .26s cubic-bezier(.2, .8, .2, 1); }
+}
+@keyframes tp-sheet { from { transform: translateY(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 </style>
 
-<header class="top">
-  <div class="row1">
-    <h1>Terminplaner</h1>
-    <div class="fld"><label for="projSel">Projekt</label><div class="pj"><select id="projSel" class="in" aria-label="Projekt wählen"></select><button class="btn" id="newProj" type="button">+ Neu</button></div></div>
-    <div class="fld"><label for="pname">Projektname</label><input id="pname" class="in" type="text" placeholder="Projektname" autocomplete="off"></div>
-    <span class="spacer"></span>
-    <span class="online" id="online" aria-label="Gerade online"></span>
-    <span class="last" id="last"></span>
-    <span class="status" id="status" data-k="local"><i></i><span id="statusTxt">Wird geladen</span></span>
-    <button class="btn" id="undo" type="button" disabled>Rückgängig</button>
-    <button class="btn" id="openPanel" type="button">Listen &amp; Daten</button>
-  </div>
-  <div class="row2">
-    <div class="settings">
-    <div class="fld"><label for="pstart">Projektstart</label><input id="pstart" class="in" type="date"></div>
-    <div class="fld"><span id="lblRaster">Zeitraster</span>
-      <div class="seg" id="segRaster" role="group" aria-labelledby="lblRaster"><button type="button" data-v="days">Tage</button><button type="button" data-v="weeks">Wochen</button></div></div>
-    <div class="fld"><span id="lblMode">Dauer in</span>
-      <div class="seg" id="segMode" role="group" aria-labelledby="lblMode"><button type="button" data-v="work">Arbeitstagen</button><button type="button" data-v="cal">Kalendertagen</button></div></div>
-    <div class="fld"><span id="lblZoom">Zoom</span>
-      <div class="seg" role="group" aria-labelledby="lblZoom"><button type="button" id="zoomOut" aria-label="Zeitachse verkleinern">−</button><button type="button" id="zoomLbl" class="zl" title="Auf 100 % zurücksetzen">100 %</button><button type="button" id="zoomIn" aria-label="Zeitachse vergrößern">+</button></div></div>
-    <label class="chk"><input type="checkbox" id="lines"> Abhängigkeitslinien</label>
+<nav class="mbar" id="mbar" aria-label="Menüleiste">
+  <span class="mbar-name">Terminplaner</span>
+  <div class="mbar-menus" id="mbarMenus" role="menubar" aria-label="Menü"></div>
+  <span class="spacer"></span>
+  <span class="online" id="online" aria-label="Gerade online"></span>
+  <span class="last" id="last"></span>
+  <span class="status" id="status" data-k="local"><i></i><span id="statusTxt">Wird geladen</span></span>
+  <span class="mbar-user" id="mbarUser"></span>
+</nav>
+<div class="shell">
+<aside class="side" id="side" aria-label="Projekte">
+  <div class="side-head"><span id="sideTitle">Projekte</span><button class="tb side-new" id="newProj" type="button" title="Neues Projekt" aria-label="Neues Projekt"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg></button></div>
+  <div class="side-list" id="sideList" role="list" aria-labelledby="sideTitle"></div>
+  <button class="side-link" id="openPanel" type="button"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5h6M11.5 4.5h2M2.5 11.5h2M7.5 11.5h6"/><circle cx="10" cy="4.5" r="1.5"/><circle cx="6" cy="11.5" r="1.5"/></svg><span>Listen &amp; Daten</span></button>
+</aside>
+<div class="work" id="work">
+<header class="head">
+  <div class="head-t">
+    <select id="projSel" class="in projsel-m" aria-label="Projekt wählen"></select>
+    <div class="head-name">
+      <input id="pname" class="title-in" type="text" placeholder="Projektname" autocomplete="off" aria-label="Projektname">
+      <span class="pill" id="projPill" hidden></span>
+      <button class="tb editonly-b" id="editProj" type="button" title="Projekt, Listen und Daten" aria-label="Projekt, Listen und Daten"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 2.5l3 3-8 8H2.5v-3z"/></svg></button>
     </div>
-    <span class="spacer"></span>
-    <button class="btn primary" id="addV" type="button">+ Vorgang</button>
-    <button class="btn" id="addU" type="button">+ Untervorgang</button>
-    <button class="btn" id="addM" type="button">+ Meilenstein</button>
+    <p class="head-meta" id="headMeta"></p>
   </div>
+  <span class="spacer"></span>
+  <div class="seg views" id="segView" role="group" aria-label="Ansicht">
+    <button type="button" data-v="gantt" aria-pressed="true"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h7M5 8h8M4 12h5"/></svg><span class="vlbl">Gantt</span></button><button type="button" data-v="list" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.01M2.5 8h.01M2.5 12h.01"/></svg><span class="vlbl">Liste</span></button><button type="button" data-v="kanban" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h3v10h-3zM6.5 3h3v6h-3zM10.5 3h3v8h-3z"/></svg><span class="vlbl">Kanban</span></button><button type="button" data-v="cal" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11v9.5h-11zM2.5 7h11M5.5 2.5v3M10.5 2.5v3"/></svg><span class="vlbl">Kalender</span></button><button type="button" data-v="tasks" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5l1.3 1.3L6.8 3.3M3 10.5l1.3 1.3 2.5-2.5M8.5 5h5M8.5 11h5"/></svg><span class="vlbl">Aufgaben</span></button><button type="button" data-v="org" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2.5h4v3H6zM2.5 10.5h4v3h-4zM9.5 10.5h4v3h-4zM8 5.5v2.5M4.5 10.5V8h7v2.5"/></svg><span class="vlbl">Team</span></button>
+  </div>
+  <button class="tb filter-toggle" id="toggleFilters" type="button" aria-controls="vfilters" aria-expanded="false" title="Suchen und filtern" aria-label="Suchen und filtern"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h11l-4.2 5.2v4.3l-2.6 1.3V8.2z"/></svg><span class="filter-count" id="filterCount" hidden></span></button>
+  <button class="tb" id="pdfBtn" type="button" title="Terminplan und Organigramm als PDF zum Drucken" aria-label="PDF exportieren"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 1.8H4.2v12.4h7.6V4.1zM9.5 1.8v2.4h2.3M8 6.8v4.6M6 9.6l2 1.9 2-1.9"/></svg></button>
 </header>
 
 <div class="banner ro-banner" id="roBanner" hidden><span><b>Nur Ansicht.</b> Du kannst die Projekte ansehen und exportieren, aber nicht ändern.</span></div>
@@ -810,20 +989,11 @@ html.tdrag [draggable="true"].drag, html.tdrag .odrag { opacity: .35; }
   <button class="btn" id="blank" type="button">Leerer Plan</button>
 </div>
 
-<div class="viewbar">
-  <div class="seg" id="segView" role="group" aria-label="Ansicht">
-    <button type="button" data-v="gantt" aria-pressed="true"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h7M5 8h8M4 12h5"/></svg><span class="vlbl">Gantt</span></button><button type="button" data-v="list" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.01M2.5 8h.01M2.5 12h.01"/></svg><span class="vlbl">Liste</span></button><button type="button" data-v="kanban" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h3v10h-3zM6.5 3h3v6h-3zM10.5 3h3v8h-3z"/></svg><span class="vlbl">Kanban</span></button><button type="button" data-v="cal" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11v9.5h-11zM2.5 7h11M5.5 2.5v3M10.5 2.5v3"/></svg><span class="vlbl">Kalender</span></button><button type="button" data-v="tasks" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5l1.3 1.3L6.8 3.3M3 10.5l1.3 1.3 2.5-2.5M8.5 5h5M8.5 11h5"/></svg><span class="vlbl">Aufgaben</span></button><button type="button" data-v="org" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2.5h4v3H6zM2.5 10.5h4v3h-4zM9.5 10.5h4v3h-4zM8 5.5v2.5M4.5 10.5V8h7v2.5"/></svg><span class="vlbl">Team</span></button>
-  </div>
-  <button class="btn filter-toggle" id="toggleFilters" type="button" aria-controls="vfilters" aria-expanded="false"><span id="filterArrow" aria-hidden="true">▸</span>Filter<span class="filter-count" id="filterCount" hidden></span></button>
-  <div class="tabs seg" id="tabs" role="tablist">
-    <button type="button" role="tab" data-tab="table" aria-pressed="true">Tabelle</button>
-    <button type="button" role="tab" data-tab="chart" aria-pressed="false">Diagramm</button>
-  </div>
-  <span class="filter-summary" id="filterSummary" aria-live="polite" hidden></span>
-  <span class="spacer"></span>
-  <button class="btn chgall" id="chgAll" type="button" hidden></button>
-  <div class="projprog" id="projProg" role="img" aria-label="Projektfortschritt"><span>Projekt</span><span class="pgb"><i></i></span><b>0 %</b></div>
-  <button class="btn" id="pdfBtn" type="button" title="Terminplan und Organigramm als PDF zum Drucken">PDF exportieren</button>
+<div class="kpis" id="kpis">
+  <div class="kpi" id="kpiTime"><span class="kpi-l">Projektzeit</span><b>–</b><small></small><div class="kpi-line projprog" id="projProg" role="img" aria-label="Projektfortschritt"><i></i></div></div>
+  <button class="kpi" id="kpiLate" type="button" title="Überfällige Vorgänge anzeigen"><span class="kpi-l">Überfällig</span><b>–</b><small></small></button>
+  <button class="kpi" id="kpiWeek" type="button" title="Vorgänge dieser Woche im Kalender"><span class="kpi-l">Diese Woche</span><b>–</b><small></small></button>
+  <button class="kpi" id="kpiTasks" type="button" title="Aufgaben öffnen"><span class="kpi-l">Offene Aufgaben</span><b>–</b><small></small></button>
 </div>
 <div class="vfilters" id="vfilters" role="group" aria-label="Vorgänge filtern" hidden>
   <div class="filter-field filter-search"><label for="fQ">Suche</label><input id="fQ" class="in" type="search" placeholder="Vorgänge durchsuchen" autocomplete="off"></div>
@@ -832,6 +1002,24 @@ html.tdrag [draggable="true"].drag, html.tdrag .odrag { opacity: .35; }
   <button class="btn filter-reset" id="resetFilters" type="button">Zurücksetzen</button>
 </div>
 
+<div class="toolbar" id="gtool" role="toolbar" aria-label="Werkzeuge">
+  <button class="btn primary" id="addV" type="button" title="Neuer Vorgang"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg><span>Vorgang</span></button>
+  <button class="tb" id="addU" type="button" title="Neuer Untervorgang" aria-label="Neuer Untervorgang"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2.5v5.5a2 2 0 0 0 2 2h7M10 7l3 3-3 3"/></svg></button>
+  <button class="tb" id="addM" type="button" title="Neuer Meilenstein" aria-label="Neuer Meilenstein"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.3l5.7 5.7L8 13.7 2.3 8z"/></svg></button>
+  <span class="sep" aria-hidden="true"></span>
+  <button class="tb" id="undo" type="button" title="Rückgängig (Strg+Z)" aria-label="Rückgängig" disabled><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 3.5L2.5 6.5l3 3M2.5 6.5H10a3.5 3.5 0 0 1 0 7H7"/></svg></button>
+  <button class="btn chgall" id="chgAll" type="button" hidden></button>
+  <div class="tabs seg" id="tabs" role="tablist">
+    <button type="button" role="tab" data-tab="table" aria-pressed="true">Tabelle</button>
+    <button type="button" role="tab" data-tab="chart" aria-pressed="false">Diagramm</button>
+  </div>
+  <span class="spacer"></span>
+  <div class="settings">
+    <div class="seg" id="segRaster" role="group" aria-label="Zeitraster"><button type="button" data-v="days">Tage</button><button type="button" data-v="weeks">Wochen</button></div>
+    <div class="zoom" role="group" aria-label="Zoom"><button class="tb" type="button" id="zoomOut" aria-label="Zeitachse verkleinern" title="Verkleinern"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8h9"/></svg></button><button type="button" id="zoomLbl" class="zl" title="Auf 100 % zurücksetzen">100 %</button><button class="tb" type="button" id="zoomIn" aria-label="Zeitachse vergrößern" title="Vergrößern"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg></button></div>
+    <label class="tb chkb" title="Abhängigkeitslinien"><input type="checkbox" id="lines" aria-label="Abhängigkeitslinien"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5h3a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h4M11 9.5l2 2-2 2"/><circle cx="2.8" cy="4.5" r=".6"/></svg></label>
+  </div>
+</div>
 <main class="board" id="board" data-tab="table">
   <section class="pane left" id="paneL" aria-label="Vorgänge">
     <div class="hdr" id="hdrL">
@@ -861,10 +1049,11 @@ html.tdrag [draggable="true"].drag, html.tdrag .odrag { opacity: .35; }
   <span class="lg"><i class="d" style="background:var(--bar-ms)"></i>Meilenstein</span>
   <span class="lg"><i class="l"></i>Abhängigkeit</span>
   <span class="lg"><i class="t"></i>Heute</span>
-  <span class="disp"><span id="lblDisp">Darstellung</span><span class="seg sm" id="segDisp" role="group" aria-labelledby="lblDisp"><button type="button" data-v="auto" title="Je nach Bildschirmbreite">Auto</button><button type="button" data-v="desktop" title="Tabelle und Diagramm nebeneinander, auch auf dem Handy">Desktop</button><button type="button" data-v="mobile" title="Schmale Ansicht für Smartphones">Mobil</button></span></span>
-  <span class="disp"><span id="lblTheme">Farbe</span><span class="seg sm" id="segTheme" role="group" aria-labelledby="lblTheme"><button type="button" data-v="auto" title="Wie im Betriebssystem eingestellt">Auto</button><button type="button" data-v="light">Hell</button><button type="button" data-v="dark">Dunkel</button></span></span>
   <span class="rels">EA Ende→Anfang · AA Anfang→Anfang · EE Ende→Ende · AE Anfang→Ende</span>
 </footer>
+</div>
+</div>
+
 
 <div class="scrim" id="scrim" hidden>
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="ptitle">
@@ -873,9 +1062,13 @@ html.tdrag [draggable="true"].drag, html.tdrag .odrag { opacity: .35; }
       <h3>Team</h3>
       <div id="teamInfo"></div>
     </div>
-    <div class="editonly setbox" hidden>
-      <h3>Einstellungen</h3>
-      <div id="setSlot"></div>
+    <div class="editonly">
+      <h3>Projekt</h3>
+      <div class="pset">
+        <div class="fld"><label for="pstart">Projektstart</label><input id="pstart" class="in" type="date"></div>
+        <div class="fld"><span id="lblMode">Dauer in</span>
+          <div class="seg" id="segMode" role="group" aria-labelledby="lblMode"><button type="button" data-v="work">Arbeitstagen</button><button type="button" data-v="cal">Kalendertagen</button></div></div>
+      </div>
     </div>
     <div class="editonly">
       <h3>Dieses Projekt</h3>
@@ -1420,6 +1613,7 @@ function renderChart(indices = ganttRowIndices()) {
   const W = Math.ceil(nCols * colW), H = Math.max(N, 1) * RH;
   const X = d => (d - first) / step * colW;
   window.__chartDayW = colW / step;   // für das Ziehen der Balken
+  window.__chartTodayX = X(todayDn());   // für „Zum heutigen Tag“
   const today = todayDn();
   const todayCol = Math.floor((today - first) / step);
   // Kopf
@@ -1748,6 +1942,13 @@ function refreshSelect() {
   const items = [...proj.entries()].sort((x, y) => x[1].name.localeCompare(y[1].name, 'de'));
   $('projSel').innerHTML = items.map(([id, e]) => '<option value="' + esc(id) + '"' + (id === curId ? ' selected' : '') + '>' + esc(e.name) + '</option>').join('');
   $('delProj').disabled = false;
+  paintSide(items);
+}
+// Projektliste links: ein Eintrag je Projekt, das aktuelle hervorgehoben
+function paintSide(items) {
+  const box = $('sideList'); if (!box) return;
+  const html = items.map(([id, e]) => '<button type="button" class="side-item" role="listitem" data-id="' + esc(id) + '"' + (id === curId ? ' aria-current="page"' : '') + ' title="' + esc(e.name) + '"><span class="side-n">' + esc(e.name) + '</span></button>').join('');
+  if (box.innerHTML !== html) box.innerHTML = html;
 }
 function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(persist, 800); }
 async function flush() {
@@ -2042,8 +2243,6 @@ function dispMode() { try { const d = JSON.parse(localStorage.getItem(LS_UI) || 
 function applyTheme() {
   let t = 'auto'; try { t = JSON.parse(localStorage.getItem(LS_UI) || '{}').theme || 'auto'; } catch (e) { }
   if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-tp-theme', t); else { t = 'auto'; document.documentElement.removeAttribute('data-tp-theme'); }
-  const seg = document.getElementById('segTheme');
-  if (seg) seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === t)));
 }
 function isMobile() { return document.documentElement.classList.contains('m'); }
 function applyDisplay() {
@@ -2054,16 +2253,15 @@ function applyDisplay() {
   const narrow = window.matchMedia ? window.matchMedia('(max-width: 860px)').matches : false;
   const m = mode === 'mobile' || (mode === 'auto' && narrow);
   html.classList.toggle('m', m); html.classList.toggle('mf', m && !narrow);
-  // Mobil: Projekteinstellungen wandern in „Listen & Daten“, damit der Kopf schmal bleibt
-  const set = document.querySelector('.settings'), slot = document.getElementById('setSlot'), home = document.querySelector('.row2');
-  if (set && slot && home) {
-    if (m && set.parentNode !== slot) slot.appendChild(set);
-    else if (!m && set.parentNode !== home) home.insertBefore(set, home.firstChild);
-    slot.parentNode.hidden = !m;
-  }
-  const seg = document.getElementById('segDisp');
-  if (seg) seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === mode)));
+  applySide();
 }
+// Projektliste links (Strg+B), je Gerät gespeichert; mobil immer ausgeblendet
+function sideOn() { try { return JSON.parse(localStorage.getItem(LS_UI) || '{}').side !== false; } catch (e) { return true; } }
+function applySide() { document.documentElement.classList.toggle('noside', !sideOn()); }
+function toggleSide() { saveUi({ side: !sideOn() }); applySide(); }
+function themeMode() { try { const t = JSON.parse(localStorage.getItem(LS_UI) || '{}').theme; return t === 'light' || t === 'dark' ? t : 'auto'; } catch (e) { return 'auto'; } }
+function setTheme(v) { saveUi({ theme: v }); applyTheme(); }
+function setDisp(v) { saveUi({ disp: v }); applyDisplay(); renderAll(); }
 function saveUi(extra) { try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); Object.assign(u, extra); localStorage.setItem(LS_UI, JSON.stringify(u)); } catch (e) { } }
 function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Math.min(px, bw - 240)); document.documentElement.style.setProperty('--leftw', px + 'px'); saveUi({ leftw: px }); }
 
@@ -2089,6 +2287,7 @@ function boot() {
   $('pname').addEventListener('input', e => { state.name = e.target.value; refreshSelect(); changed(false); });
   $('projSel').addEventListener('change', e => switchTo(e.target.value));
   $('newProj').addEventListener('click', newProject);
+  $('sideList').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (!b || b.dataset.id === curId) return; const ps = $('projSel'); ps.value = b.dataset.id; ps.dispatchEvent(new Event('change')); });
   $('dupProj').addEventListener('click', () => { duplicateProject(); closePanel(); });
   $('delProj').addEventListener('click', deleteProject);
   $('pstart').addEventListener('input', e => { if (parseISO(e.target.value) != null) { state.start = e.target.value; refresh(); changed(true); } });
@@ -2104,8 +2303,7 @@ function boot() {
   $('addU').addEventListener('click', () => addRow('untervorgang'));
   $('addM').addEventListener('click', () => addRow('meilenstein'));
   $('undo').addEventListener('click', undo);
-  $('segTheme').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; saveUi({ theme: b.dataset.v }); applyTheme(); });
-  $('segDisp').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; saveUi({ disp: b.dataset.v }); applyDisplay(); renderAll(); });
+  $('editProj').addEventListener('click', openPanel);
   window.addEventListener('resize', () => { const m = isMobile(); applyDisplay(); if (m !== isMobile()) renderAll(); });
   const blank = () => loadState(blankPlan(state), 'Plan geleert');
   $('blank').addEventListener('click', blank); $('blank2').addEventListener('click', () => { blank(); closePanel(); });
@@ -2152,6 +2350,7 @@ function boot() {
   sp.addEventListener('pointermove', e => { if (sp.dataset.drag) setLeftW(e.clientX - $('board').getBoundingClientRect().left); });
   sp.addEventListener('pointerup', () => { delete sp.dataset.drag; });
   sp.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); setLeftW($('paneL').getBoundingClientRect().width + (e.key === 'ArrowRight' ? 24 : -24)); } });
+  if (typeof initMenubar === 'function') { initMenubar(); initKpis(); }
   renderAll();
   initStore();
 }
@@ -2279,6 +2478,7 @@ function setView(v) {
   view = v; saveUi({ view: v });
   $('segView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
   $('board').hidden = v !== 'gantt'; $('tabs').hidden = v !== 'gantt';
+  if ($('gtool')) $('gtool').hidden = v !== 'gantt';
   document.querySelector('.foot').dataset.v = v;   // Legende nur im Gantt, Umschalter immer
   $('vList').hidden = v !== 'list'; $('vKanban').hidden = v !== 'kanban'; $('vCal').hidden = v !== 'cal';
   if ($('vTasks')) $('vTasks').hidden = v !== 'tasks';
@@ -2618,6 +2818,7 @@ function paintProjectProgress() {
   if (bar) bar.style.width = p + '%'; if (lbl) lbl.textContent = fin ? '100 % · erledigt' : p + ' %';
   el.classList.toggle('fin', fin);
   el.title = fin ? 'Projekt erledigt: alle Vorgänge haben 100 %' : 'Projektfortschritt: ' + p + ' % (Mittelwert der Vorgänge)';
+  if (typeof paintKpis === 'function') paintKpis();
 }
 const progBar = p => '<span class="pg' + (p >= 100 ? ' full' : '') + '" title="' + p + ' % fertig"><span class="pgb"><i style="width:' + p + '%"></i></span><span class="pgt">' + (p >= 100 ? '✓ 100 %' : p + ' %') + '</span></span>';
 const commentCount = id => (window.TP_COMMENTS && typeof window.TP_COMMENTS.count === 'function') ? window.TP_COMMENTS.count(id) : 0;
@@ -3211,6 +3412,7 @@ function paintTaskBadge() {
   const me = meUser(), open = tasks().filter(t => !t.done && (!me || taskMine(t, me)));
   const late = open.some(taskLate);
   const lbl = b.querySelector('.vlbl') || b; lbl.innerHTML = 'Aufgaben' + (open.length ? '<span class="tkbadge' + (late ? ' late' : '') + '" title="' + (me ? 'Meine offenen Aufgaben' : 'Offene Aufgaben') + (late ? ', davon überfällige' : '') + '">' + open.length + '</span>' : '');
+  if (typeof paintKpis === 'function' && sched) paintKpis();
 }
 
 function taskMatches(t, me) {
@@ -4007,14 +4209,14 @@ const pt = s => String(s ?? '').replace(/→/g, '->').replace(/[^\x20-\x7e\xa0-\
 async function exportPdf(opt) {
   opt = opt || pdfOptions();
   if (opt.plan !== false && !state.rows.length && !opt.org) { toast('Der Plan ist noch leer'); return; }
-  const btn = $('pdfBtn'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'PDF wird erstellt …';
+  const btn = $('pdfBtn'); btn.disabled = true; btn.classList.add('busy'); btn.setAttribute('aria-busy', 'true'); toast('PDF wird erstellt …');
   try {
     const JsPDF = await loadJsPdf();
     if (opt.org) opt.photos = await orgPhotoMap();
     const buf = buildPdf(JsPDF, opt);
     await offerBin((opt.plan === false ? 'organigramm-' : 'terminplan-') + slug() + '.pdf', buf);
   } catch (e) { toast((e && e.message) || 'PDF konnte nicht erstellt werden'); }
-  btn.disabled = false; btn.textContent = old;
+  btn.disabled = false; btn.classList.remove('busy'); btn.removeAttribute('aria-busy');
 }
 async function offerBin(name, buf) {
   if (dl) {
@@ -4486,6 +4688,250 @@ function openPdfDialog() {
     close(); await exportPdf(opt);
   });
   q('#pGo').focus();
+}
+
+/* ---------- Menüleiste, Projektkopf und Kennzahlen (Aufbau wie im Kapazitätsplaner) ---------- */
+// Die Menüs rufen dieselben Funktionen auf wie die Knöpfe; Häkchen und gesperrte Einträge
+// werden bei jedem Öffnen neu bestimmt, damit sie immer zum aktuellen Stand passen.
+const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
+const MOD = IS_MAC ? '⌘' : 'Strg+', ALT = IS_MAC ? '⌥' : 'Alt+';
+const VIEWS = [['gantt', 'Gantt'], ['list', 'Liste'], ['kanban', 'Kanban'], ['cal', 'Kalender'], ['tasks', 'Aufgaben'], ['org', 'Team']];
+const ICON_CHECK = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 8.4l3 3 6.6-6.8"/></svg>';
+const acct = m => document.querySelector('#userMenu [data-m="' + m + '"]');   // Konto-Funktionen der Webversion
+const kpisOn = () => { try { return JSON.parse(localStorage.getItem(LS_UI) || '{}').kpis !== false; } catch (e) { return true; } };
+function applyKpis() { const k = $('kpis'); if (k) k.hidden = !kpisOn(); }
+function hasView(v) { return !ganttOnly && (v !== 'tasks' || !!$('vTasks')) && (v !== 'org' || !!$('vOrg')); }
+function goView(v) { if (v === 'gantt' || hasView(v)) setView(v); }
+function inGantt(fn) { return () => { if (view !== 'gantt') setView('gantt'); fn(); }; }
+function openFilters(focus) {
+  if (view === 'tasks' || view === 'org') setView('gantt');
+  $('vfilters').hidden = false; updateFilterUi();
+  if (focus) $('fQ').focus();
+}
+function scrollToToday() {
+  if (view !== 'gantt') setView('gantt');
+  if (isMobile()) $('tabs').querySelector('[data-tab="chart"]').click();
+  const b = $('bodyR'), x = window.__chartTodayX; if (b && typeof x === 'number') b.scrollLeft = Math.max(0, x - b.clientWidth / 3);
+}
+function openSettingsField(id) { openPanel(); const el = $(id); if (el) setTimeout(() => el.focus(), 30); }
+
+function menuDefs() {
+  const ro = readOnly, go = ganttOnly, filt = !$('vfilters').hidden, mode = dispMode(), th = themeMode();
+  const chg = $('chgAll'), webAcct = !!acct('logout');
+  return [
+    ['Datei', [
+      { l: 'Neues Projekt', run: newProject, off: ro, hide: go },
+      { l: 'Projekt duplizieren', run: duplicateProject, off: ro, hide: go },
+      { l: 'Projekt löschen …', run: deleteProject, off: ro, hide: go },
+      '-',
+      { l: 'PDF exportieren …', k: MOD + 'P', run: () => openPdfDialog() },
+      { l: 'Als JSON sichern', run: () => $('expJson').click() },
+      { l: 'Als CSV für Excel', run: () => $('expCsv').click() },
+      '-',
+      { l: 'JSON laden …', run: () => $('impFile').click(), off: ro, hide: go },
+      { l: 'Beispielplan laden', run: () => $('loadDemo').click(), off: ro, hide: go },
+      { l: 'Leerer Plan', run: () => $('blank').click(), off: ro, hide: go },
+      '-',
+      { l: 'Als App installieren', run: () => acct('install').click(), hide: !acct('install') },
+      { l: 'Abmelden', run: () => acct('logout').click(), hide: !webAcct }
+    ]],
+    ['Bearbeiten', [
+      { l: 'Rückgängig', k: MOD + 'Z', run: undo, off: ro || !hist.length, hide: go },
+      '-',
+      { l: 'Suchen und filtern', k: MOD + 'F', run: () => openFilters(true), chk: filt },
+      { l: 'Filter zurücksetzen', run: () => $('resetFilters').click(), off: $('resetFilters').disabled },
+      '-',
+      { l: 'Änderungen als gesehen markieren', run: () => chg.click(), off: !chg || chg.hidden, hide: go }
+    ]],
+    ['Vorgang', [
+      { l: 'Neuer Vorgang', run: inGantt(() => addRow('vorgang')), off: ro },
+      { l: 'Neuer Untervorgang', run: inGantt(() => addRow('untervorgang')), off: ro },
+      { l: 'Neuer Meilenstein', run: inGantt(() => addRow('meilenstein')), off: ro },
+      { l: 'Neue Aufgabe', run: () => { setView('tasks'); const n = $('tkNew'); if (n) n.click(); }, off: ro, hide: !hasView('tasks') },
+      '-',
+      { l: 'Details zum ausgewählten Vorgang', k: ALT + 'Eingabe', run: () => openDetails(sel), off: sel < 0 || !state.rows[sel], hide: go }
+    ]],
+    ['Ansicht', VIEWS.filter(([v]) => v === 'gantt' || hasView(v)).map(([v, n], k) => ({ l: n, k: ALT + (k + 1), run: () => goView(v), chk: view === v, hide: (go && v !== 'gantt') || isMobile() })).concat([
+      '-',
+      { l: 'Projektliste', k: MOD + 'B', run: toggleSide, chk: sideOn(), hide: isMobile() },
+      { l: 'Kennzahlen', run: () => { saveUi({ kpis: !kpisOn() }); applyKpis(); }, chk: kpisOn() },
+      { l: 'Filter', run: () => { if (filt) { $('vfilters').hidden = true; updateFilterUi(); } else openFilters(false); }, chk: filt, hide: view === 'tasks' || view === 'org' },
+      '-',
+      { l: 'Zeitraster Tage', run: inGantt(() => $('segRaster').querySelector('[data-v="days"]').click()), chk: state.raster !== 'weeks', off: ro },
+      { l: 'Zeitraster Wochen', run: inGantt(() => $('segRaster').querySelector('[data-v="weeks"]').click()), chk: state.raster === 'weeks', off: ro },
+      { l: 'Vergrößern', run: inGantt(() => $('zoomIn').click()), off: $('zoomIn').disabled },
+      { l: 'Verkleinern', run: inGantt(() => $('zoomOut').click()), off: $('zoomOut').disabled },
+      { l: 'Zum heutigen Tag', run: scrollToToday },
+      { l: 'Abhängigkeitslinien', run: inGantt(() => $('lines').click()), chk: !!state.lines, off: ro },
+      '-',
+      { l: 'Darstellung: Automatisch', run: () => setDisp('auto'), chk: mode === 'auto' },
+      { l: 'Darstellung: Desktop', run: () => setDisp('desktop'), chk: mode === 'desktop' },
+      { l: 'Darstellung: Mobil', run: () => setDisp('mobile'), chk: mode === 'mobile' },
+      '-',
+      { l: 'Farbe: Wie System', run: () => setTheme('auto'), chk: th === 'auto' },
+      { l: 'Farbe: Hell', run: () => setTheme('light'), chk: th === 'light' },
+      { l: 'Farbe: Dunkel', run: () => setTheme('dark'), chk: th === 'dark' }
+    ])],
+    ['Extras', [
+      { l: 'Listen & Daten …', k: MOD + ',', run: openPanel, hide: go },
+      { l: 'Projektstart …', run: () => openSettingsField('pstart'), off: ro, hide: go },
+      { l: 'Feiertage und freie Tage …', run: () => openSettingsField('region'), off: ro, hide: go },
+      '-',
+      { l: 'Dauer in Arbeitstagen', run: () => $('segMode').querySelector('[data-v="work"]').click(), chk: state.mode !== 'cal', off: ro, hide: go },
+      { l: 'Dauer in Kalendertagen', run: () => $('segMode').querySelector('[data-v="cal"]').click(), chk: state.mode === 'cal', off: ro, hide: go },
+      '-',
+      { l: 'Mein Profil und Passwort', run: () => acct('profile').click(), hide: !acct('profile') },
+      { l: 'Idee oder Problem melden', run: () => acct('ticket').click(), hide: !acct('ticket') },
+      { l: 'Verwaltung', run: () => acct('admin').click(), hide: !acct('admin') }
+    ]],
+    ['Hilfe', [
+      { l: 'Tastenkürzel', run: keysDialog },
+      { l: 'Über den Terminplaner', run: aboutDialog },
+      { l: 'Datenschutz', run: () => acct('privacy').click(), hide: !acct('privacy') }
+    ]]
+  ].map(([n, items]) => [n, items.filter(it => it === '-' || !it.hide).filter((it, k, a) => it !== '-' || (k > 0 && a[k - 1] !== '-' && k < a.length - 1))]).filter(([, items]) => items.some(it => it !== '-'));
+}
+
+let mbOpen = -1, mbItems = [], mbList = null;
+function initMenubar() {
+  const bar = $('mbarMenus'); if (!bar) return;
+  mbList = document.createElement('div'); mbList.className = 'mb-list'; mbList.setAttribute('role', 'menu'); mbList.hidden = true; document.body.appendChild(mbList);
+  const paintTops = () => { bar.innerHTML = menuDefs().map(([n], k) => '<div class="mb-top"><button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-m="' + k + '" tabindex="' + (k ? -1 : 0) + '">' + esc(n) + '</button></div>').join(''); };
+  paintTops();
+  const tops = () => [...bar.querySelectorAll('[data-m]')];
+  const close = focusTop => {
+    if (mbOpen < 0) return; const t = tops()[mbOpen]; mbOpen = -1; mbList.hidden = true;
+    tops().forEach(b => { b.classList.remove('on'); b.setAttribute('aria-expanded', 'false'); });
+    if (focusTop && t) t.focus();
+  };
+  const open = (k, focusFirst) => {
+    const defs = menuDefs(); if (tops().length !== defs.length) paintTops();
+    k = (k + defs.length) % defs.length; const [name, items] = defs[k]; mbItems = items; mbOpen = k;
+    tops().forEach((b, j) => { b.classList.toggle('on', j === k); b.setAttribute('aria-expanded', String(j === k)); b.tabIndex = j === k ? 0 : -1; });
+    mbList.setAttribute('aria-label', name);
+    mbList.innerHTML = items.map((it, j) => it === '-' ? '<hr>' :
+      '<button type="button" role="' + ('chk' in it ? 'menuitemcheckbox' : 'menuitem') + '" data-j="' + j + '"' + ('chk' in it ? ' aria-checked="' + !!it.chk + '"' : '') + (it.off ? ' class="off" aria-disabled="true"' : '') + ' tabindex="-1">' +
+      '<span class="mb-chk">' + (it.chk ? ICON_CHECK : '') + '</span><span class="mb-l">' + esc(it.l) + '</span>' + (it.k ? '<kbd>' + esc(it.k) + '</kbd>' : '') + '</button>').join('');
+    mbList.hidden = false;
+    // Fest positioniert, damit die Liste auch bei waagerecht scrollender Leiste (Handy) nicht abgeschnitten wird
+    const r = tops()[k].getBoundingClientRect(), w = document.documentElement.clientWidth, top = $('mbar').getBoundingClientRect().bottom + 4;
+    mbList.style.top = top + 'px'; mbList.style.maxHeight = (innerHeight - top - 8) + 'px';
+    if (isMobile()) { mbList.style.left = '8px'; mbList.style.right = '8px'; }
+    else { mbList.style.right = 'auto'; mbList.style.left = Math.max(8, Math.min(r.left, w - mbList.offsetWidth - 8)) + 'px'; }
+    if (focusFirst) { const f = mbList.querySelector('button:not(.off)'); if (f) f.focus(); }
+  };
+  const run = j => { const it = mbItems[j]; if (!it || it === '-' || it.off) return; close(false); try { it.run(); } catch (e) { console.error(e); } };
+  bar.addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (!b) return; const k = +b.dataset.m; if (mbOpen === k) close(false); else open(k, e.detail === 0); });
+  bar.addEventListener('mouseover', e => { const b = e.target.closest('[data-m]'); if (b && mbOpen >= 0 && +b.dataset.m !== mbOpen) open(+b.dataset.m, false); });
+  bar.addEventListener('keydown', e => {
+    const b = e.target.closest('[data-m]'); if (!b) return; const k = +b.dataset.m, all = tops();
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); const n = (k + (e.key === 'ArrowRight' ? 1 : -1) + all.length) % all.length; if (mbOpen >= 0) open(n, true); else { all.forEach((x, j) => x.tabIndex = j === n ? 0 : -1); all[n].focus(); } }
+    else if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(k, true); }
+    else if (e.key === 'Escape') { close(false); b.blur(); }
+  });
+  mbList.addEventListener('click', e => { const b = e.target.closest('[data-j]'); if (b) run(+b.dataset.j); });
+  mbList.addEventListener('keydown', e => {
+    const bs = [...mbList.querySelectorAll('button:not(.off)')], i = bs.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const n = bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length]; if (n) n.focus(); }
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); open(mbOpen + (e.key === 'ArrowRight' ? 1 : -1), true); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(true); }
+    else if (e.key === 'Tab') close(false);
+    else if (e.key === 'Home' || e.key === 'End') { e.preventDefault(); const n = e.key === 'Home' ? bs[0] : bs[bs.length - 1]; if (n) n.focus(); }
+  });
+  document.addEventListener('pointerdown', e => { if (mbOpen >= 0 && !mbList.contains(e.target) && !bar.contains(e.target)) close(false); });
+  window.addEventListener('resize', () => close(false));
+  window.addEventListener('blur', () => close(false));
+
+  // Tastenkürzel (nur solche, die der Browser nicht selbst belegt)
+  let altOnly = false;
+  document.addEventListener('keydown', e => {
+    altOnly = e.key === 'Alt' && !e.ctrlKey && !e.metaKey && !e.shiftKey;
+    if (e.defaultPrevented || document.querySelector('.scrim:not([hidden]) .panel') && !e.target.closest('.mbar, .mb-list')) return;
+    const mod = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey, key = e.key.toLowerCase();
+    if (mod && key === 'f' && !$('toggleFilters').hidden) { e.preventDefault(); close(false); openFilters(true); }
+    else if (mod && key === 'p') { e.preventDefault(); close(false); openPdfDialog(); }
+    else if (mod && key === 'b' && !isMobile()) { e.preventDefault(); toggleSide(); }
+    else if (mod && e.key === ',' && !ganttOnly) { e.preventDefault(); close(false); openPanel(); }
+    else if (e.altKey && !e.ctrlKey && !e.metaKey && /^Digit[1-6]$/.test(e.code)) {
+      const vs = VIEWS.filter(([v]) => v === 'gantt' || hasView(v)), v = vs[+e.code.slice(5) - 1]; if (v) { e.preventDefault(); close(false); goView(v[0]); }
+    }
+    else if (e.altKey && e.key === 'Enter' && !ganttOnly && sel >= 0) { e.preventDefault(); openDetails(sel); }
+  });
+  // Alt allein: in die Menüleiste wechseln (wie in Windows-Programmen)
+  document.addEventListener('keyup', e => {
+    if (e.key !== 'Alt' || !altOnly) return; altOnly = false;
+    if (mbOpen >= 0) { close(false); return; }
+    if (document.querySelector('.scrim:not([hidden]) .panel')) return;
+    e.preventDefault(); const t = tops()[0]; if (t) t.focus();
+  });
+  document.addEventListener('pointerdown', () => { altOnly = false; }, true);
+}
+
+/* ---------- Kleine Hilfe-Fenster ---------- */
+function infoDialog(title, html) {
+  const s = document.createElement('div'); s.className = 'scrim'; s.innerHTML = '<div class="panel info" role="dialog" aria-modal="true" aria-labelledby="infoT"><div class="head"><h2 id="infoT">' + esc(title) + '</h2><button class="btn" type="button" data-x>Schließen</button></div>' + html + '</div>';
+  const prev = document.activeElement, close = () => { s.remove(); document.removeEventListener('keydown', key, true); if (prev && prev.focus) prev.focus(); };
+  const key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
+  s.addEventListener('click', e => { if (e.target === s || e.target.closest('[data-x]')) close(); });
+  document.addEventListener('keydown', key, true); document.body.appendChild(s); s.querySelector('[data-x]').focus();
+}
+function keysDialog() {
+  const k = [['Rückgängig', MOD + 'Z'], ['Suchen und filtern', MOD + 'F'], ['PDF exportieren', MOD + 'P'], ['Projektliste ein/aus', MOD + 'B'], ['Listen & Daten', MOD + ','],
+    ['Details zum ausgewählten Vorgang', ALT + 'Eingabe'], ['Menüleiste', 'Alt'], ['Im Menü bewegen', 'Pfeiltasten']]
+    .concat(VIEWS.filter(([v]) => v === 'gantt' || hasView(v)).map(([, n], j) => ['Ansicht ' + n, ALT + (j + 1)]));
+  infoDialog('Tastenkürzel', '<dl class="keys">' + k.map(([a, b]) => '<div><dt>' + esc(a) + '</dt><dd><kbd>' + esc(b) + '</kbd></dd></div>').join('') + '</dl>' +
+    '<p class="hint">In der Tabelle: Tab und Umschalt+Tab wechseln die Felder, Eingabe übernimmt den Wert.</p>');
+}
+function aboutDialog() {
+  infoDialog('Terminplaner', '<p>Gemeinsame Termin- und Aufgabenplanung: Gantt, Liste, Kanban, Kalender, Aufgaben und Organigramm. Änderungen werden automatisch gespeichert und mit dem Team abgeglichen.</p>' +
+    '<p class="hint">Schrift: Figtree (SIL Open Font License 1.1).</p>');
+}
+
+/* ---------- Projektkopf und Kennzahlen ---------- */
+function planEnd() { let E = sched.P; sched.out.forEach(o => { if (o.E > E) E = o.E; }); return E; }
+const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+function paintKpis() {
+  if (!sched || !$('kpis')) return;
+  const t = todayDn(), P = sched.P, E = planEnd(), p = projectProgress();
+  const leaf = state.rows.map((_, i) => i).filter(i => sched.out[i] && !sched.out[i].summary);
+  const late = leaf.filter(isLate), w0 = mondayOf(t), w1 = w0 + 6;
+  const week = leaf.filter(i => !isDone(i) && sched.out[i].S <= w1 && sched.out[i].E >= w0);
+  const set = (id, b, sm, bad) => { const el = $(id); if (!el) return; el.querySelector('b').textContent = b; el.querySelector('small').textContent = sm; el.classList.toggle('bad', !!bad); };
+  // Projektzeit
+  let b;
+  if (!leaf.length) b = 'Noch keine Vorgänge';
+  else if (p >= 100) b = 'Abgeschlossen';
+  else if (t < P) b = 'Beginnt in ' + plural(P - t, 'Tag', 'Tagen');
+  else if (t > E) b = plural(t - E, 'Tag', 'Tage') + ' über Ende';
+  else b = 'Tag ' + (t - P + 1) + ' von ' + (E - P + 1);
+  set('kpiTime', b, fmtLong(P) + ' – ' + fmtLong(E) + ' · ' + p + ' % erledigt', leaf.length && p < 100 && t > E);
+  set('kpiLate', plural(late.length, 'Vorgang', 'Vorgänge'), late.length ? late.slice(0, 3).map(i => state.rows[i].name || 'ohne Namen').join(', ') : 'Nichts überfällig', late.length);
+  $('kpiLate').classList.toggle('on', fSt === 'late');
+  set('kpiWeek', plural(week.length, 'Vorgang', 'Vorgänge'), 'KW ' + isoWeek(t) + ', noch nicht erledigt');
+  const tk = $('kpiTasks');
+  if (tk) {
+    tk.hidden = !hasView('tasks');
+    const all = tasks(), open = all.filter(x => !x.done), tl = open.filter(taskLate).length;
+    set('kpiTasks', String(open.length), all.length ? 'von ' + all.length + (tl ? ' · ' + tl + ' überfällig' : '') : 'Noch keine Aufgaben', tl);
+  }
+  paintHead(p, late.length, E, leaf.length);
+}
+function paintHead(p, nLate, E, nLeaf) {
+  const pill = $('projPill'), meta = $('headMeta'); if (!pill || !meta) return;
+  const t = todayDn(), P = sched.P;
+  const st = !nLeaf ? null : p >= 100 ? ['Erledigt', 'done'] : t < P ? ['Geplant', 'plan'] : nLate ? ['Verzug', 'late'] : ['Läuft', 'run'];
+  pill.hidden = !st; if (st) { pill.textContent = st[0]; pill.className = 'pill st-' + st[1]; }
+  meta.textContent = 'Start ' + fmt(P) + ' · Ende ' + fmt(E) + ' · ' + plural(nLeaf, 'Vorgang', 'Vorgänge') + ' · Dauer in ' + (state.mode === 'cal' ? 'Kalendertagen' : 'Arbeitstagen') + (state.region ? ' · Feiertage ' + regionName(state.region) : '');
+}
+function initKpis() {
+  applyKpis();
+  $('kpiLate').addEventListener('click', () => {
+    if (view !== 'gantt' && view !== 'list') setView('gantt');
+    $('vfilters').hidden = false; updateFilterUi();
+    const s = $('fSt'); s.value = fSt === 'late' ? 'all' : 'late'; s.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  $('kpiWeek').addEventListener('click', () => { goView('cal'); });
+  $('kpiTasks').addEventListener('click', () => goView('tasks'));
 }
 
 boot();

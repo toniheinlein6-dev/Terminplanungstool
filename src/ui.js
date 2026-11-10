@@ -254,6 +254,7 @@ function renderChart(indices = ganttRowIndices()) {
   const W = Math.ceil(nCols * colW), H = Math.max(N, 1) * RH;
   const X = d => (d - first) / step * colW;
   window.__chartDayW = colW / step;   // für das Ziehen der Balken
+  window.__chartTodayX = X(todayDn());   // für „Zum heutigen Tag“
   const today = todayDn();
   const todayCol = Math.floor((today - first) / step);
   // Kopf
@@ -582,6 +583,13 @@ function refreshSelect() {
   const items = [...proj.entries()].sort((x, y) => x[1].name.localeCompare(y[1].name, 'de'));
   $('projSel').innerHTML = items.map(([id, e]) => '<option value="' + esc(id) + '"' + (id === curId ? ' selected' : '') + '>' + esc(e.name) + '</option>').join('');
   $('delProj').disabled = false;
+  paintSide(items);
+}
+// Projektliste links: ein Eintrag je Projekt, das aktuelle hervorgehoben
+function paintSide(items) {
+  const box = $('sideList'); if (!box) return;
+  const html = items.map(([id, e]) => '<button type="button" class="side-item" role="listitem" data-id="' + esc(id) + '"' + (id === curId ? ' aria-current="page"' : '') + ' title="' + esc(e.name) + '"><span class="side-n">' + esc(e.name) + '</span></button>').join('');
+  if (box.innerHTML !== html) box.innerHTML = html;
 }
 function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(persist, 800); }
 async function flush() {
@@ -876,8 +884,6 @@ function dispMode() { try { const d = JSON.parse(localStorage.getItem(LS_UI) || 
 function applyTheme() {
   let t = 'auto'; try { t = JSON.parse(localStorage.getItem(LS_UI) || '{}').theme || 'auto'; } catch (e) { }
   if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-tp-theme', t); else { t = 'auto'; document.documentElement.removeAttribute('data-tp-theme'); }
-  const seg = document.getElementById('segTheme');
-  if (seg) seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === t)));
 }
 function isMobile() { return document.documentElement.classList.contains('m'); }
 function applyDisplay() {
@@ -888,16 +894,15 @@ function applyDisplay() {
   const narrow = window.matchMedia ? window.matchMedia('(max-width: 860px)').matches : false;
   const m = mode === 'mobile' || (mode === 'auto' && narrow);
   html.classList.toggle('m', m); html.classList.toggle('mf', m && !narrow);
-  // Mobil: Projekteinstellungen wandern in „Listen & Daten“, damit der Kopf schmal bleibt
-  const set = document.querySelector('.settings'), slot = document.getElementById('setSlot'), home = document.querySelector('.row2');
-  if (set && slot && home) {
-    if (m && set.parentNode !== slot) slot.appendChild(set);
-    else if (!m && set.parentNode !== home) home.insertBefore(set, home.firstChild);
-    slot.parentNode.hidden = !m;
-  }
-  const seg = document.getElementById('segDisp');
-  if (seg) seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === mode)));
+  applySide();
 }
+// Projektliste links (Strg+B), je Gerät gespeichert; mobil immer ausgeblendet
+function sideOn() { try { return JSON.parse(localStorage.getItem(LS_UI) || '{}').side !== false; } catch (e) { return true; } }
+function applySide() { document.documentElement.classList.toggle('noside', !sideOn()); }
+function toggleSide() { saveUi({ side: !sideOn() }); applySide(); }
+function themeMode() { try { const t = JSON.parse(localStorage.getItem(LS_UI) || '{}').theme; return t === 'light' || t === 'dark' ? t : 'auto'; } catch (e) { return 'auto'; } }
+function setTheme(v) { saveUi({ theme: v }); applyTheme(); }
+function setDisp(v) { saveUi({ disp: v }); applyDisplay(); renderAll(); }
 function saveUi(extra) { try { const u = JSON.parse(localStorage.getItem(LS_UI) || '{}'); Object.assign(u, extra); localStorage.setItem(LS_UI, JSON.stringify(u)); } catch (e) { } }
 function setLeftW(px) { const bw = $('board').clientWidth; px = Math.max(300, Math.min(px, bw - 240)); document.documentElement.style.setProperty('--leftw', px + 'px'); saveUi({ leftw: px }); }
 
@@ -923,6 +928,7 @@ function boot() {
   $('pname').addEventListener('input', e => { state.name = e.target.value; refreshSelect(); changed(false); });
   $('projSel').addEventListener('change', e => switchTo(e.target.value));
   $('newProj').addEventListener('click', newProject);
+  $('sideList').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (!b || b.dataset.id === curId) return; const ps = $('projSel'); ps.value = b.dataset.id; ps.dispatchEvent(new Event('change')); });
   $('dupProj').addEventListener('click', () => { duplicateProject(); closePanel(); });
   $('delProj').addEventListener('click', deleteProject);
   $('pstart').addEventListener('input', e => { if (parseISO(e.target.value) != null) { state.start = e.target.value; refresh(); changed(true); } });
@@ -938,8 +944,7 @@ function boot() {
   $('addU').addEventListener('click', () => addRow('untervorgang'));
   $('addM').addEventListener('click', () => addRow('meilenstein'));
   $('undo').addEventListener('click', undo);
-  $('segTheme').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; saveUi({ theme: b.dataset.v }); applyTheme(); });
-  $('segDisp').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; saveUi({ disp: b.dataset.v }); applyDisplay(); renderAll(); });
+  $('editProj').addEventListener('click', openPanel);
   window.addEventListener('resize', () => { const m = isMobile(); applyDisplay(); if (m !== isMobile()) renderAll(); });
   const blank = () => loadState(blankPlan(state), 'Plan geleert');
   $('blank').addEventListener('click', blank); $('blank2').addEventListener('click', () => { blank(); closePanel(); });
@@ -986,6 +991,7 @@ function boot() {
   sp.addEventListener('pointermove', e => { if (sp.dataset.drag) setLeftW(e.clientX - $('board').getBoundingClientRect().left); });
   sp.addEventListener('pointerup', () => { delete sp.dataset.drag; });
   sp.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); setLeftW($('paneL').getBoundingClientRect().width + (e.key === 'ArrowRight' ? 24 : -24)); } });
+  if (typeof initMenubar === 'function') { initMenubar(); initKpis(); }
   renderAll();
   initStore();
 }

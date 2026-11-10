@@ -1,31 +1,35 @@
-<header class="top">
-  <div class="row1">
-    <h1>Terminplaner</h1>
-    <div class="fld"><label for="projSel">Projekt</label><div class="pj"><select id="projSel" class="in" aria-label="Projekt wählen"></select><button class="btn" id="newProj" type="button">+ Neu</button></div></div>
-    <div class="fld"><label for="pname">Projektname</label><input id="pname" class="in" type="text" placeholder="Projektname" autocomplete="off"></div>
-    <span class="spacer"></span>
-    <span class="online" id="online" aria-label="Gerade online"></span>
-    <span class="last" id="last"></span>
-    <span class="status" id="status" data-k="local"><i></i><span id="statusTxt">Wird geladen</span></span>
-    <button class="btn" id="undo" type="button" disabled>Rückgängig</button>
-    <button class="btn" id="openPanel" type="button">Listen &amp; Daten</button>
-  </div>
-  <div class="row2">
-    <div class="settings">
-    <div class="fld"><label for="pstart">Projektstart</label><input id="pstart" class="in" type="date"></div>
-    <div class="fld"><span id="lblRaster">Zeitraster</span>
-      <div class="seg" id="segRaster" role="group" aria-labelledby="lblRaster"><button type="button" data-v="days">Tage</button><button type="button" data-v="weeks">Wochen</button></div></div>
-    <div class="fld"><span id="lblMode">Dauer in</span>
-      <div class="seg" id="segMode" role="group" aria-labelledby="lblMode"><button type="button" data-v="work">Arbeitstagen</button><button type="button" data-v="cal">Kalendertagen</button></div></div>
-    <div class="fld"><span id="lblZoom">Zoom</span>
-      <div class="seg" role="group" aria-labelledby="lblZoom"><button type="button" id="zoomOut" aria-label="Zeitachse verkleinern">−</button><button type="button" id="zoomLbl" class="zl" title="Auf 100 % zurücksetzen">100 %</button><button type="button" id="zoomIn" aria-label="Zeitachse vergrößern">+</button></div></div>
-    <label class="chk"><input type="checkbox" id="lines"> Abhängigkeitslinien</label>
+<nav class="mbar" id="mbar" aria-label="Menüleiste">
+  <span class="mbar-name">Terminplaner</span>
+  <div class="mbar-menus" id="mbarMenus" role="menubar" aria-label="Menü"></div>
+  <span class="spacer"></span>
+  <span class="online" id="online" aria-label="Gerade online"></span>
+  <span class="last" id="last"></span>
+  <span class="status" id="status" data-k="local"><i></i><span id="statusTxt">Wird geladen</span></span>
+  <span class="mbar-user" id="mbarUser"></span>
+</nav>
+<div class="shell">
+<aside class="side" id="side" aria-label="Projekte">
+  <div class="side-head"><span id="sideTitle">Projekte</span><button class="tb side-new" id="newProj" type="button" title="Neues Projekt" aria-label="Neues Projekt"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg></button></div>
+  <div class="side-list" id="sideList" role="list" aria-labelledby="sideTitle"></div>
+  <button class="side-link" id="openPanel" type="button"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5h6M11.5 4.5h2M2.5 11.5h2M7.5 11.5h6"/><circle cx="10" cy="4.5" r="1.5"/><circle cx="6" cy="11.5" r="1.5"/></svg><span>Listen &amp; Daten</span></button>
+</aside>
+<div class="work" id="work">
+<header class="head">
+  <div class="head-t">
+    <select id="projSel" class="in projsel-m" aria-label="Projekt wählen"></select>
+    <div class="head-name">
+      <input id="pname" class="title-in" type="text" placeholder="Projektname" autocomplete="off" aria-label="Projektname">
+      <span class="pill" id="projPill" hidden></span>
+      <button class="tb editonly-b" id="editProj" type="button" title="Projekt, Listen und Daten" aria-label="Projekt, Listen und Daten"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 2.5l3 3-8 8H2.5v-3z"/></svg></button>
     </div>
-    <span class="spacer"></span>
-    <button class="btn primary" id="addV" type="button">+ Vorgang</button>
-    <button class="btn" id="addU" type="button">+ Untervorgang</button>
-    <button class="btn" id="addM" type="button">+ Meilenstein</button>
+    <p class="head-meta" id="headMeta"></p>
   </div>
+  <span class="spacer"></span>
+  <div class="seg views" id="segView" role="group" aria-label="Ansicht">
+    <button type="button" data-v="gantt" aria-pressed="true"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h7M5 8h8M4 12h5"/></svg><span class="vlbl">Gantt</span></button><button type="button" data-v="list" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.01M2.5 8h.01M2.5 12h.01"/></svg><span class="vlbl">Liste</span></button><button type="button" data-v="kanban" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h3v10h-3zM6.5 3h3v6h-3zM10.5 3h3v8h-3z"/></svg><span class="vlbl">Kanban</span></button><button type="button" data-v="cal" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11v9.5h-11zM2.5 7h11M5.5 2.5v3M10.5 2.5v3"/></svg><span class="vlbl">Kalender</span></button><button type="button" data-v="tasks" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5l1.3 1.3L6.8 3.3M3 10.5l1.3 1.3 2.5-2.5M8.5 5h5M8.5 11h5"/></svg><span class="vlbl">Aufgaben</span></button><button type="button" data-v="org" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2.5h4v3H6zM2.5 10.5h4v3h-4zM9.5 10.5h4v3h-4zM8 5.5v2.5M4.5 10.5V8h7v2.5"/></svg><span class="vlbl">Team</span></button>
+  </div>
+  <button class="tb filter-toggle" id="toggleFilters" type="button" aria-controls="vfilters" aria-expanded="false" title="Suchen und filtern" aria-label="Suchen und filtern"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h11l-4.2 5.2v4.3l-2.6 1.3V8.2z"/></svg><span class="filter-count" id="filterCount" hidden></span></button>
+  <button class="tb" id="pdfBtn" type="button" title="Terminplan und Organigramm als PDF zum Drucken" aria-label="PDF exportieren"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 1.8H4.2v12.4h7.6V4.1zM9.5 1.8v2.4h2.3M8 6.8v4.6M6 9.6l2 1.9 2-1.9"/></svg></button>
 </header>
 
 <div class="banner ro-banner" id="roBanner" hidden><span><b>Nur Ansicht.</b> Du kannst die Projekte ansehen und exportieren, aber nicht ändern.</span></div>
@@ -34,20 +38,11 @@
   <button class="btn" id="blank" type="button">Leerer Plan</button>
 </div>
 
-<div class="viewbar">
-  <div class="seg" id="segView" role="group" aria-label="Ansicht">
-    <button type="button" data-v="gantt" aria-pressed="true"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h7M5 8h8M4 12h5"/></svg><span class="vlbl">Gantt</span></button><button type="button" data-v="list" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.01M2.5 8h.01M2.5 12h.01"/></svg><span class="vlbl">Liste</span></button><button type="button" data-v="kanban" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h3v10h-3zM6.5 3h3v6h-3zM10.5 3h3v8h-3z"/></svg><span class="vlbl">Kanban</span></button><button type="button" data-v="cal" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11v9.5h-11zM2.5 7h11M5.5 2.5v3M10.5 2.5v3"/></svg><span class="vlbl">Kalender</span></button><button type="button" data-v="tasks" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5l1.3 1.3L6.8 3.3M3 10.5l1.3 1.3 2.5-2.5M8.5 5h5M8.5 11h5"/></svg><span class="vlbl">Aufgaben</span></button><button type="button" data-v="org" aria-pressed="false"><svg class="vicon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2.5h4v3H6zM2.5 10.5h4v3h-4zM9.5 10.5h4v3h-4zM8 5.5v2.5M4.5 10.5V8h7v2.5"/></svg><span class="vlbl">Team</span></button>
-  </div>
-  <button class="btn filter-toggle" id="toggleFilters" type="button" aria-controls="vfilters" aria-expanded="false"><span id="filterArrow" aria-hidden="true">▸</span>Filter<span class="filter-count" id="filterCount" hidden></span></button>
-  <div class="tabs seg" id="tabs" role="tablist">
-    <button type="button" role="tab" data-tab="table" aria-pressed="true">Tabelle</button>
-    <button type="button" role="tab" data-tab="chart" aria-pressed="false">Diagramm</button>
-  </div>
-  <span class="filter-summary" id="filterSummary" aria-live="polite" hidden></span>
-  <span class="spacer"></span>
-  <button class="btn chgall" id="chgAll" type="button" hidden></button>
-  <div class="projprog" id="projProg" role="img" aria-label="Projektfortschritt"><span>Projekt</span><span class="pgb"><i></i></span><b>0 %</b></div>
-  <button class="btn" id="pdfBtn" type="button" title="Terminplan und Organigramm als PDF zum Drucken">PDF exportieren</button>
+<div class="kpis" id="kpis">
+  <div class="kpi" id="kpiTime"><span class="kpi-l">Projektzeit</span><b>–</b><small></small><div class="kpi-line projprog" id="projProg" role="img" aria-label="Projektfortschritt"><i></i></div></div>
+  <button class="kpi" id="kpiLate" type="button" title="Überfällige Vorgänge anzeigen"><span class="kpi-l">Überfällig</span><b>–</b><small></small></button>
+  <button class="kpi" id="kpiWeek" type="button" title="Vorgänge dieser Woche im Kalender"><span class="kpi-l">Diese Woche</span><b>–</b><small></small></button>
+  <button class="kpi" id="kpiTasks" type="button" title="Aufgaben öffnen"><span class="kpi-l">Offene Aufgaben</span><b>–</b><small></small></button>
 </div>
 <div class="vfilters" id="vfilters" role="group" aria-label="Vorgänge filtern" hidden>
   <div class="filter-field filter-search"><label for="fQ">Suche</label><input id="fQ" class="in" type="search" placeholder="Vorgänge durchsuchen" autocomplete="off"></div>
@@ -56,6 +51,24 @@
   <button class="btn filter-reset" id="resetFilters" type="button">Zurücksetzen</button>
 </div>
 
+<div class="toolbar" id="gtool" role="toolbar" aria-label="Werkzeuge">
+  <button class="btn primary" id="addV" type="button" title="Neuer Vorgang"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg><span>Vorgang</span></button>
+  <button class="tb" id="addU" type="button" title="Neuer Untervorgang" aria-label="Neuer Untervorgang"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2.5v5.5a2 2 0 0 0 2 2h7M10 7l3 3-3 3"/></svg></button>
+  <button class="tb" id="addM" type="button" title="Neuer Meilenstein" aria-label="Neuer Meilenstein"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.3l5.7 5.7L8 13.7 2.3 8z"/></svg></button>
+  <span class="sep" aria-hidden="true"></span>
+  <button class="tb" id="undo" type="button" title="Rückgängig (Strg+Z)" aria-label="Rückgängig" disabled><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 3.5L2.5 6.5l3 3M2.5 6.5H10a3.5 3.5 0 0 1 0 7H7"/></svg></button>
+  <button class="btn chgall" id="chgAll" type="button" hidden></button>
+  <div class="tabs seg" id="tabs" role="tablist">
+    <button type="button" role="tab" data-tab="table" aria-pressed="true">Tabelle</button>
+    <button type="button" role="tab" data-tab="chart" aria-pressed="false">Diagramm</button>
+  </div>
+  <span class="spacer"></span>
+  <div class="settings">
+    <div class="seg" id="segRaster" role="group" aria-label="Zeitraster"><button type="button" data-v="days">Tage</button><button type="button" data-v="weeks">Wochen</button></div>
+    <div class="zoom" role="group" aria-label="Zoom"><button class="tb" type="button" id="zoomOut" aria-label="Zeitachse verkleinern" title="Verkleinern"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8h9"/></svg></button><button type="button" id="zoomLbl" class="zl" title="Auf 100 % zurücksetzen">100 %</button><button class="tb" type="button" id="zoomIn" aria-label="Zeitachse vergrößern" title="Vergrößern"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg></button></div>
+    <label class="tb chkb" title="Abhängigkeitslinien"><input type="checkbox" id="lines" aria-label="Abhängigkeitslinien"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5h3a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h4M11 9.5l2 2-2 2"/><circle cx="2.8" cy="4.5" r=".6"/></svg></label>
+  </div>
+</div>
 <main class="board" id="board" data-tab="table">
   <section class="pane left" id="paneL" aria-label="Vorgänge">
     <div class="hdr" id="hdrL">
@@ -85,10 +98,11 @@
   <span class="lg"><i class="d" style="background:var(--bar-ms)"></i>Meilenstein</span>
   <span class="lg"><i class="l"></i>Abhängigkeit</span>
   <span class="lg"><i class="t"></i>Heute</span>
-  <span class="disp"><span id="lblDisp">Darstellung</span><span class="seg sm" id="segDisp" role="group" aria-labelledby="lblDisp"><button type="button" data-v="auto" title="Je nach Bildschirmbreite">Auto</button><button type="button" data-v="desktop" title="Tabelle und Diagramm nebeneinander, auch auf dem Handy">Desktop</button><button type="button" data-v="mobile" title="Schmale Ansicht für Smartphones">Mobil</button></span></span>
-  <span class="disp"><span id="lblTheme">Farbe</span><span class="seg sm" id="segTheme" role="group" aria-labelledby="lblTheme"><button type="button" data-v="auto" title="Wie im Betriebssystem eingestellt">Auto</button><button type="button" data-v="light">Hell</button><button type="button" data-v="dark">Dunkel</button></span></span>
   <span class="rels">EA Ende→Anfang · AA Anfang→Anfang · EE Ende→Ende · AE Anfang→Ende</span>
 </footer>
+</div>
+</div>
+
 
 <div class="scrim" id="scrim" hidden>
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="ptitle">
@@ -97,9 +111,13 @@
       <h3>Team</h3>
       <div id="teamInfo"></div>
     </div>
-    <div class="editonly setbox" hidden>
-      <h3>Einstellungen</h3>
-      <div id="setSlot"></div>
+    <div class="editonly">
+      <h3>Projekt</h3>
+      <div class="pset">
+        <div class="fld"><label for="pstart">Projektstart</label><input id="pstart" class="in" type="date"></div>
+        <div class="fld"><span id="lblMode">Dauer in</span>
+          <div class="seg" id="segMode" role="group" aria-labelledby="lblMode"><button type="button" data-v="work">Arbeitstagen</button><button type="button" data-v="cal">Kalendertagen</button></div></div>
+      </div>
     </div>
     <div class="editonly">
       <h3>Dieses Projekt</h3>

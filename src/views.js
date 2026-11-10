@@ -120,6 +120,7 @@ function setView(v) {
   view = v; saveUi({ view: v });
   $('segView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
   $('board').hidden = v !== 'gantt'; $('tabs').hidden = v !== 'gantt';
+  if ($('gtool')) $('gtool').hidden = v !== 'gantt';
   document.querySelector('.foot').dataset.v = v;   // Legende nur im Gantt, Umschalter immer
   $('vList').hidden = v !== 'list'; $('vKanban').hidden = v !== 'kanban'; $('vCal').hidden = v !== 'cal';
   if ($('vTasks')) $('vTasks').hidden = v !== 'tasks';
@@ -459,6 +460,7 @@ function paintProjectProgress() {
   if (bar) bar.style.width = p + '%'; if (lbl) lbl.textContent = fin ? '100 % · erledigt' : p + ' %';
   el.classList.toggle('fin', fin);
   el.title = fin ? 'Projekt erledigt: alle Vorgänge haben 100 %' : 'Projektfortschritt: ' + p + ' % (Mittelwert der Vorgänge)';
+  if (typeof paintKpis === 'function') paintKpis();
 }
 const progBar = p => '<span class="pg' + (p >= 100 ? ' full' : '') + '" title="' + p + ' % fertig"><span class="pgb"><i style="width:' + p + '%"></i></span><span class="pgt">' + (p >= 100 ? '✓ 100 %' : p + ' %') + '</span></span>';
 const commentCount = id => (window.TP_COMMENTS && typeof window.TP_COMMENTS.count === 'function') ? window.TP_COMMENTS.count(id) : 0;

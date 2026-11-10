@@ -6,14 +6,14 @@ import { fileURLToPath } from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const rd = f => fs.readFileSync(path.join(root, 'src', f), 'utf8');
 const head = rd('head.html'), body = rd('body.html');
-const js = ['logic.js', 'people.js', 'ui.js', 'views.js', 'gantt-ext.js', 'tasks.js', 'org.js', 'touch-dnd.js', 'assignee-picker.js', 'pdf.js'].map(rd).join('\n');
+const js = ['logic.js', 'people.js', 'ui.js', 'views.js', 'gantt-ext.js', 'tasks.js', 'org.js', 'touch-dnd.js', 'assignee-picker.js', 'pdf.js', 'shell.js'].map(rd).join('\n');
 const app = "(function(){\n'use strict';\n" + js + "\nboot();\n})();\n";
 
 // 1) Website für Vercel: ohne externe Schriften und CDNs (DSGVO), PDF-Baustein lokal
 fs.mkdirSync(path.join(root, 'public', 'vendor'), { recursive: true });
 const webHead = head
   .replace(/<link[^>]*fonts\.g[^>]*>\n?/g, '')
-  .replace('<title>Gantt Terminplaner</title>', '<title>Terminplaner</title>\n<link rel="stylesheet" href="password-eye.css">\n<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">\n<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">\n' +
+  .replace('<title>Gantt Terminplaner</title>', '<title>Terminplaner</title>\n<link rel="stylesheet" href="fonts/figtree.css">\n<link rel="stylesheet" href="password-eye.css">\n<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">\n<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">\n' +
     '<link rel="manifest" href="manifest.webmanifest">\n<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">\n' +
     '<meta name="theme-color" content="#26664b">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n' +
     '<meta name="apple-mobile-web-app-title" content="Terminplaner">\n<meta name="apple-mobile-web-app-status-bar-style" content="default">\n' +
@@ -33,6 +33,9 @@ for (const page of ['admin', 'setup']) {
   fs.writeFileSync(path.join(root, 'public', page + '.html'), html.replace(m[0], '<script src="' + page + '.js"></script>'));
 }
 fs.copyFileSync(path.join(root, 'src', 'datenschutz.html'), path.join(root, 'public', 'datenschutz.html'));
+// Schrift Figtree lokal (CSP font-src 'self')
+fs.mkdirSync(path.join(root, 'public', 'fonts'), { recursive: true });
+for (const f of fs.readdirSync(path.join(root, 'src', 'fonts'))) fs.copyFileSync(path.join(root, 'src', 'fonts', f), path.join(root, 'public', 'fonts', f));
 // App (PWA): Manifest, Symbole, Service Worker (Version = Prüfsumme der Seite, damit Updates ankommen)
 fs.mkdirSync(path.join(root, 'public', 'icons'), { recursive: true });
 for (const f of fs.readdirSync(path.join(root, 'src', 'icons'))) fs.copyFileSync(path.join(root, 'src', 'icons', f), path.join(root, 'public', 'icons', f));
