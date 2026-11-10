@@ -821,8 +821,8 @@ html.noside .side { display: none; }
 .head-t { flex: 1 1 auto; }
 .head > .spacer { display: none; }
 @media (max-width: 1000px) { .head { flex-wrap: wrap; } }
-.head-name { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.title-in { field-sizing: content; min-width: 120px; max-width: min(520px, 46vw); font-size: 20px; font-weight: 600; letter-spacing: -.01em; background: transparent; border: 1px solid transparent; border-radius: var(--r-ctl); padding: 0 6px; margin-left: -7px; height: 32px; }
+.head-name { display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
+.title-in { min-width: 120px; max-width: 100%; font-size: 20px; font-weight: 600; letter-spacing: -.01em; background: transparent; border: 1px solid transparent; border-radius: var(--r-ctl); padding: 0 6px; margin-left: -7px; height: 32px; }
 .title-in:hover { border-color: var(--line); }
 .title-in:focus { background: var(--surface); border-color: var(--accent); outline: none; }
 .head-meta { margin: 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -908,7 +908,8 @@ html.m .work { padding: 10px 12px; }
 html.m .head { gap: 8px; }
 html.m .head-t { flex: 1 1 100%; gap: 4px; }
 html.m .projsel-m { display: block; width: 100%; font-weight: 500; }
-html.m .title-in { max-width: none; flex: 1 1 auto; min-width: 0; font-size: 19px; }
+html.m .title-in { max-width: none; flex: 1 1 0; min-width: 0; font-size: 18px; width: auto !important; }
+html.m #editProj { display: none; }
 html.m .head .spacer { display: none; }
 html.m .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 html.m .kpi b { font-size: 15px; }

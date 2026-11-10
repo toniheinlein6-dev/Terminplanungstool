@@ -196,6 +196,15 @@ function aboutDialog() {
 }
 
 /* ---------- Projektkopf und Kennzahlen ---------- */
+// Projektname: Feld so breit wie der Text (field-sizing kennen nicht alle Browser)
+let titleCtx = null;
+function fitTitle() {
+  const el = $('pname'); if (!el) return;
+  const cs = getComputedStyle(el); titleCtx = titleCtx || document.createElement('canvas').getContext('2d');
+  titleCtx.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+  const w = titleCtx.measureText(el.value || el.placeholder || '').width;
+  el.style.width = Math.ceil(w + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth) * 2 + 6) + 'px';
+}
 function planEnd() { let E = sched.P; sched.out.forEach(o => { if (o.E > E) E = o.E; }); return E; }
 const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
 function paintKpis() {
@@ -233,6 +242,8 @@ function paintHead(p, nLate, E, nLeaf) {
 }
 function initKpis() {
   applyKpis();
+  $('pname').addEventListener('input', fitTitle); fitTitle();
+  try { document.fonts.ready.then(fitTitle); document.fonts.addEventListener('loadingdone', fitTitle); } catch (e) { }
   $('kpiLate').addEventListener('click', () => {
     if (view !== 'gantt' && view !== 'list') setView('gantt');
     $('vfilters').hidden = false; updateFilterUi();

@@ -382,6 +382,7 @@ function refreshPeopleList() {
 }
 function renderAll() {
   $('pname').value = state.name; $('pstart').value = state.start; refreshSelect();
+  if (typeof fitTitle === 'function') fitTitle();
   $('segRaster').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === state.raster)));
   $('segMode').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === state.mode)));
   $('lines').checked = !!state.lines;

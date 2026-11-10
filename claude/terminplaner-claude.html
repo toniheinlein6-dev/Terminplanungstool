@@ -821,8 +821,8 @@ html.noside .side { display: none; }
 .head-t { flex: 1 1 auto; }
 .head > .spacer { display: none; }
 @media (max-width: 1000px) { .head { flex-wrap: wrap; } }
-.head-name { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.title-in { field-sizing: content; min-width: 120px; max-width: min(520px, 46vw); font-size: 20px; font-weight: 600; letter-spacing: -.01em; background: transparent; border: 1px solid transparent; border-radius: var(--r-ctl); padding: 0 6px; margin-left: -7px; height: 32px; }
+.head-name { display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
+.title-in { min-width: 120px; max-width: 100%; font-size: 20px; font-weight: 600; letter-spacing: -.01em; background: transparent; border: 1px solid transparent; border-radius: var(--r-ctl); padding: 0 6px; margin-left: -7px; height: 32px; }
 .title-in:hover { border-color: var(--line); }
 .title-in:focus { background: var(--surface); border-color: var(--accent); outline: none; }
 .head-meta { margin: 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -908,7 +908,8 @@ html.m .work { padding: 10px 12px; }
 html.m .head { gap: 8px; }
 html.m .head-t { flex: 1 1 100%; gap: 4px; }
 html.m .projsel-m { display: block; width: 100%; font-weight: 500; }
-html.m .title-in { max-width: none; flex: 1 1 auto; min-width: 0; font-size: 19px; }
+html.m .title-in { max-width: none; flex: 1 1 0; min-width: 0; font-size: 18px; width: auto !important; }
+html.m #editProj { display: none; }
 html.m .head .spacer { display: none; }
 html.m .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 html.m .kpi b { font-size: 15px; }
@@ -1741,6 +1742,7 @@ function refreshPeopleList() {
 }
 function renderAll() {
   $('pname').value = state.name; $('pstart').value = state.start; refreshSelect();
+  if (typeof fitTitle === 'function') fitTitle();
   $('segRaster').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === state.raster)));
   $('segMode').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === state.mode)));
   $('lines').checked = !!state.lines;
@@ -4888,6 +4890,15 @@ function aboutDialog() {
 }
 
 /* ---------- Projektkopf und Kennzahlen ---------- */
+// Projektname: Feld so breit wie der Text (field-sizing kennen nicht alle Browser)
+let titleCtx = null;
+function fitTitle() {
+  const el = $('pname'); if (!el) return;
+  const cs = getComputedStyle(el); titleCtx = titleCtx || document.createElement('canvas').getContext('2d');
+  titleCtx.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+  const w = titleCtx.measureText(el.value || el.placeholder || '').width;
+  el.style.width = Math.ceil(w + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth) * 2 + 6) + 'px';
+}
 function planEnd() { let E = sched.P; sched.out.forEach(o => { if (o.E > E) E = o.E; }); return E; }
 const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
 function paintKpis() {
@@ -4925,6 +4936,8 @@ function paintHead(p, nLate, E, nLeaf) {
 }
 function initKpis() {
   applyKpis();
+  $('pname').addEventListener('input', fitTitle); fitTitle();
+  try { document.fonts.ready.then(fitTitle); document.fonts.addEventListener('loadingdone', fitTitle); } catch (e) { }
   $('kpiLate').addEventListener('click', () => {
     if (view !== 'gantt' && view !== 'list') setView('gantt');
     $('vfilters').hidden = false; updateFilterUi();
