@@ -94,6 +94,7 @@ function menuDefs() {
     ]],
     ['Hilfe', [
       { l: 'Tastenkürzel', run: keysDialog },
+      { l: 'Nach neuer Version suchen', run: checkUpdate, hide: !updatesOn() },
       { l: 'Über den Terminplaner', run: aboutDialog },
       { l: 'Datenschutz', run: () => acct('privacy').click(), hide: !acct('privacy') }
     ]]
@@ -251,4 +252,39 @@ function initKpis() {
   });
   $('kpiWeek').addEventListener('click', () => { goView('cal'); });
   $('kpiTasks').addEventListener('click', () => goView('tasks'));
+}
+
+/* ---------- Neue Versionen in installierten Apps (nur Website mit Service Worker) ---------- */
+// Der Service Worker übernimmt eine neue Version sofort. Die offene Seite merkt das (controllerchange):
+// Läuft die App im Hintergrund, wird nach dem Speichern still neu geladen. Ist sie im Vordergrund,
+// erscheint „Neue Version laden“; spätestens beim nächsten Wechsel in den Hintergrund wird aktualisiert.
+const updatesOn = () => !!window.SP && 'serviceWorker' in navigator && location.protocol !== 'file:';
+let updPending = false, updBusy = false;
+async function applyUpdate() {
+  if (updBusy) return; updBusy = true;
+  try { await flush(); } catch (e) { }
+  location.reload();
+}
+function swCheck() { return navigator.serviceWorker.getRegistration().then(r => r ? r.update().then(() => r) : null).catch(() => null); }
+async function checkUpdate() {
+  toast('Suche nach einer neuen Version …');
+  const r = await swCheck();
+  if (updPending) return;
+  if (r && (r.installing || r.waiting)) { toast('Neue Version wird geladen …'); return; }
+  toast(r ? 'Du hast die neueste Version.' : 'Prüfen nicht möglich, die Seite läuft ohne App-Zwischenspeicher.');
+}
+function initUpdates() {
+  if (!updatesOn()) return;
+  const sw = navigator.serviceWorker; let had = !!sw.controller;
+  $('updBtn').addEventListener('click', applyUpdate);
+  sw.addEventListener('controllerchange', () => {
+    if (!had) { had = true; return; }   // erste Installation der App: Seite ist schon aktuell
+    if (updPending) return; updPending = true;
+    if (document.hidden) { applyUpdate(); return; }
+    $('updBtn').hidden = false;
+    toast('Eine neue Version des Terminplaners ist da.', 'Jetzt laden', applyUpdate, 15000);
+  });
+  // Beim Zurückkehren in die App und alle 30 Minuten nachsehen; beim Wechsel in den Hintergrund ggf. aktualisieren
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (updPending) applyUpdate(); } else swCheck(); });
+  setInterval(() => { if (!document.hidden) swCheck(); }, 30 * 60 * 1000);
 }

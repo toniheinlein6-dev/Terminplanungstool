@@ -795,6 +795,8 @@ kbd { font: inherit; font-size: 11.5px; color: var(--muted); white-space: nowrap
 .mbar .online, .mbar .last { padding: 0; }
 .mbar .chip { width: 22px; height: 22px; }
 .mbar-user:empty { display: none; }
+.mbar .upd { padding: 2px 10px; font-size: 12.5px; background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 500; }
+html.m .mbar .upd { padding: 2px 8px; font-size: 12px; }
 .mbar .userbtn { border: 0; background: transparent; padding: 2px 8px 2px 3px; min-height: 28px; font-size: 13px; }
 .mbar .userbtn:hover { background: var(--hover); }
 .umenu { background: var(--pop); border-radius: var(--r-card); box-shadow: var(--shadow); padding: 5px; }
@@ -956,6 +958,7 @@ html.m .tabs.seg button { padding-inline: 10px; }
   <span class="spacer"></span>
   <span class="online" id="online" aria-label="Gerade online"></span>
   <span class="last" id="last"></span>
+  <button class="btn upd" id="updBtn" type="button" hidden title="Eine neue Version ist bereit. Deine Änderungen werden vorher gespeichert.">Neue Version laden</button>
   <span class="status" id="status" data-k="local"><i></i><span id="statusTxt">Wird geladen</span></span>
   <span class="mbar-user" id="mbarUser"></span>
 </nav>
@@ -1915,10 +1918,10 @@ function onClick(e) {
 /* ---------- Meldungen ---------- */
 window.__cur = () => curId;
 let toastT = 0;
-function toast(txt, btn, fn) {
+function toast(txt, btn, fn, ms = 7000) {
   $('toastTxt').textContent = txt; const b = $('toastBtn');
   b.hidden = !btn; b.textContent = btn || ''; b.onclick = () => { $('toast').hidden = true; if (fn) fn(); };
-  $('toast').hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { $('toast').hidden = true; }, 7000);
+  $('toast').hidden = false; clearTimeout(toastT); if (ms) toastT = setTimeout(() => { $('toast').hidden = true; }, ms);
 }
 function setStatus(k, t) { const s = $('status'); s.dataset.k = k; $('statusTxt').textContent = t; }
 
@@ -2352,7 +2355,7 @@ function boot() {
   sp.addEventListener('pointermove', e => { if (sp.dataset.drag) setLeftW(e.clientX - $('board').getBoundingClientRect().left); });
   sp.addEventListener('pointerup', () => { delete sp.dataset.drag; });
   sp.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); setLeftW($('paneL').getBoundingClientRect().width + (e.key === 'ArrowRight' ? 24 : -24)); } });
-  if (typeof initMenubar === 'function') { initMenubar(); initKpis(); }
+  if (typeof initMenubar === 'function') { initMenubar(); initKpis(); initUpdates(); }
   renderAll();
   initStore();
 }
@@ -4788,6 +4791,7 @@ function menuDefs() {
     ]],
     ['Hilfe', [
       { l: 'Tastenkürzel', run: keysDialog },
+      { l: 'Nach neuer Version suchen', run: checkUpdate, hide: !updatesOn() },
       { l: 'Über den Terminplaner', run: aboutDialog },
       { l: 'Datenschutz', run: () => acct('privacy').click(), hide: !acct('privacy') }
     ]]
@@ -4945,6 +4949,41 @@ function initKpis() {
   });
   $('kpiWeek').addEventListener('click', () => { goView('cal'); });
   $('kpiTasks').addEventListener('click', () => goView('tasks'));
+}
+
+/* ---------- Neue Versionen in installierten Apps (nur Website mit Service Worker) ---------- */
+// Der Service Worker übernimmt eine neue Version sofort. Die offene Seite merkt das (controllerchange):
+// Läuft die App im Hintergrund, wird nach dem Speichern still neu geladen. Ist sie im Vordergrund,
+// erscheint „Neue Version laden“; spätestens beim nächsten Wechsel in den Hintergrund wird aktualisiert.
+const updatesOn = () => !!window.SP && 'serviceWorker' in navigator && location.protocol !== 'file:';
+let updPending = false, updBusy = false;
+async function applyUpdate() {
+  if (updBusy) return; updBusy = true;
+  try { await flush(); } catch (e) { }
+  location.reload();
+}
+function swCheck() { return navigator.serviceWorker.getRegistration().then(r => r ? r.update().then(() => r) : null).catch(() => null); }
+async function checkUpdate() {
+  toast('Suche nach einer neuen Version …');
+  const r = await swCheck();
+  if (updPending) return;
+  if (r && (r.installing || r.waiting)) { toast('Neue Version wird geladen …'); return; }
+  toast(r ? 'Du hast die neueste Version.' : 'Prüfen nicht möglich, die Seite läuft ohne App-Zwischenspeicher.');
+}
+function initUpdates() {
+  if (!updatesOn()) return;
+  const sw = navigator.serviceWorker; let had = !!sw.controller;
+  $('updBtn').addEventListener('click', applyUpdate);
+  sw.addEventListener('controllerchange', () => {
+    if (!had) { had = true; return; }   // erste Installation der App: Seite ist schon aktuell
+    if (updPending) return; updPending = true;
+    if (document.hidden) { applyUpdate(); return; }
+    $('updBtn').hidden = false;
+    toast('Eine neue Version des Terminplaners ist da.', 'Jetzt laden', applyUpdate, 15000);
+  });
+  // Beim Zurückkehren in die App und alle 30 Minuten nachsehen; beim Wechsel in den Hintergrund ggf. aktualisieren
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (updPending) applyUpdate(); } else swCheck(); });
+  setInterval(() => { if (!document.hidden) swCheck(); }, 30 * 60 * 1000);
 }
 
 boot();

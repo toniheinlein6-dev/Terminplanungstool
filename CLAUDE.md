@@ -41,6 +41,8 @@ Neue Dateien in `scripts/build.mjs` eintragen.
 - `src/shell.js` – Menüleiste (`menuDefs`), Tastenkürzel, Kennzahlen (`paintKpis`), Projektkopf
 - `src/server-api.js` – nur Website: Anmeldung, Konto-Menü, Verbindung zu `/api/tp`
 - `src/fonts/` – Schrift Figtree (OFL), auf der Website lokal ausgeliefert
+- `src/sw.js` – Service Worker der installierten App. Das Build hängt an alle Programmdateien ihre
+  Prüfsumme an (`app.js?v=…`); neue Versionen meldet `initUpdates` in `shell.js` („Neue Version laden“)
 - `lib/` + `api/` – Server (Vercel Functions): `handler.js` (`/api/tp?a=…`), `auth.js` (Sitzungen,
   scrypt), `security.js` (CSRF, Ratenbegrenzung, Protokoll), `db.js` (Postgres), Mails, Erinnerungen
 - `SECURITY.md` – Sicherheitskonzept; bei Änderungen an Anmeldung/API mitpflegen

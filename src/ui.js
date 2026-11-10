@@ -555,10 +555,10 @@ function onClick(e) {
 /* ---------- Meldungen ---------- */
 window.__cur = () => curId;
 let toastT = 0;
-function toast(txt, btn, fn) {
+function toast(txt, btn, fn, ms = 7000) {
   $('toastTxt').textContent = txt; const b = $('toastBtn');
   b.hidden = !btn; b.textContent = btn || ''; b.onclick = () => { $('toast').hidden = true; if (fn) fn(); };
-  $('toast').hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { $('toast').hidden = true; }, 7000);
+  $('toast').hidden = false; clearTimeout(toastT); if (ms) toastT = setTimeout(() => { $('toast').hidden = true; }, ms);
 }
 function setStatus(k, t) { const s = $('status'); s.dataset.k = k; $('statusTxt').textContent = t; }
 
@@ -992,7 +992,7 @@ function boot() {
   sp.addEventListener('pointermove', e => { if (sp.dataset.drag) setLeftW(e.clientX - $('board').getBoundingClientRect().left); });
   sp.addEventListener('pointerup', () => { delete sp.dataset.drag; });
   sp.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); setLeftW($('paneL').getBoundingClientRect().width + (e.key === 'ArrowRight' ? 24 : -24)); } });
-  if (typeof initMenubar === 'function') { initMenubar(); initKpis(); }
+  if (typeof initMenubar === 'function') { initMenubar(); initKpis(); initUpdates(); }
   renderAll();
   initStore();
 }
