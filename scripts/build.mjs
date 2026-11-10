@@ -13,7 +13,7 @@ const app = "(function(){\n'use strict';\n" + js + "\nboot();\n})();\n";
 fs.mkdirSync(path.join(root, 'public', 'vendor'), { recursive: true });
 const webHead = head
   .replace(/<link[^>]*fonts\.g[^>]*>\n?/g, '')
-  .replace('<title>Gantt Terminplaner</title>', '<title>Terminplaner</title>\n<link rel="stylesheet" href="password-eye.css">\n<link rel="icon" href="favicon.svg">\n' +
+  .replace('<title>Gantt Terminplaner</title>', '<title>Terminplaner</title>\n<link rel="stylesheet" href="password-eye.css">\n<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">\n<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">\n' +
     '<link rel="manifest" href="manifest.webmanifest">\n<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">\n' +
     '<meta name="theme-color" content="#26664b">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n' +
     '<meta name="apple-mobile-web-app-title" content="Terminplaner">\n<meta name="apple-mobile-web-app-status-bar-style" content="default">\n' +
@@ -43,7 +43,7 @@ fs.copyFileSync(path.join(root, 'src', 'manifest.webmanifest'), path.join(root, 
   fs.writeFileSync(path.join(root, 'public', 'sw.js'), rd('sw.js').replace('__VERSION__', h));
 }
 fs.copyFileSync(path.join(root, 'node_modules', 'jspdf', 'dist', 'jspdf.umd.min.js'), path.join(root, 'public', 'vendor', 'jspdf.umd.min.js'));
-fs.writeFileSync(path.join(root, 'public', 'favicon.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#26664b"/><rect x="6" y="8" width="12" height="4" rx="1.5" fill="#fff"/><rect x="11" y="14" width="14" height="4" rx="1.5" fill="#fff"/><rect x="9" y="20" width="10" height="4" rx="1.5" fill="#fff"/></svg>\n');
+// Symbol: Logo als Hintergrund, Terminbalken davor (erzeugt mit scripts/make-icons.py aus src/icons/logo-hbc.png)
 
 // 2) Claude-Version (Artifact mit gemeinsamer Claude-Datenbank)
 fs.mkdirSync(path.join(root, 'claude'), { recursive: true });
